@@ -20,3 +20,5 @@ https://raphaelstaebler.medium.com/building-a-gameboy-from-scratch-part-2-the-cp
 thorough opcodes technical reference:
 
 https://gekkio.fi/files/gb-docs/gbctr.pdf
+
+https://meganesu.github.io/generate-gb-opcodes/
