@@ -2,6 +2,7 @@
 
 #include <cmath> //may not need it, used originally for pow
 
+
 //shortcuts for code readability
 using BYTE = unsigned char; //8-bit number
 using WORD = unsigned short; //16-bit number, 2byte
@@ -16,6 +17,14 @@ BYTE DE_reg[2];
 BYTE HL_reg[2];
 WORD SP; //stack pointer
 WORD PC; //program counter
+
+
+//for redability
+BYTE OPCODE[2];
+BYTE *OP_0 = &OPCODE[0];
+BYTE *OP_1 = &OPCODE[1];
+
+
 
 //sub-registers
 
@@ -36,6 +45,29 @@ BYTE c = AF_reg[1] & 0x10; //carry flag
 
 int main() {
     std::cout << "Hello, !!!!!!!!" << std::endl;
-    //nothing
+
+    while(true)
+    {
+        //main gameboy loop
+
+        //FETCH
+        OPCODE[0] = memory[PC];
+        OPCODE[1] = memory[PC+1];
+        PC++;
+
+        //DECODE & EXECUTE
+        switch(*OP_0)
+        {
+            case(0x00):
+                //NOP OPERATION
+                break;
+
+
+
+        }
+
+        //nothing
+    }
+
     return 1;
 }
