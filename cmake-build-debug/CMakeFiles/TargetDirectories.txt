@@ -1,3 +1,0 @@
-C:/Users/97252/CLionProjects/friendly-fishstick/cmake-build-debug/CMakeFiles/GB_EMU_2024.dir
-C:/Users/97252/CLionProjects/friendly-fishstick/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/Users/97252/CLionProjects/friendly-fishstick/cmake-build-debug/CMakeFiles/rebuild_cache.dir
