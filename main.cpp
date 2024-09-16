@@ -73,7 +73,8 @@ int main() {
             case(0x01):case(0x11):case(0x21):case(0x31): //LD BC, d16
                 //r16[4th&5th_bits] = memory[PC] which is 2 bytes
                 //increment PC twice
-                *r16[0] = memory[PC_reg];
+                WORD tmp = (OPCODE & 0x30)>>4;
+                *r16[tmp] = memory[PC_reg];
                 PC_reg++;
                 PC_reg++;
                 break;
@@ -81,8 +82,10 @@ int main() {
             case(0x02):
 
                 break;
+            case(0x03):case(0x13):case(0x23):case(0x33): //INC r16[reg]
 
 
+                break;
 
             default:
                 break;
