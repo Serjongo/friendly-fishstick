@@ -14,32 +14,35 @@ WORD memory[65536]; //2^16 bytes
 
 //registers
 //https://www.reddit.com/r/EmuDev/comments/7ljc41/how_to_algorithmically_parse_gameboy_opcodes/ - may change registers structure
-BYTE AF_reg[2]; //Accumulator + Flags
-BYTE BC_reg[2];
-BYTE DE_reg[2];
-BYTE HL_reg[2];
+WORD AF_reg; //Accumulator + Flags
+WORD BC_reg;
+WORD DE_reg;
+WORD HL_reg;
 WORD SP_reg; //stack pointer
 WORD PC_reg; //program counter
 
 //those are the full registers
 WORD* r16[] = {&BC_reg,&DE_reg,&HL_reg,&SP_reg};
-BYTE* r8[]
+
+//array of pointers to sub-registers. the way it works is by casting the pointers of unsigned shorts (WORDs) into pointers of bytes.
+// In order to point to the second byte of said short, we increment the pointer by 1(and since we're talking in BYTE resolution, this increments us by 8 bits)
+BYTE* r8[] = {(BYTE*)&BC_reg,(BYTE*)&BC_reg+1, (BYTE*)&DE_reg,(BYTE*)&DE_reg+1,(BYTE*)&HL_reg,(BYTE*)&HL_reg+1,(BYTE*)&memory[HL_reg],(BYTE*)&AF_reg};
 
 
 //for redability
-BYTE OPCODE[2];
-BYTE *OP_0 = &OPCODE[0];
-BYTE *OP_1 = &OPCODE[1];
+WORD OPCODE;
+//BYTE *OP_0 = &OPCODE;
+//BYTE *OP_1 = &OPCODE;
 
 //sub-registers
-
-BYTE *A = &AF_reg[0]; //pointer to sub-register (first byte)
-BYTE *B = &BC_reg[0];
-BYTE *C = &BC_reg[1];
-BYTE *D = &DE_reg[0];
-BYTE *E = &DE_reg[1];
-BYTE *H = &HL_reg[0];
-BYTE *L = &HL_reg[1];
+//
+//BYTE *A = &AF_reg[0]; //pointer to sub-register (first byte)
+//BYTE *B = &BC_reg[0];
+//BYTE *C = &BC_reg[1];
+//BYTE *D = &DE_reg[0];
+//BYTE *E = &DE_reg[1];
+//BYTE *H = &HL_reg[0];
+//BYTE *L = &HL_reg[1];
 
 //flags
 //may not work, check bitwise arithemtic
