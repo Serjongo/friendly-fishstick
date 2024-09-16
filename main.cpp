@@ -68,7 +68,7 @@ int main() {
         //DECODE & EXECUTE
 
         //FIRST BYTE - OPCODE SWITCH CASE
-        switch(OPCODE)
+        switch(OPCODE) //MAY NEED TO FIX THE OPCODE SINCE ITS 2 BYTES, BUT MAYBE ITS OK SINCE IT SHOULD BE 0 anyway
         {
             case(0x00): //NOP OPERATION
                 break;
@@ -82,14 +82,20 @@ int main() {
                 PC_reg++;
                 break;
 
-            case(0x02):
-
-                break;
             case(0x03):case(0x13):case(0x23):case(0x33): //INC r16[reg]
                 tmp = (OPCODE & 0x30)>>4;
                 r16[tmp]++;
                 break;
 
+            case(0x02): case(0x12): //LD (BC) OR (DE), A
+                tmp = (OPCODE & 0x30)>>4;
+                memory[*r16[tmp]] = *r8[7];
+                break;
+            ///TO CHECK FIRST THING - IS A "TMP" still relevant in this opcode?! I DONT THINK SO, DELETING TMP FOR NOW
+            case(0x22): case(0x32): //LD (HL), A
+                //tmp = (OPCODE & 0x30)>>4;
+                memory[*r16[2]] = *r8[7]; //IS IT POINTER OR NUMBER, RE-CHECK!
+                r16[2]++; //increment the CONTENTS of HL, which is a pointer to
             case(0x04):case(0x14):case(0x24):case(0x34): //INC r8[reg]
                 tmp = (OPCODE & 0x38)>>3;
                 r8[tmp]++;
