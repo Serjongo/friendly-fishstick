@@ -46,10 +46,10 @@ WORD OPCODE;
 
 //flags
 //may not work, check bitwise arithemtic
-BYTE z = AF_reg[1] & 0x80; //zero flag, 7th bit
-BYTE n = AF_reg[1] & 0x40; //subtraction flag
-BYTE h = AF_reg[1] & 0x20; //half carry flag
-BYTE c = AF_reg[1] & 0x10; //carry flag
+BYTE z = *(r8[7]+1) & 0x80; //zero flag, 7th bit
+BYTE n = *(r8[7]+1) & 0x40; //subtraction flag
+BYTE h = *(r8[7]+1) & 0x20; //half carry flag
+BYTE c = *(r8[7]+1) & 0x10; //carry flag
 
 int main() {
     std::cout << "Hello, !!!!!!!!" << std::endl;
@@ -59,25 +59,23 @@ int main() {
         //main gameboy loop
 
         //FETCH
-        OPCODE[0] = memory[PC];
-        OPCODE[1] = memory[PC+1];
-        PC++;
+        OPCODE = memory[PC_reg];
+        PC_reg++;
 
         //DECODE & EXECUTE
 
         //FIRST BYTE - OPCODE SWITCH CASE
-        switch(*OP_0)
+        switch(OPCODE)
         {
             case(0x00): //NOP OPERATION
                 break;
 
-                case(0x01):case(0x11):case(0x21):case(0x31): //LD BC, d16
+            case(0x01):case(0x11):case(0x21):case(0x31): //LD BC, d16
                 //r16[4th&5th_bits] = memory[PC] which is 2 bytes
                 //increment PC twice
-                *BC = memory[PC];
-                PC++;
-                *C = memory[PC];
-                PC++;
+                *r16[0] = memory[PC_reg];
+                PC_reg++;
+                PC_reg++;
                 break;
 
             case(0x02):
@@ -86,7 +84,8 @@ int main() {
 
 
 
-
+            default:
+                break;
 
 
 
