@@ -86,8 +86,18 @@ int main() {
 
                 break;
             case(0x03):case(0x13):case(0x23):case(0x33): //INC r16[reg]
+                tmp = (OPCODE & 0x30)>>4;
+                r16[tmp]++;
+                break;
 
+            case(0x04):case(0x14):case(0x24):case(0x34): //INC r8[reg]
+                tmp = (OPCODE & 0x38)>>3;
+                r8[tmp]++;
+                break;
 
+            case(0x05):case(0x15):case(0x25):case(0x35): //DEC r8[reg]
+                tmp = (OPCODE & 0x38)>>3;
+                r8[tmp]--;
                 break;
 
             default:
