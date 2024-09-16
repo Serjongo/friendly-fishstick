@@ -21,6 +21,9 @@ WORD HL_reg;
 WORD SP_reg; //stack pointer
 WORD PC_reg; //program counter
 
+//a variable for general usage (as one can't declare vars in switch cases)
+WORD tmp;
+
 //those are the full registers
 WORD* r16[] = {&BC_reg,&DE_reg,&HL_reg,&SP_reg};
 
@@ -73,7 +76,7 @@ int main() {
             case(0x01):case(0x11):case(0x21):case(0x31): //LD BC, d16
                 //r16[4th&5th_bits] = memory[PC] which is 2 bytes
                 //increment PC twice
-                WORD tmp = (OPCODE & 0x30)>>4;
+                tmp = (OPCODE & 0x30)>>4;
                 *r16[tmp] = memory[PC_reg];
                 PC_reg++;
                 PC_reg++;
