@@ -11,20 +11,25 @@ using DWORD = unsigned int; // 32-bit number
 //declarations - data structures etc
 WORD memory[65536]; //2^16 bytes
 
+
+//registers
+//https://www.reddit.com/r/EmuDev/comments/7ljc41/how_to_algorithmically_parse_gameboy_opcodes/ - may change registers structure
 BYTE AF_reg[2]; //Accumulator + Flags
 BYTE BC_reg[2];
 BYTE DE_reg[2];
 BYTE HL_reg[2];
-WORD SP; //stack pointer
-WORD PC; //program counter
+WORD SP_reg; //stack pointer
+WORD PC_reg; //program counter
+
+//those are the full registers
+WORD* r16[] = {&BC_reg,&DE_reg,&HL_reg,&SP_reg};
+BYTE* r8[]
 
 
 //for redability
 BYTE OPCODE[2];
 BYTE *OP_0 = &OPCODE[0];
 BYTE *OP_1 = &OPCODE[1];
-
-
 
 //sub-registers
 
@@ -56,11 +61,30 @@ int main() {
         PC++;
 
         //DECODE & EXECUTE
+
+        //FIRST BYTE - OPCODE SWITCH CASE
         switch(*OP_0)
         {
-            case(0x00):
-                //NOP OPERATION
+            case(0x00): //NOP OPERATION
                 break;
+
+                case(0x01):case(0x11):case(0x21):case(0x31): //LD BC, d16
+                //r16[4th&5th_bits] = memory[PC] which is 2 bytes
+                //increment PC twice
+                *BC = memory[PC];
+                PC++;
+                *C = memory[PC];
+                PC++;
+                break;
+
+            case(0x02):
+
+                break;
+
+
+
+
+
 
 
 
