@@ -136,9 +136,96 @@ class gameboy
 
             //public methods
             //getters
-            Register get_reg_
+            Register get_reg_AF()
+            {
+                return AF_reg;
+            }
+            BYTE get_subreg_A()
+            {
+                return AF_reg.hi;
+            }
+            BYTE get_subreg_F()
+            {
+                return AF_reg.lo;
+            }
+            Register get_reg_BC()
+            {
+                return BC_reg;
+            }
+            BYTE get_subreg_B()
+            {
+                return BC_reg.hi;
+            }
+            BYTE get_subreg_C()
+            {
+                return BC_reg.lo;
+            }
+            Register get_reg_HL()
+            {
+                return HL_reg;
+            }
+            BYTE get_subreg_H()
+            {
+                return HL_reg.hi;
+            }
+            BYTE get_subreg_L()
+            {
+                return HL_reg.lo;
+            }
+            Register get_reg_SP()
+            {
+                return StackPointer_reg;
+            }
+            WORD get_PC()
+            {
+                return PC;
+            }
 
             //setters
+            void set_reg_AF(WORD input)
+            {
+                AF_reg.reg = input;
+            }
+            void set_subreg_A(BYTE input)
+            {
+                AF_reg.hi = input;
+            }
+            void set_subreg_F(BYTE input)
+            {
+                AF_reg.lo = input;
+            }
+            void set_reg_BC(WORD input)
+            {
+                BC_reg.reg = input;
+            }
+            void set_subreg_B(BYTE input)
+            {
+                BC_reg.hi = input;
+            }
+            void set_subreg_C(BYTE input)
+            {
+                BC_reg.lo = input;
+            }
+            void set_reg_HL(WORD input)
+            {
+                HL_reg.reg = input;
+            }
+            void set_subreg_H(BYTE input)
+            {
+                HL_reg.hi = input;
+            }
+            void set_subreg_L(BYTE input)
+            {
+                HL_reg.lo = input;
+            }
+            void set_reg_SP(WORD input)
+            {
+                StackPointer_reg.reg = input;
+            }
+            void set_PC(WORD input)
+            {
+                PC = input;
+            }
 
 
         };
