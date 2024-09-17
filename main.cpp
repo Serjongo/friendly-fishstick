@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath> //may not need it, used originally for pow
 
+//HARTA
 
 //shortcuts for code readability
 typedef unsigned char BYTE; //8-bit number
