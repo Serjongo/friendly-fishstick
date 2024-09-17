@@ -95,12 +95,12 @@ class gameboy
 
             void init()
             {
-                PC=0x100 ;
-                AF_reg=0x01B0;
-                BC_reg = 0x0013;
-                DE_reg = 0x00D8;
-                HL_reg = 0x014D;
-                StackPointer_reg=0xFFFE;
+                PC = 0x100 ;
+                AF_reg.reg = (WORD)0x01B0;
+                BC_reg.reg = 0x0013;
+                DE_reg.reg = 0x00D8;
+                HL_reg.reg = 0x014D;
+                StackPointer_reg.reg = 0xFFFE;
                 m_Rom[0xFF05] = 0x00 ;
                 m_Rom[0xFF06] = 0x00 ;
                 m_Rom[0xFF07] = 0x00 ;
