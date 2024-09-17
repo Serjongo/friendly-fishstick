@@ -39,6 +39,7 @@ union Register
 
 class gameboy
         {
+        public:
             //constructor
             gameboy();
 
@@ -62,11 +63,23 @@ class gameboy
             WORD tmp;
 
         //those are the full registers
-            Register* r16[4] = {&BC_reg,&DE_reg,&HL_reg,&StackPointer_reg};
+            Register* r16[4] = {
+                    &BC_reg,
+                    &DE_reg,
+                    &HL_reg,
+                    &StackPointer_reg};
 
         //array of pointers to sub-registers. the way it works is by casting the pointers of unsigned shorts (WORDs) into pointers of bytes.
         // In order to point to the second byte of said short, we increment the pointer by 1(and since we're talking in BYTE resolution, this increments us by 8 bits)
-            BYTE* r8[8] = {&BC_reg.hi,&BC_reg.lo, &DE_reg.hi,&DE_reg.lo,&HL_reg.hi,&HL_reg.lo,(BYTE*)&mem[HL_reg.lo],&AF_reg.hi}; //index 6 is PROBLEMATIC,
+            BYTE* r8[8] = {
+                    &BC_reg.hi,
+                    &BC_reg.lo,
+                    &DE_reg.hi,
+                    &DE_reg.lo,
+                    &HL_reg.hi,
+                    &HL_reg.lo,
+                    (BYTE*)&mem[HL_reg.lo],
+                    &AF_reg.hi}; //index 6 is PROBLEMATIC,
             // (IT POINTS TO BYTE L, WE NEED TO CAST TO WORD* EVERY TIME WE POINT TO IT)
 
 
@@ -142,7 +155,7 @@ class gameboy
                         //r16[4th&5th_bits] = memory[PC] which is 2 bytes
                         //increment PC twice
                         tmp = (OPCODE & 0x30)>>4;
-                        *r16[tmp].reg = mem[PC];
+                        r16[tmp]->reg = mem[PC];
                         PC++;
                         PC++;
                         break;
@@ -150,14 +163,14 @@ class gameboy
 
                     case(0x02): case(0x12): //LD (BC) OR (DE), A
                         tmp = (OPCODE & 0x30)>>4;
-                        mem[*r16[tmp]] = *r8[7];
+                        mem[r16[tmp]->lo] = *r8[7];
                         break;
 
                         ///TO CHECK FIRST THING - IS A "TMP" still relevant in this opcode?! I DONT THINK SO, DELETING TMP FOR NOW
                     case(0x22): case(0x32): //LD (HL), A
                         //tmp = (OPCODE & 0x30)>>4;
-                        mem[*r16[2]] = *r8[7]; //IS IT POINTER OR NUMBER, RE-CHECK!
-                        r16[2]++; //increment the CONTENTS of HL, which is a pointer to
+                        mem[r16[2]->reg] = *r8[7];
+                        r16[2]->reg++; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
 
                     case(0x03):case(0x13):case(0x23):case(0x33): //INC r16[reg]
                         tmp = (OPCODE & 0x30)>>4; //relevant opcode bits in r16 are 4th & 5th
@@ -295,7 +308,7 @@ class gameboy
 
 int main() {
     std::cout << "Hello, !!!!!!!!" << std::endl;
-    gameboy jibby = new gameboy();
+    gameboy jibby;
 
     return 1;
 }
