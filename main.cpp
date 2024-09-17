@@ -40,7 +40,7 @@ union Register
 class gameboy
         {
             //constructor
-
+            gameboy();
 
             //parameters
 
@@ -295,21 +295,7 @@ class gameboy
 
 int main() {
     std::cout << "Hello, !!!!!!!!" << std::endl;
-
-    while(true)
-    {
-        //main gameboy loop
-
-        //FETCH
-
-
-        //DECODE & EXECUTE
-
-        //FIRST BYTE - OPCODE SWITCH CASE
-
-
-        //nothing
-    }
+    gameboy jibby = new gameboy();
 
     return 1;
 }
