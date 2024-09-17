@@ -46,7 +46,7 @@ class gameboy
 
 
             //declarations - data structures etc
-                WORD memory[65536]; //2^16 bytes
+                WORD mem[0x10000]; //2^16 bytes
 
 
             //registers
@@ -66,7 +66,7 @@ class gameboy
 
         //array of pointers to sub-registers. the way it works is by casting the pointers of unsigned shorts (WORDs) into pointers of bytes.
         // In order to point to the second byte of said short, we increment the pointer by 1(and since we're talking in BYTE resolution, this increments us by 8 bits)
-            Register* r8[8] = {BC_reg.hi,&BC_reg.lo, &DE_reg.hi,&DE_reg.lo,&HL_reg.hi,&HL_reg.lo,(BYTE*)&memory[HL_reg],&AF_reg.hi};
+            Register* r8[8] = {BC_reg.hi,&BC_reg.lo, &DE_reg.hi,&DE_reg.lo,&HL_reg.hi,&HL_reg.lo,(BYTE*)&mem[HL_reg],&AF_reg.hi};
 
 
             //for redability
@@ -101,37 +101,37 @@ class gameboy
                 DE_reg.reg = 0x00D8;
                 HL_reg.reg = 0x014D;
                 StackPointer_reg.reg = 0xFFFE;
-                m_Rom[0xFF05] = 0x00 ;
-                m_Rom[0xFF06] = 0x00 ;
-                m_Rom[0xFF07] = 0x00 ;
-                m_Rom[0xFF10] = 0x80 ;
-                m_Rom[0xFF11] = 0xBF ;
-                m_Rom[0xFF12] = 0xF3 ;
-                m_Rom[0xFF14] = 0xBF ;
-                m_Rom[0xFF16] = 0x3F ;
-                m_Rom[0xFF17] = 0x00 ;
-                m_Rom[0xFF19] = 0xBF ;
-                m_Rom[0xFF1A] = 0x7F ;
-                m_Rom[0xFF1B] = 0xFF ;
-                m_Rom[0xFF1C] = 0x9F ;
-                m_Rom[0xFF1E] = 0xBF ;
-                m_Rom[0xFF20] = 0xFF ;
-                m_Rom[0xFF21] = 0x00 ;
-                m_Rom[0xFF22] = 0x00 ;
-                m_Rom[0xFF23] = 0xBF ;
-                m_Rom[0xFF24] = 0x77 ;
-                m_Rom[0xFF25] = 0xF3 ;
-                m_Rom[0xFF26] = 0xF1 ;
-                m_Rom[0xFF40] = 0x91 ;
-                m_Rom[0xFF42] = 0x00 ;
-                m_Rom[0xFF43] = 0x00 ;
-                m_Rom[0xFF45] = 0x00 ;
-                m_Rom[0xFF47] = 0xFC ;
-                m_Rom[0xFF48] = 0xFF ;
-                m_Rom[0xFF49] = 0xFF ;
-                m_Rom[0xFF4A] = 0x00 ;
-                m_Rom[0xFF4B] = 0x00 ;
-                m_Rom[0xFFFF] = 0x00 ;
+                mem[0xFF05] = 0x00 ;
+                mem[0xFF06] = 0x00 ;
+                mem[0xFF07] = 0x00 ;
+                mem[0xFF10] = 0x80 ;
+                mem[0xFF11] = 0xBF ;
+                mem[0xFF12] = 0xF3 ;
+                mem[0xFF14] = 0xBF ;
+                mem[0xFF16] = 0x3F ;
+                mem[0xFF17] = 0x00 ;
+                mem[0xFF19] = 0xBF ;
+                mem[0xFF1A] = 0x7F ;
+                mem[0xFF1B] = 0xFF ;
+                mem[0xFF1C] = 0x9F ;
+                mem[0xFF1E] = 0xBF ;
+                mem[0xFF20] = 0xFF ;
+                mem[0xFF21] = 0x00 ;
+                mem[0xFF22] = 0x00 ;
+                mem[0xFF23] = 0xBF ;
+                mem[0xFF24] = 0x77 ;
+                mem[0xFF25] = 0xF3 ;
+                mem[0xFF26] = 0xF1 ;
+                mem[0xFF40] = 0x91 ;
+                mem[0xFF42] = 0x00 ;
+                mem[0xFF43] = 0x00 ;
+                mem[0xFF45] = 0x00 ;
+                mem[0xFF47] = 0xFC ;
+                mem[0xFF48] = 0xFF ;
+                mem[0xFF49] = 0xFF ;
+                mem[0xFF4A] = 0x00 ;
+                mem[0xFF4B] = 0x00 ;
+                mem[0xFFFF] = 0x00 ;
             }
 
             //public methods
@@ -154,7 +154,7 @@ int main() {
         //main gameboy loop
 
         //FETCH
-        OPCODE = memory[PC_reg];
+        OPCODE = mem[PC_reg];
         PC_reg++;
 
         //DECODE & EXECUTE
@@ -169,7 +169,7 @@ int main() {
                 //r16[4th&5th_bits] = memory[PC] which is 2 bytes
                 //increment PC twice
                 tmp = (OPCODE & 0x30)>>4;
-                *r16[tmp] = memory[PC_reg];
+                *r16[tmp] = mem[PC_reg];
                 PC_reg++;
                 PC_reg++;
                 break;
@@ -177,13 +177,13 @@ int main() {
 
             case(0x02): case(0x12): //LD (BC) OR (DE), A
                 tmp = (OPCODE & 0x30)>>4;
-                memory[*r16[tmp]] = *r8[7];
+                mem[*r16[tmp]] = *r8[7];
                 break;
 
             ///TO CHECK FIRST THING - IS A "TMP" still relevant in this opcode?! I DONT THINK SO, DELETING TMP FOR NOW
             case(0x22): case(0x32): //LD (HL), A
                 //tmp = (OPCODE & 0x30)>>4;
-                memory[*r16[2]] = *r8[7]; //IS IT POINTER OR NUMBER, RE-CHECK!
+                mem[*r16[2]] = *r8[7]; //IS IT POINTER OR NUMBER, RE-CHECK!
                 r16[2]++; //increment the CONTENTS of HL, which is a pointer to
 
             case(0x03):case(0x13):case(0x23):case(0x33): //INC r16[reg]
