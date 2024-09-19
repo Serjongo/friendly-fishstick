@@ -1,5 +1,8 @@
 #include <iostream>
 #include <cmath> //may not need it, used originally for pow
+#include <cstring>
+#include <fstream>
+using namespace std;
 
 //HARTA
 
@@ -42,7 +45,7 @@ class gameboy
         {
         public:
             //constructor
-            gameboy();
+            //gameboy();
 
             //parameters
 
@@ -100,6 +103,10 @@ class gameboy
 
             void init()
             {
+                //fill memory with zeroes
+                memset(m_CartridgeMemory,0,sizeof(m_CartridgeMemory));
+
+
                 PC = 0x100 ;
                 AF_reg.reg = (WORD)0x01B0;
                 BC_reg.reg = 0x0013;
@@ -137,6 +144,19 @@ class gameboy
                 mem[0xFF4A] = 0x00 ;
                 mem[0xFF4B] = 0x00 ;
                 mem[0xFFFF] = 0x00 ;
+            }
+
+            //what this currently does is simply read from file, and drop into mem from cell 0x100 and onwards.
+            // This is likely temporary and currently done for testing purposes. the reading from cartridge mechanism is more complicated, and we're not there yet
+            void read_from_file(string path) //basic version, will change as the project develops
+            {
+                ifstream input_file(path);
+                if(!input_file)
+                {
+                    cerr << "File error.\n";
+                }
+                input_file.read((char *)m_CartridgeMemory + 0x100, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
+                m_CartridgeMemory[input_file.gcount()] = '\0';
             }
 
             void fetch()
@@ -199,6 +219,8 @@ class gameboy
 
             void main_loop()
             {
+                read_from_file("C:\\Users\\Serjo\\CLionProjects\\GB_EMU_2024\\test_commands.txt");
+                cout << m_CartridgeMemory[0x100];
                 while(true)
                 {
                     fetch();
@@ -309,6 +331,7 @@ class gameboy
 int main() {
     std::cout << "Hello, !!!!!!!!" << std::endl;
     gameboy jibby;
+    jibby.main_loop();
 
     return 1;
 }
