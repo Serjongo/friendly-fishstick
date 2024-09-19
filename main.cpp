@@ -52,7 +52,6 @@ class gameboy
 
 
             //registers
-            //https://www.reddit.com/r/EmuDev/comments/7ljc41/how_to_algorithmically_parse_gameboy_opcodes/ - may change registers structure
             Register AF_reg; //Accumulator + Flags
             Register BC_reg;
             Register DE_reg;
