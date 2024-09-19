@@ -20,7 +20,7 @@ typedef unsigned int DWORD; // 32-bit number
 
 //constants
 BYTE m_CartridgeMemory[0x200000];
-
+//gitcommit_harta
 //registers class
 union Register
 {
