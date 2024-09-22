@@ -227,13 +227,13 @@ class gameboy
                         r16[tmp]->reg++;
                         break;
 
-                    //TO-TEST
+                    //tested
                     case(0x04):case(0x14):case(0x24):case(0x34): //INC r8[reg]
                         tmp = (OPCODE & 0x38)>>3; //relevant opcode bits in r8 are 3rd, 4th & 5th
                         (*r8[tmp])++; ///may cause error when incrementing B
                         break;
 
-                    ///TO-TEST
+                    //tested
                     case(0x05):case(0x15):case(0x25):case(0x35): //DEC r8[reg]
                         tmp = (OPCODE & 0x38)>>3;
                         (*r8[tmp])--; ///may cause error when incrementing B
