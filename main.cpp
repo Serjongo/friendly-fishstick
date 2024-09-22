@@ -79,15 +79,15 @@ class gameboy
         //array of pointers to sub-registers. the way it works is by casting the pointers of unsigned shorts (WORDs) into pointers of bytes.
         // In order to point to the second byte of said short, we increment the pointer by 1(and since we're talking in BYTE resolution, this increments us by 8 bits)
             BYTE* r8[8] = {
-                    &BC_reg.hi,
-                    &BC_reg.lo,
-                    &DE_reg.hi,
-                    &DE_reg.lo,
-                    &HL_reg.hi,
-                    &HL_reg.lo,
-                    (BYTE*)&mem[HL_reg.lo],
-                    &AF_reg.hi}; //index 6 is PROBLEMATIC,
-            // (IT POINTS TO BYTE L, WE NEED TO CAST TO WORD* EVERY TIME WE POINT TO IT)
+                    &BC_reg.hi, //B
+                    &BC_reg.lo, //C
+                    &DE_reg.hi, //D
+                    &DE_reg.lo, //E
+                    &HL_reg.hi, //H
+                    &HL_reg.lo, //L
+                    (BYTE*)&mem[HL_reg.lo], //[HL] //index 6 is PROBLEMATIC, // (IT POINTS TO BYTE L, WE NEED TO CAST TO WORD* EVERY TIME WE POINT TO IT)
+                    &AF_reg.hi}; //A
+
 
 
             //for redability
@@ -188,46 +188,55 @@ class gameboy
                     case(0x00): //NOP OPERATION
                         break;
 
+                    //tested
                     case(0x01):case(0x11):case(0x21):case(0x31): //LD BC, d16
                         //r16[4th&5th_bits] = memory[PC] which is 2 bytes
                         //increment PC twice
                         tmp = (OPCODE & 0x30)>>4;
-                        //r16[tmp]->reg =
-                        nn_lsb = mem[PC];
+                        r16[tmp]->lo = mem[PC];
                         PC = PC + 1;
-                        nn_msb = mem[PC];
-
-                        r16[tmp]->reg = nn_lsb | (nn_msb)<<4;
+                        r16[tmp]->hi = (BYTE)mem[PC];
 
                         PC = PC + 1;
                         break;
 
-
+                    //tested
                     case(0x02): case(0x12): //LD (BC) OR (DE), A
                         tmp = (OPCODE & 0x30)>>4;
                         mem[r16[tmp]->lo] = *r8[7];
                         break;
 
-                        ///TO CHECK FIRST THING - IS A "TMP" still relevant in this opcode?! I DONT THINK SO, DELETING TMP FOR NOW
-                    case(0x22): case(0x32): //LD (HL), A
+                    ///TO CHECK FIRST THING - IS A "TMP" still relevant in this opcode?! I DONT THINK SO, DELETING TMP FOR NOW
+                    //tested
+                    case(0x22): //LD (HL), A
                         //tmp = (OPCODE & 0x30)>>4;
                         mem[r16[2]->reg] = *r8[7];
                         r16[2]->reg++; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
+                        break;
 
+                    //tested
+                    case(0x32):
+                        mem[r16[2]->reg] = *r8[7];
+                        r16[2]->reg--; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
+                        break;
+
+
+                    //tested
                     case(0x03):case(0x13):case(0x23):case(0x33): //INC r16[reg]
                         tmp = (OPCODE & 0x30)>>4; //relevant opcode bits in r16 are 4th & 5th
-                        r16[tmp]++;
+                        r16[tmp]->reg++;
                         break;
 
-
+                    //TO-TEST
                     case(0x04):case(0x14):case(0x24):case(0x34): //INC r8[reg]
                         tmp = (OPCODE & 0x38)>>3; //relevant opcode bits in r8 are 3rd, 4th & 5th
-                        (WORD*)r8[tmp]++; ///temporary solution of casting the byte as a word, so it increments in the right place
+                        (*r8[tmp])++; ///may cause error when incrementing B
                         break;
 
+                    ///TO-TEST
                     case(0x05):case(0x15):case(0x25):case(0x35): //DEC r8[reg]
                         tmp = (OPCODE & 0x38)>>3;
-                        (WORD*)r8[tmp]--; ///temporary solution of casting the byte as a word, so it increments in the right place
+                        (*r8[tmp])--; ///may cause error when incrementing B
                         break;
 
                     default:
