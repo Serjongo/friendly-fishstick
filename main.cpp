@@ -148,17 +148,30 @@ class gameboy
                 mem[0xFFFF] = 0x00 ;
             }
 
+
+            //deep copy function from cartridge to mem ~@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+            ///This is a temporary placeholder of a function. In reality, moving the cartridge mem to gb mem is more complicated, for now we just dump it
+            void cartridge_to_mem(long long bytes)
+            {
+                for(long long i = 0 ; i < bytes ; i++)
+                {
+                    mem[i] = m_CartridgeMemory[0x100+i];
+                }
+            }
+
             //what this currently does is simply read from file, and drop into mem from cell 0x100 and onwards.
             // This is likely temporary and currently done for testing purposes. the reading from cartridge mechanism is more complicated, and we're not there yet
             void read_from_file(string path) //basic version, will change as the project develops
             {
-                ifstream input_file(path);
+                ifstream input_file(path,ios::binary);
                 if(!input_file)
                 {
                     cerr << "File error.\n";
                 }
                 input_file.read((char *)m_CartridgeMemory + 0x100, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
                 m_CartridgeMemory[input_file.gcount()] = '\0';
+                cartridge_to_mem(input_file.gcount());
+
             }
 
             void fetch()
@@ -220,7 +233,6 @@ class gameboy
             void main_loop()
             {
                 read_from_file("../test_commands.txt");
-                cout << m_CartridgeMemory[0x100];
                 while(true)
                 {
                     fetch();
