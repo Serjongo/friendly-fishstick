@@ -2,6 +2,9 @@
 #include <cmath> //may not need it, used originally for pow
 #include <cstring>
 #include <fstream>
+#include <filesystem>
+#include <unistd.h>
+
 using namespace std;
 
 //HARTA
@@ -148,15 +151,29 @@ class gameboy
 
             //what this currently does is simply read from file, and drop into mem from cell 0x100 and onwards.
             // This is likely temporary and currently done for testing purposes. the reading from cartridge mechanism is more complicated, and we're not there yet
-            void read_from_file(string path) //basic version, will change as the project develops
-            {
-                ifstream input_file(path);
-                if(!input_file)
-                {
-                    cerr << "File error.\n";
+            void read_from_file(const std::string& path) {
+                // Check if file exists
+                if (!filesystem::exists(path)) {
+                    std::cerr << "File not found: " << path << std::endl;
+                    return;
                 }
-                input_file.read((char *)m_CartridgeMemory + 0x100, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
-                m_CartridgeMemory[input_file.gcount()] = '\0';
+
+                std::ifstream input_file(path, std::ios::binary);  // use binary mode if you're reading binary data
+                if (!input_file.is_open()) {
+                    std::cerr << "Failed to open file: " << path << std::endl;
+                    return;
+                }
+
+                // Ensure m_CartridgeMemory is properly initialized
+                input_file.read(reinterpret_cast<char*>(m_CartridgeMemory) + 0x100, sizeof(mem) - 1);
+
+                if (input_file.gcount() > 0) {
+                    m_CartridgeMemory[input_file.gcount()] = '\0';  // Add null terminator
+                } else {
+                    std::cerr << "Failed to read data from file.\n";
+                }
+
+                input_file.close();
             }
 
             void fetch()
@@ -212,14 +229,14 @@ class gameboy
                         break;
 
 
-
-
                 }
             }
 
             void main_loop()
             {
-                read_from_file("C:\\Users\\Serjo\\CLionProjects\\GB_EMU_2024\\test_commands.txt");
+                //char cwd[PATH_MAX];
+                //cout << GetCurrentDirectory(MAX_PATH, cwd);
+                read_from_file("../test_commands.txt");
                 cout << m_CartridgeMemory[0x100];
                 while(true)
                 {
