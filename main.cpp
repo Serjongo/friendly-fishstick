@@ -66,6 +66,8 @@ class gameboy
 
             //a variable for general usage (as one can't declare vars in switch cases)
             WORD tmp;
+            BYTE nn_lsb; //least significant byte
+            BYTE nn_msb; //most significant byte
 
         //those are the full registers
             Register* r16[4] = {
@@ -190,9 +192,14 @@ class gameboy
                         //r16[4th&5th_bits] = memory[PC] which is 2 bytes
                         //increment PC twice
                         tmp = (OPCODE & 0x30)>>4;
-                        r16[tmp]->reg = mem[PC];
-                        PC++;
-                        PC++;
+                        //r16[tmp]->reg =
+                        nn_lsb = mem[PC];
+                        PC = PC + 1;
+                        nn_msb = mem[PC];
+
+                        r16[tmp]->reg = nn_lsb | (nn_msb)<<4;
+
+                        PC = PC + 1;
                         break;
 
 
@@ -232,7 +239,7 @@ class gameboy
 
             void main_loop()
             {
-                read_from_file("../test_commands.txt");
+                read_from_file("../test.bin");
                 while(true)
                 {
                     fetch();
