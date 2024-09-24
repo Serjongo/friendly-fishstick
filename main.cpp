@@ -231,13 +231,98 @@ class gameboy
                     case(0x04):case(0x14):case(0x24):case(0x34): //INC r8[reg]
                         tmp = (OPCODE & 0x38)>>3; //relevant opcode bits in r8 are 3rd, 4th & 5th
                         (*r8[tmp])++; ///may cause error when incrementing B
+
+                        //flags
+                        if ((*r8[tmp]) == 0)
+                        {
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_Z)); //should turn on FLAG_ZERO
+                        }
+                        else
+                        {
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_Z))); //should turn off FLAG_ZERO
+                        }
+                        AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_N))); //should turn off FLAG_N
+
+                        //FLAG H DEAL WITH IT
+
                         break;
 
                     //tested
                     case(0x05):case(0x15):case(0x25):case(0x35): //DEC r8[reg]
                         tmp = (OPCODE & 0x38)>>3;
                         (*r8[tmp])--; ///may cause error when incrementing B
+
+                        //flags
+                        if ((*r8[tmp]) == 0)
+                        {
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_Z)); //should turn on FLAG_ZERO
+                        }
+                        else
+                        {
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_Z))); //should turn off FLAG_ZERO
+                        }
+                        AF_reg.lo = (AF_reg.lo | (BYTE)((1 << FLAG_N))); //should turn on FLAG_N
+
+                        //FLAG H DEAL WITH IT
                         break;
+
+                    //to-test
+                    case(0x06): case(0x16): case(0x26): case(0x36): //LD SUBREG, d8
+                        tmp = (OPCODE & 0x38)>>3;
+                        (*r8[tmp]) = mem[PC];
+                        PC++;
+                        break;
+
+                    ///LD INSTRUCTIONS WITH REGISTERS - MAY UNIFY THEM ALL INTO ONE COMMAND SOON
+                    //to-test
+                    case(0x40): case(0x41): case(0x42): case(0x43): case(0x44): case(0x45): case(0x46): case(0x47): //LD B,*SUBREG*
+                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
+                        (*r8[0]) = (*r8[tmp]);
+                        break;
+
+                    //to-test
+                    case(0x50): case(0x51): case(0x52): case(0x53): case(0x54): case(0x55): case(0x56): case(0x57): //LD D,*SUBREG*
+                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
+                        (*r8[2]) = (*r8[tmp]);
+                        break;
+
+
+                    //to-test
+                    case(0x60): case(0x61): case(0x62): case(0x63): case(0x64): case(0x65): case(0x66): case(0x67): //LD H,*SUBREG*
+                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
+                        (*r8[4]) = (*r8[tmp]);
+                        break;
+
+                    //to-test
+                    case(0x70): case(0x71): case(0x72): case(0x73): case(0x74): case(0x75): case(0x77): //LD H,*SUBREG*
+                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
+                        (*r8[6]) = (*r8[tmp]);
+                        break;
+
+                    //to-test
+                    case(0x48): case(0x49): case(0x4A): case(0x4B): case(0x4C): case(0x4D): case(0x4E): case(0x4F): //LD C,*SUBREG*
+                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
+                        (*r8[(1)]) = (*r8[(tmp & 0x07)]); //src: C
+                        break;
+
+                    //to-test
+                    case(0x58): case(0x59): case(0x5A): case(0x5B): case(0x5C): case(0x5D): case(0x5E): case(0x5F): //LD C,*SUBREG*
+                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
+                        (*r8[(3)]) = (*r8[(tmp & 0x07)]); //src: E
+                        break;
+
+                    //to-test
+                    case(0x68): case(0x69): case(0x6A): case(0x6B): case(0x6C): case(0x6D): case(0x6E): case(0x6F): //LD C,*SUBREG*
+                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
+                        (*r8[(5)]) = (*r8[(tmp & 0x07)]); //src: L
+                        break;
+
+                    //to-test
+                    case(0x78): case(0x79): case(0x7A): case(0x7B): case(0x7C): case(0x7D): case(0x7E): case(0x7F): //LD C,*SUBREG*
+                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
+                        (*r8[(7)]) = (*r8[(tmp & 0x07)]); //src: A
+                        break;
+                    ///
 
                     default:
                         break;
