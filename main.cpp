@@ -274,55 +274,48 @@ class gameboy
                         break;
 
                     ///LD INSTRUCTIONS WITH REGISTERS - MAY UNIFY THEM ALL INTO ONE COMMAND SOON
+
+
                     //to-test
                     case(0x40): case(0x41): case(0x42): case(0x43): case(0x44): case(0x45): case(0x46): case(0x47): //LD B,*SUBREG*
-                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
-                        (*r8[0]) = (*r8[tmp]);
-                        break;
-
-                    //to-test
                     case(0x50): case(0x51): case(0x52): case(0x53): case(0x54): case(0x55): case(0x56): case(0x57): //LD D,*SUBREG*
-                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
-                        (*r8[2]) = (*r8[tmp]);
-                        break;
-
-
-                    //to-test
                     case(0x60): case(0x61): case(0x62): case(0x63): case(0x64): case(0x65): case(0x66): case(0x67): //LD H,*SUBREG*
-                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
-                        (*r8[4]) = (*r8[tmp]);
-                        break;
-
-                    //to-test
                     case(0x70): case(0x71): case(0x72): case(0x73): case(0x74): case(0x75): case(0x77): //LD H,*SUBREG*
-                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
-                        (*r8[6]) = (*r8[tmp]);
-                        break;
-
-                    //to-test
                     case(0x48): case(0x49): case(0x4A): case(0x4B): case(0x4C): case(0x4D): case(0x4E): case(0x4F): //LD C,*SUBREG*
-                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
-                        (*r8[(1)]) = (*r8[(tmp & 0x07)]); //src: C
-                        break;
-
-                    //to-test
                     case(0x58): case(0x59): case(0x5A): case(0x5B): case(0x5C): case(0x5D): case(0x5E): case(0x5F): //LD C,*SUBREG*
-                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
-                        (*r8[(3)]) = (*r8[(tmp & 0x07)]); //src: E
-                        break;
-
-                    //to-test
                     case(0x68): case(0x69): case(0x6A): case(0x6B): case(0x6C): case(0x6D): case(0x6E): case(0x6F): //LD C,*SUBREG*
-                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
-                        (*r8[(5)]) = (*r8[(tmp & 0x07)]); //src: L
+                    case(0x78): case(0x79): case(0x7A): case(0x7B): case(0x7C): case(0x7D): case(0x7E): case(0x7F): //LD C,*SUBREG*
+
+                        (*r8[(OPCODE & 0x38)>>3]) = (*r8[(OPCODE & 0x07)]); //dst: relevant opcode bits in r8 are 3rd, 4th & 5th, src: rel bits 0,1,2
                         break;
 
-                    //to-test
-                    case(0x78): case(0x79): case(0x7A): case(0x7B): case(0x7C): case(0x7D): case(0x7E): case(0x7F): //LD C,*SUBREG*
-                        tmp = (OPCODE & 0x0F); //relevant opcode bits in r8 are 3rd, 4th & 5th
-                        (*r8[(7)]) = (*r8[(tmp & 0x07)]); //src: A
-                        break;
                     ///
+
+                    //to-test
+                    case(0x0A): case(0x1A):  //LD A, (REG)
+                        tmp = (OPCODE & 0x38)>>3;
+                        (*r8[7]) = mem[r16[tmp]->reg];
+                        break;
+                    //to-test
+                    case(0x2A): //LD A, (HL+)
+                        (*r8[7]) = mem[r16[2]->reg]; //HL
+                        (r16[2]->reg)++;
+                        break;
+                    //to-test
+                    case(0x3A): //LD A, (HL-)
+                        (*r8[7]) = mem[r16[2]->reg]; //HL
+                        (r16[2]->reg)--;
+                        break;
+
+                    case(0x0E): case(0x1E): case(0x2E): case(0x3E):
+                        (*r8[(OPCODE & 0x38)>>3]) = mem[PC];
+                        PC++;
+                        break;
+
+
+                    case(0x01):
+                        break;
+
 
                     default:
                         break;
