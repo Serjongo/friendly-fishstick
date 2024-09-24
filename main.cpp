@@ -313,9 +313,6 @@ class gameboy
                         break;
 
 
-                    case(0x01):
-                        break;
-
 
                     default:
                         break;
