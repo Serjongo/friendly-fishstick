@@ -512,14 +512,40 @@ class gameboy
                             AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
                         }
                         break;
-                    case(0xC3):
+
+                    case(0xC2): //JP NZ, a16
+
+                            tmp = 0;
+                            tmp = tmp | (mem[PC]);
+                            PC = PC + 1;
+                            tmp = tmp | (mem[PC]) << 8;
+                            PC = PC + 1; // May not be necessary
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_Z)) == 0)
+                            PC = tmp;
+
+                        break;
+
+
+                    case(0xC3): //JP a16
 
                         tmp = 0;
-                        tmp = tmp | (mem[PC] << 8);
-                        PC = PC + 1;
                         tmp = tmp | mem[PC];
+                        PC = PC + 1;
+                        tmp = tmp | (mem[PC] << 8);
                         PC = PC + 1; // May not be necessary
                         PC = tmp;
+
+                        break;
+
+                    case(0XD2): //JP NC, a16
+
+                        tmp = 0;
+                        tmp = tmp | (mem[PC]);
+                        PC = PC + 1;
+                        tmp = tmp | (mem[PC]) << 8;
+                        PC = PC + 1; // May not be necessary
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_C)) == 0)
+                            PC = tmp;
 
                         break;
 
