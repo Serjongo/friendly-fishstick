@@ -585,8 +585,6 @@ class gameboy
                     case(0xB8): case(0xB9): case(0xBA):case(0xBB): case(0xBC): case(0xBD): case(0xBE): case(0xBF): //CP A,r8
                         tmp = (*r8[A]) - (*r8[(OPCODE & 0x07)]);
 
-
-
                         //flags
                         //FLAG_C
                         //do notice something unique here. in contrast to the other commands where we use tmp for a backup of the register,
