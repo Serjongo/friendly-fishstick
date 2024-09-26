@@ -481,6 +481,49 @@ class gameboy
                         AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_N))); //should turn off FLAG_N
                         break;
 
+
+                    case(0x98): case(0x99): case(0x9A):case(0x9B): case(0x9C): case(0x9D): case(0x9E): case(0x9F): //SBC A,r8
+                        // the reason I'm using tmp as a backup for current register, is because I'll need it later to verify C and H flags
+                        tmp = (*r8[A]);
+                        //
+                        (*r8[A]) = (*r8[A]) - (*r8[(OPCODE & 0x07)]) - ((AF_reg.lo & (BYTE)(1 << FLAG_C)) >> FLAG_C);
+
+                        //FLAG_C
+                        if ( ((tmp & 0x7F)-((*r8[(OPCODE & 0x07)]) & 0x7F) & (BYTE)(1 << FLAG_C)) == (BYTE)(1 << FLAG_C))
+                        {
+                            //half_carry = ((a & 0xf) - (operand & 0xf)) & 0x10;
+                            //HC = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on
+                        }
+                        else
+                        {
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF
+                        }
+                        //FLAG_H
+                        if ( ((tmp & 0x0F)-((*r8[(OPCODE & 0x07)]) & 0x0F) & (BYTE)(1 << FLAG_H)) == (BYTE)(1 << FLAG_H))
+                        {
+                            //half_carry = ((a & 0xf) - (operand & 0xf)) & 0x10;
+                            //HC = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_H)); //should turn on FLAG_H
+                        }
+                        else
+                        {
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_H
+                        }
+
+                        //flags
+                        if ((*r8[A]) == 0)
+                        {
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_Z)); //should turn on FLAG_ZERO
+                        }
+                        else
+                        {
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_Z))); //should turn off FLAG_ZERO
+                        }
+                        AF_reg.lo = (AF_reg.lo | (BYTE)((1 << FLAG_N))); //should turn ON
+                        break;
+
+
                     case(0xA0): case(0xA1): case(0xA2):case(0xA3): case(0xA4): case(0xA5): case(0xA6): case(0xA7): //AND A,r8
                         (*r8[A]) = (*r8[A]) & (*r8[(OPCODE & 0x07)]);
                         //flags
@@ -496,6 +539,23 @@ class gameboy
                             AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
                         }
                         break;
+
+                    case(0xA8): case(0xA9): case(0xAA):case(0xAB): case(0xAC): case(0xAD): case(0xAE): case(0xAF): //XOR A,r8
+                        (*r8[A]) = ((*r8[A]) ^ (*r8[(OPCODE & 0x07)]));
+                        //flags
+                        if((*r8[A]) == 0)
+                        {
+                            AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
+                        }
+                        else
+                        {
+                            AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
+                        }
+                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_C); //OFF
+                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_H); //OFF
+                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_N); //OFF
+
+
 
                     case(0xB0): case(0xB1): case(0xB2):case(0xB3): case(0xB4): case(0xB5): case(0xB6): case(0xB7): //OR A,r8
                         (*r8[A]) = (*r8[A]) | (*r8[(OPCODE & 0x07)]);
@@ -536,6 +596,46 @@ class gameboy
                         PC = tmp;
 
                         break;
+                    case(0xB8): case(0xB9): case(0xBA):case(0xBB): case(0xBC): case(0xBD): case(0xBE): case(0xBF): //CP A,r8
+                        tmp = (*r8[A]) - (*r8[(OPCODE & 0x07)]);
+
+                        //flags
+                        //FLAG_C
+                        //do notice something unique here. in contrast to the other commands where we use tmp for a backup of the register,
+                        // here we use the original, although without storing the result. this is because our register remains unchanged in CP.
+                        if ( (((*r8[A]) & 0x7F)-((*r8[(OPCODE & 0x07)]) & 0x7F) & (BYTE)(1 << FLAG_C)) == (BYTE)(1 << FLAG_C))
+                        {
+                            //half_carry = ((a & 0xf) - (operand & 0xf)) & 0x10;
+                            //HC = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on
+                        }
+                        else
+                        {
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF
+                        }
+                        //FLAG_H
+                        if ( (((*r8[A]) & 0x0F)-((*r8[(OPCODE & 0x07)]) & 0x0F) & (BYTE)(1 << FLAG_H)) == (BYTE)(1 << FLAG_H))
+                        {
+                            //half_carry = ((a & 0xf) - (operand & 0xf)) & 0x10;
+                            //HC = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_H)); //should turn on FLAG_H
+                        }
+                        else
+                        {
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_H
+                        }
+
+                        if(tmp == 0)
+                        {
+                            AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
+                        }
+                        else
+                        {
+                            AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
+                        }
+                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_N); //OFF
+                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_H); //OFF
+                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_C); //OFF
 
                     case(0XD2): //JP NC, a16
 
