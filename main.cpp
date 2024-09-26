@@ -194,8 +194,22 @@ class gameboy
                 input_file.read((char *)m_CartridgeMemory + 0x100, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
                 m_CartridgeMemory[input_file.gcount()] = '\0';
                 cartridge_to_mem(input_file.gcount());
-
             }
+
+            //this will be the function that read the cartridge and organizes its data into the system
+//            void read_cartridge(string path)
+//            {
+//                ifstream gb_cartridge(path,ios::binary);
+//                if(!gb_cartridge)
+//                {
+//                    cerr << "File error.\n";
+//                }
+//
+//                //HEADER RANGE - $0100 - $014F
+//
+//                //ENTRY POINT - 0100-0103
+//                gb_cartridge.seekg(0x100,ios::beg);
+//            }
 
             void fetch()
             {
@@ -658,6 +672,7 @@ class gameboy
 
             void main_loop()
             {
+                //read_from_file("../test.bin");
                 read_from_file("../test.bin");
                 while(true)
                 {
