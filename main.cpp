@@ -365,7 +365,7 @@ class gameboy
 
                     case(0x80): case(0x81): case(0x82):case(0x83): case(0x84): case(0x85): case(0x86): case(0x87): //ADD r8,r8
                         //FLAG_C
-                        if ( (((*r8[A]) & 0x7F)+((*r8[(OPCODE & 0x07)]) & 0x7F) & (BYTE)(1 << FLAG_C)) == (BYTE)(1 << FLAG_C))
+                        if ( (((*r8[(OPCODE & 0x38)>>3]) & 0x7F)+((*r8[(OPCODE & 0x07)]) & 0x7F) & (BYTE)(1 << FLAG_C)) == (BYTE)(1 << FLAG_C))
                         {
                             //half_carry = ((a & 0xf) - (operand & 0xf)) & 0x10;
                             //HC = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
@@ -376,7 +376,7 @@ class gameboy
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF FLAG_CARRY
                         }
                         //FLAG_H
-                        if ( (((*r8[A]) & 0x0F)+((*r8[(OPCODE & 0x07)]) & 0x0F) & (BYTE)(1 << FLAG_H)) == (BYTE)(1 << FLAG_H))
+                        if ( (((*r8[(OPCODE & 0x38)>>3]) & 0x0F)+((*r8[(OPCODE & 0x07)]) & 0x0F) & (BYTE)(1 << FLAG_H)) == (BYTE)(1 << FLAG_H))
                         {
                             //half_carry = ((a & 0xf) - (operand & 0xf)) & 0x10;
                             //HC = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
@@ -387,10 +387,10 @@ class gameboy
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_HALF
                         }
 
-                        (*r8[A]) = (*r8[A]) + (*r8[(OPCODE & 0x07)]);
+                        (*r8[(OPCODE & 0x38)>>3]) = (*r8[(OPCODE & 0x38)>>3]) + (*r8[(OPCODE & 0x07)]);
 
                         //flags
-                        if ((*r8[A]) == 0)
+                        if ((*r8[(OPCODE & 0x38)>>3]) == 0)
                         {
                             AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_Z)); //should turn on FLAG_ZERO
                         }
@@ -404,14 +404,11 @@ class gameboy
 
                     case(0x88): case(0x89): case(0x8A):case(0x8B): case(0x8C): case(0x8D): case(0x8E): case(0x8F): //ADC r8,r8
                         //here we must add before calculating flags, since it is dependent on the carry flag
-                        //saving tmp beforehand to calculate flag after
-                        tmp = (*r8[A]);
-                        //
 
                         (*r8[A]) = (*r8[A]) + (*r8[(OPCODE & 0x07)]) + ((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C); //add only the C flag bit, and shift it back to be the 1 bit val
 
                         //FLAG_C
-                        if ( ((tmp & 0x7F)+((*r8[(OPCODE & 0x07)]) & 0x7F) & (BYTE)(1 << FLAG_C)) == (BYTE)(1 << FLAG_C))
+                        if ( (((*r8[A]) & 0x7F)+((*r8[(OPCODE & 0x07)]) & 0x7F) & (BYTE)(1 << FLAG_C)) == (BYTE)(1 << FLAG_C))
                         {
                             //half_carry = ((a & 0xf) - (operand & 0xf)) & 0x10;
                             //HC = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
@@ -422,7 +419,7 @@ class gameboy
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF FLAG_ZERO
                         }
                         //FLAG_H
-                        if ( ((tmp & 0x0F)+((*r8[(OPCODE & 0x07)]) & 0x0F) & (BYTE)(1 << FLAG_H)) == (BYTE)(1 << FLAG_H))
+                        if ( (((*r8[A]) & 0x0F)+((*r8[(OPCODE & 0x07)]) & 0x0F) & (BYTE)(1 << FLAG_H)) == (BYTE)(1 << FLAG_H))
                         {
                             //half_carry = ((a & 0xf) - (operand & 0xf)) & 0x10;
                             //HC = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
@@ -446,7 +443,7 @@ class gameboy
 
                         break;
 
-                    case(0x90): case(0x91): case(0x92):case(0x93): case(0x94): case(0x95): case(0x96): case(0x97): //SUB A,r8
+                    case(0x90): case(0x91): case(0x92):case(0x93): case(0x94): case(0x95): case(0x96): case(0x97): //SUB r8,r8
                         //FLAG_C
                         if ( (((*r8[A]) & 0x7F)-((*r8[(OPCODE & 0x07)]) & 0x7F) & (BYTE)(1 << FLAG_C)) == (BYTE)(1 << FLAG_C))
                         {
@@ -473,7 +470,7 @@ class gameboy
                         (*r8[A]) = (*r8[A]) - (*r8[(OPCODE & 0x07)]);
 
                         //flags
-                        if ((*r8[A]) == 0)
+                        if ((*r8[(OPCODE & 0x38)>>3]) == 0)
                         {
                             AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_Z)); //should turn on FLAG_ZERO
                         }
@@ -575,8 +572,16 @@ class gameboy
                             AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
                         }
                         break;
+                    case(0xC3):
 
+                        tmp = 0;
+                        tmp = tmp | (mem[PC] << 8);
+                        PC = PC + 1;
+                        tmp = tmp | mem[PC];
+                        PC = PC + 1; // May not be necessary
+                        PC = tmp;
 
+                        break;
                     case(0xB8): case(0xB9): case(0xBA):case(0xBB): case(0xBC): case(0xBD): case(0xBE): case(0xBF): //CP A,r8
                         tmp = (*r8[A]) - (*r8[(OPCODE & 0x07)]);
 
