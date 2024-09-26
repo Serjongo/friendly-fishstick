@@ -23,7 +23,7 @@ typedef unsigned int DWORD; // 32-bit number
 #define FLAG_C 4
 
 
-
+int loop_counter = 1;
 
 //constants
 BYTE m_CartridgeMemory[0x200000];
@@ -224,7 +224,7 @@ class gameboy
                         break;
 
                     //tested
-                    case(0x01):case(0x11):case(0x21):case(0x31): //LD BC, d16
+                    case(0x01):case(0x11):case(0x21):case(0x31): //LD r16, d16
                         //r16[4th&5th_bits] = memory[PC] which is 2 bytes
                         //increment PC twice
                         tmp = (OPCODE & 0x30)>>4;
@@ -361,6 +361,25 @@ class gameboy
                         tmp = (OPCODE & 0x38)>>3;
                         (*r8[A]) = mem[r16[tmp]->reg];
                         break;
+
+
+                    case(0x20): //JR NZ,s8
+                        tmp = (char)mem[PC];
+                        PC++;
+                        if(!(AF_reg.lo & (BYTE)(1 << FLAG_Z)))
+                            PC = PC + tmp;
+                        break;
+
+                    case(0x30): //JR NC,s8
+                        tmp = (char)mem[PC];
+                        PC++;
+                        if(!(AF_reg.lo & (BYTE)(1 << FLAG_C)))
+                            PC = PC + tmp;
+                        break;
+
+
+
+
                     //to-test
                     case(0x2A): //LD A, (HL+)
                         (*r8[A]) = mem[r16[HL_16]->reg]; //HL //may be problematic, since mem is an array of WORDS, so it should only take the first BYTE of the word
@@ -372,7 +391,7 @@ class gameboy
                         (r16[HL_16]->reg)--;
                         break;
 
-                    case(0x0E): case(0x1E): case(0x2E): case(0x3E):
+                    case(0x0E): case(0x1E): case(0x2E): case(0x3E): //LD C,d8
                         (*r8[(OPCODE & 0x38)>>3]) = mem[PC];
                         PC++;
                         break;
@@ -664,6 +683,8 @@ class gameboy
                         break;
 
                     default:
+                        cout << std::hex  << OPCODE << std::dec << '\n';
+                        cout << "Loop Counter: " << loop_counter << '\n';
                         break;
 
 
@@ -673,11 +694,14 @@ class gameboy
             void main_loop()
             {
                 //read_from_file("../test.bin");
-                read_from_file("../test.bin");
+                read_from_file("../TESTS/01-special.gb");
+                init();
+
                 while(true)
                 {
                     fetch();
                     decode_execute();
+                    loop_counter++;
                 }
 
             }
