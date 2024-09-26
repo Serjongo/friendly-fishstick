@@ -512,8 +512,16 @@ class gameboy
                             AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
                         }
                         break;
+                    case(0xC3):
 
+                        tmp = 0;
+                        tmp = tmp | (mem[PC] << 8);
+                        PC = PC + 1;
+                        tmp = tmp | mem[PC];
+                        PC = PC + 1; // May not be necessary
+                        PC = tmp;
 
+                        break;
 
                     default:
                         break;
