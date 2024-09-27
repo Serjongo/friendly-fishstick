@@ -55,7 +55,7 @@ class gameboy
 
 
             //declarations - data structures etc
-                WORD mem[0x10000]; //2^16 bytes
+                BYTE mem[0x10000]; //2^16 bytes
 
 
             //registers
@@ -178,8 +178,8 @@ class gameboy
             {
                 for(long long i = 0 ; i < bytes ; i++)
                 {
-//                    mem[i] = m_CartridgeMemory[0x100+i];
-                  mem[i+0x100] = m_CartridgeMemory[i];
+                    mem[i] = m_CartridgeMemory[0x100+i];
+//                  mem[i+0x100] = m_CartridgeMemory[i];
 
                 }
             }
@@ -193,8 +193,8 @@ class gameboy
                 {
                     cerr << "File error.\n";
                 }
-                //input_file.read((char *)m_CartridgeMemory + 0x100, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
-                input_file.read((char *)m_CartridgeMemory, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
+                input_file.read((char *)m_CartridgeMemory + 0x100, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
+//                input_file.read((char *)m_CartridgeMemory, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
 
                 m_CartridgeMemory[input_file.gcount()] = '\0';
                 cartridge_to_mem(input_file.gcount());
@@ -234,7 +234,7 @@ class gameboy
                         tmp = (OPCODE & 0x30)>>4;
                         r16[tmp]->lo = mem[PC];
                         PC = PC + 1;
-                        r16[tmp]->hi = (BYTE)mem[PC];
+                        r16[tmp]->hi = mem[PC];
 
                         PC = PC + 1;
                         break;
@@ -633,6 +633,50 @@ class gameboy
                         PC = tmp;
 
                         break;
+
+                    case(0xC6): //ADD A, d8
+                        tmp = (*r8[A]); //backup for flag calculation
+                        (*r8[A]) = (*r8[A]) + mem[PC];
+                        //NOTE that I'm delaying the PC increment (although it should be immediately after) so I can calculate the flags beforehand
+
+                        //FLAG_C
+                        if ( ((tmp & 0x7F)+(mem[PC] & 0x7F) & (BYTE)(1 << FLAG_C)) == (BYTE)(1 << FLAG_C))
+                        {
+                            //half_carry = ((a & 0xf) - (operand & 0xf)) & 0x10;
+                            //HC = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on FLAG_CARRY
+                        }
+                        else
+                        {
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF FLAG_CARRY
+                        }
+                        //FLAG_H
+                        if ( (((tmp) & 0x0F)+((mem[PC]) & 0x0F) & (BYTE)(1 << FLAG_H)) == (BYTE)(1 << FLAG_H))
+                        {
+                            //half_carry = ((a & 0xf) - (operand & 0xf)) & 0x10;
+                            //HC = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_H)); //should turn on FLAG_HALF
+                        }
+                        else
+                        {
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_HALF
+                        }
+                        PC++;
+                        //flags
+                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_N); //OFF
+                        if((*r8[A]) == 0)
+                        {
+                            AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
+                        }
+                        else
+                        {
+                            AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
+                        }
+
+
+
+
+
                     case(0xB8): case(0xB9): case(0xBA):case(0xBB): case(0xBC): case(0xBD): case(0xBE): case(0xBF): //CP A,r8
                         tmp = (*r8[A]) - (*r8[(OPCODE & 0x07)]);
 
@@ -698,8 +742,14 @@ class gameboy
             void main_loop()
             {
                 //read_from_file("../test.bin");
-                //read_from_file("../TESTS/01-special.gb");
-                read_from_file("../TESTS/DMG_ROM.bin");
+
+
+                //tester, gameboy cartridge, 0x100 offset and all
+                read_from_file("../TESTS/01-special.gb");
+
+
+                //bootstrap rom, 0x0 offset
+                //read_from_file("../TESTS/DMG_ROM.bin");
                 init();
 
                 while(true)
