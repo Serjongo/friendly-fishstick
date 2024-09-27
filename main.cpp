@@ -634,6 +634,37 @@ class gameboy
 
                         break;
 
+                    case(0xC4): //CALL NZ, a16
+                        tmp = 0;
+                        tmp = tmp | (mem[PC]);
+                        PC = PC + 1;
+                        tmp = tmp | (mem[PC]) << 8;
+                        PC = PC + 1; // May not be necessary
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_Z)) == 0){
+                            r16[SP]->reg = (r16[SP]->reg) - 1;
+                            mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+                            r16[SP]->reg = (r16[SP]->reg) - 1;
+                            mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+                            PC = tmp;
+                        }
+                        break;
+
+                    case(0xD4): //CALL NC, a16
+                        tmp = 0;
+                        tmp = tmp | (mem[PC]);
+                        PC = PC + 1;
+                        tmp = tmp | (mem[PC]) << 8;
+                        PC = PC + 1; // May not be necessary
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_C)) == 0){
+                            r16[SP]->reg = (r16[SP]->reg) - 1;
+                            mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+                            r16[SP]->reg = (r16[SP]->reg) - 1;
+                            mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+                            PC = tmp;
+                        }
+                        break;
+
+
                     case(0xC6): //ADD A, d8
                         tmp = (*r8[A]); //backup for flag calculation
                         (*r8[A]) = (*r8[A]) + mem[PC];
