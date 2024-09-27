@@ -6,7 +6,7 @@
 
 using namespace std;
 
-//HARTA2
+//HARTA3
 
 //shortcuts for code readability
 typedef unsigned char BYTE; //8-bit number
