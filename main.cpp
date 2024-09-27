@@ -178,7 +178,9 @@ class gameboy
             {
                 for(long long i = 0 ; i < bytes ; i++)
                 {
-                    mem[i] = m_CartridgeMemory[0x100+i];
+//                    mem[i] = m_CartridgeMemory[0x100+i];
+                  mem[i] = m_CartridgeMemory[0x100+i];
+
                 }
             }
 
@@ -191,7 +193,9 @@ class gameboy
                 {
                     cerr << "File error.\n";
                 }
-                input_file.read((char *)m_CartridgeMemory + 0x100, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
+                //input_file.read((char *)m_CartridgeMemory + 0x100, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
+                input_file.read((char *)m_CartridgeMemory, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
+
                 m_CartridgeMemory[input_file.gcount()] = '\0';
                 cartridge_to_mem(input_file.gcount());
             }
@@ -694,7 +698,8 @@ class gameboy
             void main_loop()
             {
                 //read_from_file("../test.bin");
-                read_from_file("../TESTS/01-special.gb");
+                //read_from_file("../TESTS/01-special.gb");
+                read_from_file("../TESTS/DMG_ROM.bin");
                 init();
 
                 while(true)
