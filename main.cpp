@@ -179,7 +179,7 @@ class gameboy
                 for(long long i = 0 ; i < bytes ; i++)
                 {
 //                    mem[i] = m_CartridgeMemory[0x100+i];
-                  mem[i] = m_CartridgeMemory[0x100+i];
+                  mem[i+0x100] = m_CartridgeMemory[i];
 
                 }
             }
