@@ -540,6 +540,43 @@ class gameboy
                             AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
                         break;
 
+                    case(0xC9):  //RET
+
+                            tmp = 0;
+                            tmp = tmp | (mem[SP]);
+                            r16[SP]->reg = (r16[SP]->reg) + 1;
+                            tmp = tmp | (mem[PC]) << 8;
+                            r16[SP]->reg = (r16[SP]->reg) + 1;
+                            PC = tmp;
+
+                        break;
+
+                    case(0xC0):  //RET NZ
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_Z)) == 0) {
+
+                            tmp = 0;
+                            tmp = tmp | (mem[SP]);
+                            r16[SP]->reg = (r16[SP]->reg) + 1;
+                            tmp = tmp | (mem[PC]) << 8;
+                            r16[SP]->reg = (r16[SP]->reg) + 1;
+                            PC = tmp;
+                        }
+
+                        break;
+
+                    case(0xD0):  //RET NZ
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_C)) == 0) {
+
+                            tmp = 0;
+                            tmp = tmp | (mem[SP]);
+                            r16[SP]->reg = (r16[SP]->reg) + 1;
+                            tmp = tmp | (mem[PC]) << 8;
+                            r16[SP]->reg = (r16[SP]->reg) + 1;
+                            PC = tmp;
+                        }
+
+                        break;
+
                     case(0xC1): case(0xD1): case(0xE1): case(0xF1): //POP r16stk
 
                         tmp = (OPCODE & 0x30)>>4;
