@@ -564,7 +564,7 @@ class gameboy
 
                         break;
 
-                    case(0xD0):  //RET NZ
+                    case(0xD0):  //RET NC
                         if((AF_reg.lo & (BYTE)(1 << FLAG_C)) == 0) {
 
                             tmp = 0;
