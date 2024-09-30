@@ -732,6 +732,16 @@ class gameboy
                         }
                         break;
 
+                    case(0xC7): case(0xD7): case(0xE7): case(0xF7):
+                    case(0xCF): case(0xDF): case(0xEF): case(0xFF)://RST tgt3
+
+                        tmp = (OPCODE & 0x38);
+                        r16[SP]->reg = (r16[SP]->reg) - 1;
+                        mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+                        r16[SP]->reg = (r16[SP]->reg) - 1;
+                        mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+                        PC = tmp;
+                        break;
 
                     case(0xC6): //ADD A, d8
                         tmp = (*r8[A]); //backup for flag calculation
