@@ -541,6 +541,61 @@ class gameboy
                             AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
                         break;
 
+                    case(0xC9):  //RET
+
+                            tmp = 0;
+                            tmp = tmp | (mem[SP]);
+                            r16[SP]->reg = (r16[SP]->reg) + 1;
+                            tmp = tmp | (mem[PC]) << 8;
+                            r16[SP]->reg = (r16[SP]->reg) + 1;
+                            PC = tmp;
+
+                        break;
+
+                    case(0xC0):  //RET NZ
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_Z)) == 0) {
+
+                            tmp = 0;
+                            tmp = tmp | (mem[SP]);
+                            r16[SP]->reg = (r16[SP]->reg) + 1;
+                            tmp = tmp | (mem[PC]) << 8;
+                            r16[SP]->reg = (r16[SP]->reg) + 1;
+                            PC = tmp;
+                        }
+
+                        break;
+
+                    case(0xD0):  //RET NC
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_C)) == 0) {
+
+                            tmp = 0;
+                            tmp = tmp | (mem[SP]);
+                            r16[SP]->reg = (r16[SP]->reg) + 1;
+                            tmp = tmp | (mem[PC]) << 8;
+                            r16[SP]->reg = (r16[SP]->reg) + 1;
+                            PC = tmp;
+                        }
+
+                        break;
+
+                    case(0xC1): case(0xD1): case(0xE1): case(0xF1): //POP r16stk
+
+                        tmp = (OPCODE & 0x30)>>4;
+                        r16[tmp]->lo = mem[SP];
+                        r16[SP]->reg = (r16[SP]->reg) + 1;
+                        r16[tmp]->hi = (mem[SP]);
+                        r16[SP]->reg = (r16[SP]->reg) + 1;
+                        break;
+
+                    case(0xC5): case(0xD5): case(0xE5): case(0xF5): //PUSH r16stk
+
+                        tmp = (OPCODE & 0x30)>>4;
+                        r16[SP]->reg = (r16[SP]->reg) - 1;
+                        mem[SP] = r16[tmp]->hi;
+                        r16[SP]->reg = (r16[SP]->reg) - 1;
+                        mem[SP] = r16[tmp]->lo;
+                        break;
+
                     case(0xC2): //JP NZ, a16
 
                             tmp = 0;
@@ -565,6 +620,20 @@ class gameboy
 
                         break;
 
+                    case(0xCD): //CALL C, a16
+                        tmp = 0;
+                        tmp = tmp | (mem[PC]);
+                        PC = PC + 1;
+                        tmp = tmp | (mem[PC]) << 8;
+                        PC = PC + 1; // May not be necessary
+                        r16[SP]->reg = (r16[SP]->reg) - 1;
+                        mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+                        r16[SP]->reg = (r16[SP]->reg) - 1;
+                        mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+                        PC = tmp;
+
+                        break;
+
                     case(0xC4): //CALL NZ, a16
                         tmp = 0;
                         tmp = tmp | (mem[PC]);
@@ -580,6 +649,21 @@ class gameboy
                         }
                         break;
 
+                    case(0xCC): //CALL Z, a16
+                        tmp = 0;
+                        tmp = tmp | (mem[PC]);
+                        PC = PC + 1;
+                        tmp = tmp | (mem[PC]) << 8;
+                        PC = PC + 1; // May not be necessary
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_Z)) == (BYTE)(1 << FLAG_Z)){
+                            r16[SP]->reg = (r16[SP]->reg) - 1;
+                            mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+                            r16[SP]->reg = (r16[SP]->reg) - 1;
+                            mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+                            PC = tmp;
+                        }
+                        break;
+
                     case(0xD4): //CALL NC, a16
                         tmp = 0;
                         tmp = tmp | (mem[PC]);
@@ -587,6 +671,21 @@ class gameboy
                         tmp = tmp | (mem[PC]) << 8;
                         PC = PC + 1; // May not be necessary
                         if((AF_reg.lo & (BYTE)(1 << FLAG_C)) == 0){
+                            r16[SP]->reg = (r16[SP]->reg) - 1;
+                            mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+                            r16[SP]->reg = (r16[SP]->reg) - 1;
+                            mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+                            PC = tmp;
+                        }
+                        break;
+
+                    case(0xDC): //CALL C, a16
+                        tmp = 0;
+                        tmp = tmp | (mem[PC]);
+                        PC = PC + 1;
+                        tmp = tmp | (mem[PC]) << 8;
+                        PC = PC + 1; // May not be necessary
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_C)) == (BYTE)(1 << FLAG_C)){
                             r16[SP]->reg = (r16[SP]->reg) - 1;
                             mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
                             r16[SP]->reg = (r16[SP]->reg) - 1;
