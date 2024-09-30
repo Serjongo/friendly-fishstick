@@ -433,19 +433,21 @@ class gameboy
                         break;
 
                     case(0x88): case(0x89): case(0x8A):case(0x8B): case(0x8C): case(0x8D): case(0x8E): case(0x8F): //ADC A,r8
-                        //here we must add before calculating flags, since it is dependent on the carry flag
-                        (*r8[A]) = (*r8[A]) + (*r8[(OPCODE & 0x07)]) + ((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C); //add only the C flag bit, and shift it back to be the 1 bit val
+                        //here we must add before calculating flags, since it is dependent on the carry flag, we save it to tmp first to back up the final ans, because flag calculation may affect the result
+                        tmp = (*r8[A]) + (*r8[(OPCODE & 0x07)]) + ((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C); //add only the C flag bit, and shift it back to be the 1 bit val
 
                         //FLAG_C
-                        if ( ( (((*r8[A]) & 0x7F)+((*r8[(OPCODE & 0x07)]) & 0x7F) ) & carry_8bit) == carry_8bit)
+                        if ( ( (((*r8[A]) & 0x7F)+((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C)+((*r8[(OPCODE & 0x07)]) & 0x7F) ) & carry_8bit) == carry_8bit)
                             AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on FLAG_ZERO
                         else
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF FLAG_ZERO
                         //FLAG_H
-                        if ( ((((*r8[A]) & 0x0F)+((*r8[(OPCODE & 0x07)]) & 0x0F) )& half_carry_8bit) == half_carry_8bit)
+                        if ( ((((*r8[A]) & 0x0F)+((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C)+((*r8[(OPCODE & 0x07)]) & 0x0F) )& half_carry_8bit) == half_carry_8bit)
                             AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_H)); //should turn on FLAG_ZERO
                         else
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_ZERO
+
+                        (*r8[A]) = tmp;
 
                         //flags
                         if ((*r8[A]) == 0)
@@ -485,12 +487,12 @@ class gameboy
                         (*r8[A]) = (*r8[A]) - (*r8[(OPCODE & 0x07)]) - ((AF_reg.lo & (BYTE)(1 << FLAG_C)) >> FLAG_C);
 
                         //FLAG_C
-                        if ( (((tmp & 0x7F)-((*r8[(OPCODE & 0x07)]) & 0x7F) ) & carry_8bit) == carry_8bit)
+                        if ( (((tmp & 0x7F)-((AF_reg.lo & (BYTE)(1 << FLAG_C)) >> FLAG_C)-((*r8[(OPCODE & 0x07)]) & 0x7F) ) & carry_8bit) == carry_8bit)
                             AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on
                         else
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF
                         //FLAG_H
-                        if (( ((tmp & 0x0F)-((*r8[(OPCODE & 0x07)]) & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
+                        if (( ((tmp & 0x0F)-((AF_reg.lo & (BYTE)(1 << FLAG_C)) >> FLAG_C)-((*r8[(OPCODE & 0x07)]) & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
                             AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_H)); //should turn on FLAG_H
                         else
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_H
@@ -721,6 +723,53 @@ class gameboy
                         break;
 
                     case(0xCE): //ADC A,d8
+                        tmp = (*r8[A]) + mem[PC] + ((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C);
+                        //no incrementing PC yet, because we're calculating the flags now
+
+                        //FLAG_C
+                        if ( ( (((*r8[A]) & 0x7F)+((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C)+(mem[PC] & 0x7F) ) & carry_8bit) == carry_8bit)
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on FLAG_CARRY
+                        else
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF FLAG_CARRY
+                        //FLAG_H
+                        if ( ( (((tmp) & 0x0F)+((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C)+((mem[PC]) & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_H)); //should turn on FLAG_HALF
+                        else
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_HALF
+
+
+                        (*r8[A]) = tmp;
+                        PC++;
+                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_N); //OFF
+                        if((*r8[A]) == 0)
+                            AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
+                        else
+                            AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
+
+                        break;
+
+                    case(0xDE): //SBC A,d8
+                        tmp = (*r8[A]) - mem[PC] - ((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C);
+                        //no incrementing PC yet, because we're calculating the flags now
+
+                        //FLAG_C
+                        if ( ( (((*r8[A]) & 0x7F)-((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C)-(mem[PC] & 0x7F) ) & carry_8bit) == carry_8bit)
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on FLAG_CARRY
+                        else
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF FLAG_CARRY
+                        //FLAG_H
+                        if ( ( (((tmp) & 0x0F)-((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C)-((mem[PC]) & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_H)); //should turn on FLAG_HALF
+                        else
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_HALF
+
+                        (*r8[A]) = tmp;
+                        PC++;
+                        AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_N); //ON
+                        if((*r8[A]) == 0)
+                            AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
+                        else
+                            AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
 
                         break;
 
@@ -766,6 +815,25 @@ class gameboy
                             AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
                         break;
 
+                    case(0xEE): //XOR A, d8
+                        (*r8[A]) = (*r8[A]) ^ mem[PC];
+                        PC++;
+
+                        //FLAGS
+                        //FLAG_C
+                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_C); //OFF
+                        //FLAG_H
+                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_H); //OFF
+
+                        //flags
+                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_N); //OFF
+
+                        if((*r8[A]) == 0)
+                            AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
+                        else
+                            AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
+                        break;
+
                     case(0xF6): //OR A, d8
                         (*r8[A]) = (*r8[A]) | mem[PC];
                         PC++;
@@ -781,6 +849,31 @@ class gameboy
                             AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
                         else
                             AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
+                        break;
+
+
+                    case(0xFE): //CP A, d8
+                        tmp = (*r8[A]) - mem[PC];
+
+                        //FLAG_C
+                        if ( ((((*r8[A]) & 0x7F)-(mem[PC] & 0x7F) ) & carry_8bit) == carry_8bit)
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on
+                        else
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF
+                        //FLAG_H
+                        if ( ( (((*r8[A]) & 0x0F)-(mem[PC] & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
+                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_H)); //should turn on FLAG_H
+                        else
+                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_H
+
+                        if(tmp == 0)
+                            AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
+                        else
+                            AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
+                        AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_N); //ON
+
+                        //no incrementing immediately so as not to mess up flag calculation
+                        PC++;
                         break;
 
 
@@ -820,6 +913,19 @@ class gameboy
                         if((AF_reg.lo & (BYTE)(1 << FLAG_C)) == 0)
                             PC = tmp;
 
+                        break;
+
+                        //16 bit commands
+                    case(0xCB40): case(0xCB41): case(0xCB42): case(0xCB43): case(0xCB44): case(0xCB45): case(0xCB46): case(0xCB47): case(0xCB48): case(0xCB49): case(0xCB4A): case(0xCB4B): case(0xCB4C): case(0xCB4D): case(0xCB4E): case(0xCB4F):
+                    case(0xCB50): case(0xCB51): case(0xCB52): case(0xCB53): case(0xCB54): case(0xCB55): case(0xCB56): case(0xCB57): case(0xCB58): case(0xCB59): case(0xCB5A): case(0xCB5B): case(0xCB5C): case(0xCB5D): case(0xCB5E): case(0xCB5F):
+                    case(0xCB60): case(0xCB61): case(0xCB62): case(0xCB63): case(0xCB64): case(0xCB65): case(0xCB66): case(0xCB67): case(0xCB68): case(0xCB69): case(0xCB6A): case(0xCB6B): case(0xCB6C): case(0xCB6D): case(0xCB6E): case(0xCB6F):
+                    case(0xCB70): case(0xCB71): case(0xCB72): case(0xCB73): case(0xCB74): case(0xCB75): case(0xCB76): case(0xCB77): case(0xCB78): case(0xCB79): case(0xCB7A): case(0xCB7B): case(0xCB7C): case(0xCB7D): case(0xCB7E): case(0xCB7F):
+                        tmp = (*r8[(OPCODE & 0x38)>>3]);
+                        ///SHOULD BE THE Z-FLAG OF THE PROGRAM STATUS REGISTER / STAT REGISTER. UNSURE WHAT IT IS FOR NOW, TO-CHECK!~~~~~
+                        if((0x01 & (tmp >> (OPCODE & 0x07))) == 0) //input the complement of the given bit into the Z_FLAG
+                            AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
+                        else
+                            AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
                         break;
 
                     default:
