@@ -331,6 +331,9 @@ class gameboy
                         {
                             AF_reg.hi = (AF_reg.hi | (BYTE)(1)); //should turn on bit 0 of Reg A
                         }
+                        set_Z_flag_status(0);
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
                         break;
 
                     case(0x17): // RLA
@@ -346,6 +349,9 @@ class gameboy
                         {
                             AF_reg.hi = (AF_reg.hi | (BYTE)(1)); //should turn on bit 0 of Reg A
                         }
+                        set_Z_flag_status(0);
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
                         break;
 
                     case(0x0F): // RRCA
@@ -360,6 +366,9 @@ class gameboy
                         {
                             AF_reg.hi = (AF_reg.hi | (BYTE)(0x80)); //should turn on bit 7 of Reg A
                         }
+                        set_Z_flag_status(0);
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
                         break;
 
                     case(0x1F): // RRA
@@ -374,6 +383,24 @@ class gameboy
                         {
                             AF_reg.hi = (AF_reg.hi | (BYTE)(0x80)); //should turn on bit 7 of Reg A
                         }
+                        set_Z_flag_status(0);
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
+                        break;
+
+                    case(0x37): // SCF
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
+                        set_C_flag_status(1);
+                        break;
+
+                    case(0x3F): // CCF
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
+                        if(get_C_flag_status() == 0)
+                            set_C_flag_status(1);
+                        else
+                            set_C_flag_status(0);
                         break;
 
                     ///TO CHECK FIRST THING - IS A "TMP" still relevant in this opcode?! I DONT THINK SO, DELETING TMP FOR NOW
