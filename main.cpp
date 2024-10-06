@@ -1175,6 +1175,18 @@ class gameboy
                             AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
                         break;
 
+                    case(0xCB80): case(0xCB81): case(0xCB82): case(0xCB83): case(0xCB84): case(0xCB85): case(0xCB86): case(0xCB87): case(0xCB88): case(0xCB89): case(0xCB8A): case(0xCB8B): case(0xCB8C): case(0xCB8D): case(0xCB8E): case(0xCB8F):
+                    case(0xCB90): case(0xCB91): case(0xCB92): case(0xCB93): case(0xCB94): case(0xCB95): case(0xCB96): case(0xCB97): case(0xCB98): case(0xCB99): case(0xCB9A): case(0xCB9B): case(0xCB9C): case(0xCB9D): case(0xCB9E): case(0xCB9F):
+                    case(0xCBA0): case(0xCBA1): case(0xCBA2): case(0xCBA3): case(0xCBA4): case(0xCBA5): case(0xCBA6): case(0xCBA7): case(0xCBA8): case(0xCBA9): case(0xCBAA): case(0xCBAB): case(0xCBAC): case(0xCBAD): case(0xCBAE): case(0xCBAF):
+                    case(0xCBB0): case(0xCBB1): case(0xCBB2): case(0xCBB3): case(0xCBB4): case(0xCBB5): case(0xCBB6): case(0xCBB7): case(0xCBB8): case(0xCBB9): case(0xCBBA): case(0xCBBB): case(0xCBBC): case(0xCBBD): case(0xCBBE): case(0xCBBF):
+
+                        tmp = ((OPCODE & 0x38)>>3);
+                        *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] & (BYTE)(~(1 << tmp)));
+
+                        break;
+
+
+
                     default:
                         cout << std::hex  << OPCODE << std::dec << '\n';
                         cout << "Loop Counter: " << loop_counter << '\n';
