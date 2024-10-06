@@ -320,6 +320,62 @@ class gameboy
                         mem[r16[tmp]->lo] = *r8[A];
                         break;
 
+                    case(0x07): // RLCA
+                        set_C_flag_status(((*r8[A]) & (0x80)) >> 7);
+                        *r8[A] = *r8[A] << 1;
+                        if(get_C_flag_status() == 0)
+                        {
+                            AF_reg.hi = (AF_reg.hi & (BYTE)(~(1))); //should turn off bit 0 of Reg A
+                        }
+                        else
+                        {
+                            AF_reg.hi = (AF_reg.hi | (BYTE)(1)); //should turn on bit 0 of Reg A
+                        }
+                        break;
+
+                    case(0x17): // RLA
+
+                        tmp = get_C_flag_status();
+                        set_C_flag_status(((*r8[A]) & (0x80)) >> 7);
+                        *r8[A] = *r8[A] << 1;
+                        if(tmp == 0)
+                        {
+                            AF_reg.hi = (AF_reg.hi & (BYTE)(~(1))); //should turn off bit 0 of Reg A
+                        }
+                        else
+                        {
+                            AF_reg.hi = (AF_reg.hi | (BYTE)(1)); //should turn on bit 0 of Reg A
+                        }
+                        break;
+
+                    case(0x0F): // RRCA
+
+                        set_C_flag_status(((*r8[A]) & (BYTE)(0x01)));
+                        *r8[A] = *r8[A] >> 1;
+                        if(get_C_flag_status() == 0)
+                        {
+                            AF_reg.hi = (AF_reg.hi & (BYTE)(~(0x80))); //should turn off bit 7 of Reg A
+                        }
+                        else
+                        {
+                            AF_reg.hi = (AF_reg.hi | (BYTE)(0x80)); //should turn on bit 7 of Reg A
+                        }
+                        break;
+
+                    case(0x1F): // RRA
+                        tmp = get_C_flag_status();
+                        set_C_flag_status(((*r8[A]) & (BYTE)(0x01)));
+                        *r8[A] = *r8[A] >> 1;
+                        if(tmp == 0)
+                        {
+                            AF_reg.hi = (AF_reg.hi & (BYTE)(~(0x80))); //should turn off bit 7 of Reg A
+                        }
+                        else
+                        {
+                            AF_reg.hi = (AF_reg.hi | (BYTE)(0x80)); //should turn on bit 7 of Reg A
+                        }
+                        break;
+
                     ///TO CHECK FIRST THING - IS A "TMP" still relevant in this opcode?! I DONT THINK SO, DELETING TMP FOR NOW
                     //tested
                     case(0x22): //LD (HL), A
