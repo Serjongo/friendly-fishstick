@@ -375,21 +375,38 @@ class gameboy
                         (*r8[A]) = mem[r16[tmp]->reg];
                         break;
 
+                    case(0x18): //JR s8
+                        PC++;
+                        PC = PC + (char)mem[PC];
+                        break;
 
                     case(0x20): //JR NZ,s8
-                        tmp = (char)mem[PC];
                         PC++;
                         if(!(AF_reg.lo & (BYTE)(1 << FLAG_Z)))
-                            PC = PC + tmp;
+                            PC = PC + (char)mem[PC];
                         break;
+
+
+                    case(0x28): //JR Z,s8
+                        PC++;
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_Z)) == (BYTE)(1 << FLAG_Z))
+                            PC = PC + (char)mem[PC];
+                        break;
+
+
 
                     case(0x30): //JR NC,s8
-                        tmp = (char)mem[PC];
                         PC++;
                         if(!(AF_reg.lo & (BYTE)(1 << FLAG_C)))
-                            PC = PC + tmp;
+                            PC = PC + (char)mem[PC];
                         break;
 
+
+                    case(0x38): //JR Z,s8
+                        PC++;
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_C)) == (BYTE)(1 << FLAG_C))
+                            PC = PC + (char)mem[PC];
+                        break;
 
 
 
@@ -648,6 +665,42 @@ class gameboy
 
                         break;
 
+                    case(0xCA): //JP Z, a16
+
+                        tmp = 0;
+                        tmp = tmp | (mem[PC]);
+                        PC = PC + 1;
+                        tmp = tmp | (mem[PC]) << 8;
+                        PC = PC + 1; // May not be necessary
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_Z)) == (BYTE)(1 << FLAG_Z))
+                            PC = tmp;
+
+                        break;
+
+                    case(0XD2): //JP NC, a16
+
+                        tmp = 0;
+                        tmp = tmp | (mem[PC]);
+                        PC = PC + 1;
+                        tmp = tmp | (mem[PC]) << 8;
+                        PC = PC + 1; // May not be necessary
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_C)) == 0)
+                            PC = tmp;
+
+                        break;
+
+                    case(0xDA): //JP C, a16
+
+                        tmp = 0;
+                        tmp = tmp | (mem[PC]);
+                        PC = PC + 1;
+                        tmp = tmp | (mem[PC]) << 8;
+                        PC = PC + 1; // May not be necessary
+                        if((AF_reg.lo & (BYTE)(1 << FLAG_C)) == (BYTE)(1 << FLAG_C))
+                            PC = tmp;
+
+                        break;
+
 
                     case(0xC3): //JP a16
 
@@ -659,6 +712,11 @@ class gameboy
                         PC = tmp;
 
                         break;
+
+                    case(0xE9): //JP HL
+                        PC = r16[HL_16]->reg;
+                        break;
+
 
                     case(0xCD): //CALL C, a16
                         tmp = 0;
@@ -688,6 +746,7 @@ class gameboy
                             PC = tmp;
                         }
                         break;
+
 
                     case(0xCC): //CALL Z, a16
                         tmp = 0;
@@ -951,17 +1010,9 @@ class gameboy
                         AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_N); //ON
                         break;
 
-                    case(0XD2): //JP NC, a16
 
-                        tmp = 0;
-                        tmp = tmp | (mem[PC]);
-                        PC = PC + 1;
-                        tmp = tmp | (mem[PC]) << 8;
-                        PC = PC + 1; // May not be necessary
-                        if((AF_reg.lo & (BYTE)(1 << FLAG_C)) == 0)
-                            PC = tmp;
 
-                        break;
+
 
                         //16 bit commands
                     case(0xCB40): case(0xCB41): case(0xCB42): case(0xCB43): case(0xCB44): case(0xCB45): case(0xCB46): case(0xCB47): case(0xCB48): case(0xCB49): case(0xCB4A): case(0xCB4B): case(0xCB4C): case(0xCB4D): case(0xCB4E): case(0xCB4F):
@@ -984,7 +1035,6 @@ class gameboy
 
                 }
             }
-
             void main_loop()
             {
                 //read_from_file("../test.bin");
