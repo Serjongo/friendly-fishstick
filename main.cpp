@@ -127,6 +127,71 @@ class gameboy
             BYTE h = *(r8[7]+1) & 0x20; //half carry flag
             BYTE c = *(r8[7]+1) & 0x10; //carry flag
 
+
+            //flag getters
+            BYTE get_Z_flag_status() const //returns 1 or 0
+            {
+                return (AF_reg.lo & (BYTE)(1 << FLAG_Z)) == (BYTE)(1 << FLAG_Z);
+            }
+            BYTE get_N_flag_status() const //returns 1 or 0
+            {
+                return (AF_reg.lo & (BYTE)(1 << FLAG_N)) == (BYTE)(1 << FLAG_N);
+            }
+            BYTE get_H_flag_status() const //returns 1 or 0
+            {
+                return (AF_reg.lo & (BYTE)(1 << FLAG_H)) == (BYTE)(1 << FLAG_H);
+            }
+            BYTE get_C_flag_status() const //returns 1 or 0
+            {
+                return (AF_reg.lo & (BYTE)(1 << FLAG_C)) == (BYTE)(1 << FLAG_C);
+            }
+
+            //flag setters
+            void set_Z_flag_status(BYTE status)
+            {
+                if(status == 0)
+                {
+                    AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_Z))); //should turn off FLAG_ZERO
+                }
+                else
+                {
+                    AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_Z)); //should turn on FLAG_ZERO
+                }
+            }
+            void set_N_flag_status(BYTE status)
+            {
+                if(status == 0)
+                {
+                    AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_N))); //should turn off FLAG_ZERO
+                }
+                else
+                {
+                    AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_N)); //should turn on FLAG_ZERO
+                }
+            }
+            void set_H_flag_status(BYTE status)
+            {
+                if(status == 0)
+                {
+                    AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn off FLAG_ZERO
+                }
+                else
+                {
+                    AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_H)); //should turn on FLAG_ZERO
+                }
+            }
+            void set_C_flag_status(BYTE status)
+            {
+                if(status == 0)
+                {
+                    AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn off FLAG_ZERO
+                }
+                else
+                {
+                    AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on FLAG_ZERO
+                }
+            }
+
             //for readability
             BYTE half_carry_8bit = 0x10; //5th bit on, 1st bit of highest nibble
             WORD half_carry_16bit = 0x1000; //5th bit of the most significant BYTE, 1st of highest nibble
