@@ -1186,7 +1186,6 @@ class gameboy
                         break;
 
 
-
                     default:
                         cout << std::hex  << OPCODE << std::dec << '\n';
                         cout << "Loop Counter: " << loop_counter << '\n';
