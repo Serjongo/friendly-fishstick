@@ -314,6 +314,9 @@ class gameboy
                         PC = PC + 1;
                         break;
 
+                    case(0xF9): //LD SP, HL
+                        r16[SP]->reg = r16[HL_16]->reg;
+
                     //tested
                     case(0x02): case(0x12): //LD (BC) OR (DE), A
                         tmp = (OPCODE & 0x30)>>4;
@@ -438,6 +441,43 @@ class gameboy
                     case(0x0A): case(0x1A):  //LD A, (REG)
                         tmp = (OPCODE & 0x38)>>3;
                         (*r8[A]) = mem[r16[tmp]->reg];
+                        break;
+
+
+                    case(0xE0): //LD (a8), A
+                        mem[(WORD)0xFF00|(BYTE)PC] = *r8[A]; //MSB is FF, LSB is the PC byte
+                        PC++;
+                        break;
+
+                    case(0xF0): //LD A, (a8)
+                        *r8[A] = mem[(WORD)0xFF00|(BYTE)PC]; //MSB is FF, LSB is the PC byte
+                        PC++;
+                        break;
+
+                    case(0xE2): //LD (C), A
+                        mem[(WORD)0xFF00|*r8[C]] = *r8[A]; //MSB is FF, LSB is the PC byte
+                        break;
+
+                    case(0xF2): //LD A, (C)
+                        *r8[A] = mem[(WORD)0xFF00|*r8[C]]; //MSB is FF, LSB is the PC byte
+                        break;
+
+                    case(0xEA): //LD (a16), A
+                        tmp = 0;
+                        tmp = mem[PC];
+                        PC++;
+                        tmp = (tmp | (mem[PC]<<8));
+                        PC++;
+                        mem[tmp] = *r8[A];
+                        break;
+
+                    case(0xFA): //LD A, (a16)
+                        tmp = 0;
+                        tmp = mem[PC];
+                        PC++;
+                        tmp = (tmp | (mem[PC]<<8));
+                        PC++;
+                        *r8[A] = mem[tmp];
                         break;
 
                     case(0x18): //JR s8
