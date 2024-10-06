@@ -316,12 +316,22 @@ class gameboy
 
                     case(0xF9): //LD SP, HL
                         r16[SP]->reg = r16[HL_16]->reg;
+                        break;
 
                     //tested
                     case(0x02): case(0x12): //LD (BC) OR (DE), A
                         tmp = (OPCODE & 0x30)>>4;
                         mem[r16[tmp]->lo] = *r8[A];
                         break;
+
+                    case(0x08): //LD (a16), SP
+                        tmp = 0;
+                        tmp = mem[PC];
+                        PC++;
+                        tmp = (tmp | (mem[PC]<<8));
+                        PC++;
+                        mem[tmp] = r16[SP]->lo;
+                        mem[tmp+1] = r16[SP]->hi;
 
                     case(0x07): // RLCA
                         set_C_flag_status(((*r8[A]) & (0x80)) >> 7);
@@ -562,6 +572,36 @@ class gameboy
                         PC++;
                         *r8[A] = mem[tmp];
                         break;
+
+                    case(0xF8): //LD HL, SP+e
+
+                        if((char)mem[PC] < 0) //if I'm looking to subtract, both carry flags should be OFF (unless I underflow, but this is a problem for later, if such occurs)
+                        {
+                            set_C_flag_status(0);
+                            set_H_flag_status(0);
+                        }
+                        else
+                        {
+                            //FLAG_C
+                            if ( ( ((r16[SP]->reg & 0x7F) + (((char)mem[PC]) & 0x7F) ) & carry_8bit) == carry_8bit) //(char)mem[PC] is e
+                                set_C_flag_status(1);
+                            else
+                                set_C_flag_status(0);
+                            //FLAG_H
+                            if ( (((r16[SP]->reg & 0x0F)-(((char)mem[PC]) & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
+                                set_H_flag_status(1);
+                            else
+                                set_H_flag_status(0);
+
+                        }
+                        r16[HL_16]->reg = r16[SP]->reg + (char)mem[PC];
+                        PC++;
+
+                        //flags
+                        set_Z_flag_status(0);
+                        set_N_flag_status(0);
+                        break;
+
 
                     case(0x18): //JR s8
                         PC++;
