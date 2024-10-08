@@ -318,6 +318,14 @@ class gameboy
                         r16[SP]->reg = r16[HL_16]->reg;
                         break;
 
+                    case(0xF3): //DI (disable interrupts)
+                        IME = 0;
+                        break;
+
+                    case(0xFB): //EI (enable interrupts)
+                        IME = 1;
+                        break;
+
                     //tested
                     case(0x02): case(0x12): //LD (BC) OR (DE), A
                         tmp = (OPCODE & 0x30)>>4;
@@ -675,6 +683,27 @@ class gameboy
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_Z))); //should turn off FLAG_ZERO
 
                         AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_N))); //should turn off FLAG_N
+                        break;
+
+                    case(0xE8): //ADD SP, e (relative)
+                        //FLAG_C
+                        if ( (((r16[SP]->reg & 0x7F)+((char)(mem[PC]) & 0x7F) ) & carry_8bit) == carry_8bit)
+                            set_C_flag_status(1); //should turn on CARRY
+                        else
+                            set_C_flag_status(0); //should turn off CARRY
+                        //FLAG_H
+                        if ( (((r16[SP]->reg & 0x0F)+((char)(mem[PC]) & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
+                            set_H_flag_status(1); //should turn on FLAG_HALF
+                        else
+                            set_H_flag_status(0); //should turn OFF FLAG_HALF
+
+                        r16[SP]->reg = r16[SP]->reg + (char)(mem[PC]);
+
+                        PC++;
+
+                        //flags
+                        set_Z_flag_status(0);
+                        set_N_flag_status(0);
                         break;
 
                     case(0x88): case(0x89): case(0x8A):case(0x8B): case(0x8C): case(0x8D): case(0x8E): case(0x8F): //ADC A,r8
