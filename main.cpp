@@ -314,6 +314,15 @@ class gameboy
                         PC = PC + 1;
                         break;
 
+                    case(0x10): ///TODO: STOP
+                        cout << "STOP COMMAND REACHED";
+                        break;
+
+                    case(0x76): ///TODO: HALT
+                        cout << "HALT COMMAND REACHED";
+                        break;
+
+
                     case(0xF9): //LD SP, HL
                         r16[SP]->reg = r16[HL_16]->reg;
                         break;
@@ -423,6 +432,55 @@ class gameboy
                         else
                             set_C_flag_status(0);
                         break;
+
+
+                    case(0x27): //DAA -
+                    // credit https://blog.ollien.com/posts/gb-daa/#fn:2
+                    // credit https://forums.nesdev.org/viewtopic.php?t=15944
+
+                        if(!get_N_flag_status())
+                        {
+                            //check upper nibble, since it doesn't affect lower nibble, eliminating need for temp
+                            if (*r8[A] > 0x99 || get_C_flag_status())
+                            {
+                                *r8[A] = *r8[A] + 0x60;
+                                set_C_flag_status(1); //C FLAG
+                            }
+
+                            if ((*r8[A] & 0x0F) > 0x09 || get_H_flag_status()) //check lower nibble
+                                *r8[A] = *r8[A] + 0x06;
+                        }
+                        else
+                        {
+                            //this means a subtraction occured, we are checking for borrow operations
+                            if(get_C_flag_status())
+                                *r8[A] = *r8[A] - 0x60;
+                            if(get_H_flag_status())
+                                *r8[A] = *r8[A] - 0x06;
+                        }
+
+                        //flags
+                        if(*r8[A] == 0)
+                            set_Z_flag_status(1);
+                        else
+                            set_Z_flag_status(0);
+
+                        set_H_flag_status(0);
+
+                        //removed this for now since potentially we could overflow A reg, and thus it wouldn't show
+//                        if(*r8[A] > 0x99)
+//                            set_C_flag_status(1);
+//                        else
+//                            set_C_flag_status(0);
+
+                        break;
+
+                    case(0x2F): //CPL (flip all bits)
+                        *r8[A] = ~*r8[A];
+                        set_N_flag_status(1);
+                        set_H_flag_status(1);
+                        break;
+
 
                     ///TO CHECK FIRST THING - IS A "TMP" still relevant in this opcode?! I DONT THINK SO, DELETING TMP FOR NOW
                     //tested
