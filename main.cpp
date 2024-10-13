@@ -57,6 +57,7 @@ class gameboy
             //declarations - data structures etc
                 BYTE mem[0x10000]; //2^16 bytes
                 BYTE IME = 0; //IME FLAG, interrupts enabled/disabled
+                BYTE is_halted = 0; //used for halt commands, perhaps temporarily. credit : https://rylev.github.io/DMG-01/public/book/cpu/conclusion.html
 
 
             //registers
@@ -297,6 +298,10 @@ class gameboy
             }
             void decode_execute()
             {
+                if(is_halted) //if HALT command was executed, we will not execute new commands until the status changes back
+                {
+                    return;
+                }
                 switch(OPCODE) //MAY NEED TO FIX THE OPCODE SINCE ITS 2 BYTES, BUT MAYBE ITS OK SINCE IT SHOULD BE 0 anyway
                 {
                     case(0x00): //NOP OPERATION
@@ -318,7 +323,8 @@ class gameboy
                         cout << "STOP COMMAND REACHED";
                         break;
 
-                    case(0x76): ///TODO: HALT
+                    case(0x76): ///TODO: HALT, currently it is a temporary solution
+                        is_halted = 1;
                         cout << "HALT COMMAND REACHED";
                         break;
 
