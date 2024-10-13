@@ -1363,6 +1363,110 @@ class gameboy
                         break;
 
 
+                    case(0xCB00): case(0xCB01): case(0xCB02): case(0xCB03): case(0xCB04): case(0xCB05): case(0xCB06): case(0xCB07): //RLC(rotate left carry) - bits 0 1 2 - operand
+                        tmp = 0;
+                        tmp = (*r8[(OPCODE & 0x07)] & 0x80) >> 7; //msb - but shifted to lsb
+                        *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] << 1); //shift all bits to the left
+                        *r8[(OPCODE & 0x07)] = *r8[(OPCODE & 0x07)] | (tmp); //shift msb into lsb
+
+                        //flags
+                        set_Z_flag_status(*r8[(OPCODE & 0x07)]);
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
+                        set_C_flag_status(tmp); //tmp is either 1 or 0 at this point
+                        break;
+
+                    case(0xCB08): case(0xCB09): case(0xCB0A): case(0xCB0B): case(0xCB0C): case(0xCB0D): case(0xCB0E): case(0xCB0F): //RRC(rotate right carry) - bits 0 1 2 - operand
+                        tmp = 0;
+                        tmp = (*r8[(OPCODE & 0x07)] & 0x01); //lsb
+                        *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] >> 1); //shift all bits to the right
+                        *r8[(OPCODE & 0x07)] = *r8[(OPCODE & 0x07)] | ((tmp) << 7); //shift lsb into msb
+
+                        //flags
+                        set_Z_flag_status(*r8[(OPCODE & 0x07)]);
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
+                        set_C_flag_status(tmp); //tmp is either 1 or 0 at this point
+                        break;
+
+                    case(0xCB10): case(0xCB11): case(0xCB12): case(0xCB13): case(0xCB14): case(0xCB15): case(0xCB16): case(0xCB17): //RL (rotate left) - bits 0 1 2 - operand
+                        tmp = 0;
+                        tmp = (*r8[(OPCODE & 0x07)] & 0x80); //msb
+                        *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] << 1); //shift all bits to the left
+                        *r8[(OPCODE & 0x07)] = *r8[(OPCODE & 0x07)] | get_C_flag_status(); //shift carry flag into lsb
+
+                        //flags
+                        set_Z_flag_status(*r8[(OPCODE & 0x07)]);
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
+                        set_C_flag_status(tmp); //tmp is either 0x80 or 0 at this point (we only care if its 0 or not)
+                        break;
+
+                    case(0xCB18): case(0xCB19): case(0xCB1A): case(0xCB1B): case(0xCB1C): case(0xCB1D): case(0xCB1E): case(0xCB1F): //RR (rotate right) - bits 0 1 2 - operand
+                        tmp = 0;
+                        tmp = (*r8[(OPCODE & 0x07)] & 0x01); //lsb
+                        *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] >> 1); //shift all bits to the right
+                        *r8[(OPCODE & 0x07)] = *r8[(OPCODE & 0x07)] | get_C_flag_status(); //shift carry flag into lsb
+
+                        //flags
+                        set_Z_flag_status(*r8[(OPCODE & 0x07)]);
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
+                        set_C_flag_status(tmp); //tmp is either 1 or 0 at this point
+                        break;
+
+                    case(0xCB20): case(0xCB21): case(0xCB22): case(0xCB23): case(0xCB24): case(0xCB25): case(0xCB26): case(0xCB27): //SLA - shift left arithmetic
+                        tmp = 0;
+                        tmp = (*r8[(OPCODE & 0x07)] & 0x80); //msb
+                        *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] << 1); //shift all bits to the left
+                        *r8[(OPCODE & 0x07)] = *r8[(OPCODE & 0x07)] & 0xFE; //reset bit 0
+
+                        //flags
+                        set_Z_flag_status(*r8[(OPCODE & 0x07)]);
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
+                        set_C_flag_status(tmp); //tmp is either 1 or 0 at this point
+                        break;
+
+                    case(0xCB28): case(0xCB29): case(0xCB2A): case(0xCB2B): case(0xCB2C): case(0xCB2D): case(0xCB2E): case(0xCB2F): //SRA - shift right arithmetic
+                        tmp = 0;
+                        tmp = (*r8[(OPCODE & 0x07)] & 0x01); //lsb
+                        *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] >> 1); //shift all bits to the right
+                        //new bit 7 is unchanged as per the instructions, although it should automatically default to 0 since unsigned
+
+                        //flags
+                        set_Z_flag_status(*r8[(OPCODE & 0x07)]);
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
+                        set_C_flag_status(tmp); //tmp is either 1 or 0 at this point
+                        break;
+
+                    case(0xCB30): case(0xCB31): case(0xCB32): case(0xCB33): case(0xCB34): case(0xCB35): case(0xCB36): case(0xCB37): //SWAP
+                        tmp = 0;
+                        tmp = (BYTE)(*r8[(OPCODE & 0x07)] << 4) & 0x00F0; //shift lower nibble to upper, and erase everything else
+                        *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] >> 4);//shift four times to make the upper nibble - low
+                        *r8[(OPCODE & 0x07)] = *r8[(OPCODE & 0x07)] | tmp;
+                        //flags
+                        set_Z_flag_status(*r8[(OPCODE & 0x07)]);
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
+                        set_C_flag_status(0); //tmp is either 1 or 0 at this point
+
+                        break;
+
+                    case(0xCB38): case(0xCB39): case(0xCB3A): case(0xCB3B): case(0xCB3C): case(0xCB3D): case(0xCB3E): case(0xCB3F): //SRL
+                        tmp = 0;
+                        tmp = (*r8[(OPCODE & 0x07)] & 0x01); //lsb
+                        *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] >> 1); //shift all bits to the right
+                        *r8[(OPCODE & 0x07)] = *r8[(OPCODE & 0x07)] & 0x7F; //this is what differentiates SRL and SRA, explicit 7th bit reset
+
+                        //flags
+                        set_Z_flag_status(*r8[(OPCODE & 0x07)]);
+                        set_N_flag_status(0);
+                        set_H_flag_status(0);
+                        set_C_flag_status(tmp); //tmp is either 1 or 0 at this point
+                        break;
+
                     default:
                         cout << std::hex  << OPCODE << std::dec << '\n';
                         cout << "Loop Counter: " << loop_counter << '\n';
