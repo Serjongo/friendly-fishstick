@@ -198,19 +198,49 @@ class gameboy
 
 
             //testing funcs
+            void init_status_file(){
+                ofstream outFile("registers_status.txt");
+
+                if (!outFile) {
+                    std::cerr << "Error: Could not open the file!" << endl;
+                }
+                outFile.close();
+            }
             void print_registers_r8()
             {
-                cout << "A: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[A])<< " " << dec;
-                cout << "F: " << hex << AF_reg.lo << " " << dec;
-                cout << "B: " << hex << r8[B] << " " << dec;
-                cout << "C: " << hex << r8[C] << " " << dec;
-                cout << "D: " << hex << r8[D] << " " << dec;
-                cout << "E: " << hex << r8[E] << " " << dec;
-                cout << "H: " << hex << r8[H] << " " << dec;
-                cout << "L: " << hex << r8[L] << " " << dec;
-                cout << "SP: " << hex << r16[SP] << " " << dec;
-                cout << "PC: 00:" << hex << PC << " " << dec;
-                cout << "(" << mem[PC] << " " << mem[PC + 1] << dec << ")\n";
+                ofstream outFile("registers_status.txt", ios::app);
+
+                if (!outFile) {
+                    std::cerr << "Error: Could not open the file!" << endl;
+                    return;
+                }
+
+                outFile << "A: " << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)(*r8[A])<< " " << dec;
+                outFile << "F: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(AF_reg.lo)<< " " << dec;
+                outFile << "B: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[B])<< " " << dec;
+                outFile << "C: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[C])<< " " << dec;
+                outFile << "D: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[D])<< " " << dec;
+                outFile << "E: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[E])<< " " << dec;
+                outFile << "H: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[H])<< " " << dec;
+                outFile << "L: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[L])<< " " << dec;
+                outFile << "SP: " << std::hex << std::setw(4) << std::setfill('0')  << (int)(r16[SP]->reg)<< " " << dec;
+                outFile << "PC: 00:" << std::hex << std::setw(4) << std::setfill('0')  << PC << " " << dec;
+                outFile << "(" << std::hex << std::setw(2) << std::setfill('0')  << (int)mem[PC] << " " <<
+                                           std::setw(2) << std::setfill('0')  << (int)mem[PC + 1] << " " <<
+                                           std::setw(2) << std::setfill('0')  <<(int)mem[PC + 2] << " " <<
+                                           std::setw(2) << std::setfill('0')  <<(int)mem[PC + 3] << ")\n" << dec;
+                outFile.close();
+
+//                cout << "F: " << hex << AF_reg.lo << " " << dec;
+//                cout << "B: " << hex << r8[B] << " " << dec;
+//                cout << "C: " << hex << r8[C] << " " << dec;
+//                cout << "D: " << hex << r8[D] << " " << dec;
+//                cout << "E: " << hex << r8[E] << " " << dec;
+//                cout << "H: " << hex << r8[H] << " " << dec;
+//                cout << "L: " << hex << r8[L] << " " << dec;
+//                cout << "SP: " << hex << r16[SP] << " " << dec;
+//                cout << "PC: 00:" << hex << PC << " " << dec;
+//                cout << "(" << mem[PC] << " " << mem[PC + 1] << dec << ")\n";
             }
 //            void print_registers_r16()
 //            {
@@ -1522,6 +1552,7 @@ class gameboy
                 //bootstrap rom, 0x0 offset
                 //read_from_file("../TESTS/DMG_ROM.bin");
                 init();
+                init_status_file();
 
                 //for testing
                 BYTE test_output_SB = mem[SB_reg];
@@ -1542,8 +1573,10 @@ class gameboy
 //                        test_output_SB = mem[SB_reg];
 //                        test_output_SC = mem[SC_reg];
                     }
-                    fetch();
+
                     print_registers_r8(); //for testing
+                    fetch();
+
                     decode_execute();
                     loop_counter++;
                 }
