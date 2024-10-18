@@ -21,6 +21,8 @@ typedef unsigned int DWORD; // 32-bit number
 #define FLAG_N 6
 #define FLAG_H 5
 #define FLAG_C 4
+#define SB_reg 0xFF01 //Serial transfer data
+#define SC_reg 0xFF02 //Serial transfer control
 
 
 int loop_counter = 1;
@@ -193,11 +195,37 @@ class gameboy
                 }
             }
 
+
+            //testing funcs
+            void print_registers_r8()
+            {
+                cout << "A: " << std::hex << (int*)(r8[A]) << " " << dec;
+                cout << "F: " << hex << AF_reg.lo << " " << dec;
+                cout << "B: " << hex << r8[B] << " " << dec;
+                cout << "C: " << hex << r8[C] << " " << dec;
+                cout << "D: " << hex << r8[D] << " " << dec;
+                cout << "E: " << hex << r8[E] << " " << dec;
+                cout << "H: " << hex << r8[H] << " " << dec;
+                cout << "L: " << hex << r8[L] << " " << dec;
+                cout << "SP: " << hex << r16[SP] << " " << dec;
+                cout << "PC: 00:" << hex << PC << " " << dec;
+                cout << "(" << mem[PC] << " " << mem[PC + 1] << dec << ")\n";
+            }
+//            void print_registers_r16()
+//            {
+//
+//            }
+
+
+
             //for readability
             BYTE half_carry_8bit = 0x10; //5th bit on, 1st bit of highest nibble
             WORD half_carry_16bit = 0x1000; //5th bit of the most significant BYTE, 1st of highest nibble
             BYTE carry_8bit = 0x80; //most significant bit
             WORD carry_16bit = 0x8000; //most significant bit
+
+
+
 
             //private methods
 
@@ -320,12 +348,12 @@ class gameboy
                         break;
 
                     case(0x10): ///TODO: STOP
-                        cout << "STOP COMMAND REACHED";
+                        cout << "STOP COMMAND REACHED\n";
                         break;
 
                     case(0x76): ///TODO: HALT, currently it is a temporary solution
                         is_halted = 1;
-                        cout << "HALT COMMAND REACHED";
+                        cout << "HALT COMMAND REACHED\n";
                         break;
 
 
@@ -1474,8 +1502,8 @@ class gameboy
                         break;
 
                     default:
-                        cout << std::hex  << OPCODE << std::dec << '\n';
-                        cout << "Loop Counter: " << loop_counter << '\n';
+                        //cout << std::hex  << OPCODE << std::dec << '\n';
+                        //cout << "Loop Counter: " << loop_counter << '\n';
                         break;
 
 
@@ -1494,9 +1522,27 @@ class gameboy
                 //read_from_file("../TESTS/DMG_ROM.bin");
                 init();
 
+                //for testing
+                BYTE test_output_SB = mem[SB_reg];
+                BYTE test_output_SC = mem[SC_reg];
                 while(true)
                 {
+//                    if(test_output_SB != mem[SB_reg] || test_output_SC != mem[SC_reg])
+//                    {
+//                        //cout << "SB/SC change detected! : ";
+//                        cout << test_output_SB;
+//                        test_output_SB = mem[SB_reg];
+//                        test_output_SC = mem[SC_reg];
+//                    }
+                    if(0x81 == mem[SC_reg])
+                    {
+                        //cout << "SB/SC change detected! : ";
+                        cout << mem[SB_reg];
+//                        test_output_SB = mem[SB_reg];
+//                        test_output_SC = mem[SC_reg];
+                    }
                     fetch();
+                    print_registers_r8(); //for testing
                     decode_execute();
                     loop_counter++;
                 }
