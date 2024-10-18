@@ -2,6 +2,7 @@
 #include <cmath> //may not need it, used originally for pow
 #include <cstring>
 #include <fstream>
+#include <iomanip>  // For std::setw and std::setfill
 
 
 using namespace std;
@@ -199,7 +200,7 @@ class gameboy
             //testing funcs
             void print_registers_r8()
             {
-                cout << "A: " << std::hex << (int*)(r8[A]) << " " << dec;
+                cout << "A: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[A])<< " " << dec;
                 cout << "F: " << hex << AF_reg.lo << " " << dec;
                 cout << "B: " << hex << r8[B] << " " << dec;
                 cout << "C: " << hex << r8[C] << " " << dec;
