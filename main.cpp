@@ -73,6 +73,7 @@ class gameboy
 
             //a variable for general usage (as one can't declare vars in switch cases)
             WORD tmp;
+            BYTE tmp_uchar;
             BYTE nn_lsb; //least significant byte
             BYTE nn_msb; //most significant byte
 
@@ -199,7 +200,7 @@ class gameboy
 
             //testing funcs
             void init_status_file(){
-                ofstream outFile("registers_status.txt");
+                ofstream outFile("../registers_status.txt"); //overwriting the file if it exists
 
                 if (!outFile) {
                     std::cerr << "Error: Could not open the file!" << endl;
@@ -208,7 +209,7 @@ class gameboy
             }
             void print_registers_r8()
             {
-                ofstream outFile("registers_status.txt", ios::app);
+                ofstream outFile("../registers_status.txt", ios::app);
 
                 if (!outFile) {
                     std::cerr << "Error: Could not open the file!" << endl;
@@ -739,10 +740,15 @@ class gameboy
                         PC = PC + (char)mem[PC];
                         break;
 
+                        ///fixing this command
                     case(0x20): //JR NZ,s8
+                        //PC++;
+                        tmp_uchar = (signed char)mem[PC];
                         PC++;
                         if(!(AF_reg.lo & (BYTE)(1 << FLAG_Z)))
-                            PC = PC + (char)mem[PC];
+                        {
+                            PC = PC + mem[PC];
+                        }
                         break;
 
 
