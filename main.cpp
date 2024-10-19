@@ -6,6 +6,7 @@
 
 
 using namespace std;
+ofstream outMemoryFile;
 
 //HARTA3
 
@@ -204,37 +205,45 @@ class gameboy
 
             //testing funcs
             void init_status_file(){
-                ofstream outFile("../registers_status.txt"); //overwriting the file if it exists
+                ofstream outStatusFile("../registers_status.txt"); //overwriting the file if it exists
 
-                if (!outFile) {
+                if (!outStatusFile) {
                     std::cerr << "Error: Could not open the file!" << endl;
                 }
-                outFile.close();
+                outStatusFile.close();
+            }
+            void init_memory_file(){
+                ofstream outMemoryFile("../memory_status.txt"); //overwriting the file if it exists
+
+                if (!outMemoryFile) {
+                    std::cerr << "Error: Could not open the file!" << endl;
+                }
+                outMemoryFile.close();
             }
             void print_registers_r8()
             {
-                ofstream outFile("../registers_status.txt", ios::app);
+                ofstream outStatusFile("../registers_status.txt", ios::app);
 
-                if (!outFile) {
+                if (!outStatusFile) {
                     std::cerr << "Error: Could not open the file!" << endl;
                     return;
                 }
 
-                outFile << "A: " << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)(*r8[A])<< " " << dec;
-                outFile << "F: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(AF_reg.lo)<< " " << dec;
-                outFile << "B: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[B])<< " " << dec;
-                outFile << "C: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[C])<< " " << dec;
-                outFile << "D: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[D])<< " " << dec;
-                outFile << "E: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[E])<< " " << dec;
-                outFile << "H: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[H])<< " " << dec;
-                outFile << "L: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[L])<< " " << dec;
-                outFile << "SP: " << std::hex << std::setw(4) << std::setfill('0')  << (int)(r16[SP]->reg)<< " " << dec;
-                outFile << "PC: 00:" << std::hex << std::setw(4) << std::setfill('0')  << PC << " " << dec;
-                outFile << "(" << std::hex << std::setw(2) << std::setfill('0')  << (int)mem[PC] << " " <<
+                outStatusFile << "A: " << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)(*r8[A])<< " " << dec;
+                outStatusFile << "F: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(AF_reg.lo)<< " " << dec;
+                outStatusFile << "B: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[B])<< " " << dec;
+                outStatusFile << "C: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[C])<< " " << dec;
+                outStatusFile << "D: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[D])<< " " << dec;
+                outStatusFile << "E: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[E])<< " " << dec;
+                outStatusFile << "H: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[H])<< " " << dec;
+                outStatusFile << "L: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[L])<< " " << dec;
+                outStatusFile << "SP: " << std::hex << std::setw(4) << std::setfill('0')  << (int)(r16[SP]->reg)<< " " << dec;
+                outStatusFile << "PC: 00:" << std::hex << std::setw(4) << std::setfill('0')  << PC << " " << dec;
+                outStatusFile << "(" << std::hex << std::setw(2) << std::setfill('0')  << (int)mem[PC] << " " <<
                                            std::setw(2) << std::setfill('0')  << (int)mem[PC + 1] << " " <<
                                            std::setw(2) << std::setfill('0')  <<(int)mem[PC + 2] << " " <<
                                            std::setw(2) << std::setfill('0')  <<(int)mem[PC + 3] << ")\n" << dec;
-                outFile.close();
+                outStatusFile.close();
 
 //                cout << "F: " << hex << AF_reg.lo << " " << dec;
 //                cout << "B: " << hex << r8[B] << " " << dec;
@@ -407,8 +416,21 @@ class gameboy
 
                     //tested
                     case(0x02): case(0x12): //LD (BC) OR (DE), A
+                        outMemoryFile.open("../memory_status.txt", ios::app);
+                        if (!outMemoryFile) {
+                            std::cerr << "Error: Could not open the file!" << std::endl;
+                            return;
+                        }
+
                         tmp = (OPCODE & 0x30)>>4;
                         mem[r16[tmp]->reg] = *r8[A];
+
+//                        outMemoryFile << loop_counter << ": " << hex << "Store the contents of register A: " << (int)*r8[A] << " in the memory location: mem[" << r16[tmp]->reg << "] specified by register pair " << r16[tmp] << dec << endl;
+
+
+                        outMemoryFile << std::uppercase  << std::setfill('0') << loop_counter << ": " << hex << "mem[" << r16[tmp]->reg << "] <- "<< std::setw(2) << (int)*r8[A] << dec << endl;
+                        outMemoryFile.close();
+
                         break;
 
                     case(0x08): //LD (a16), SP
@@ -1581,12 +1603,17 @@ class gameboy
                 //read_from_file("../TESTS/DMG_ROM.bin");
                 init();
                 init_status_file();
-
+                init_memory_file();
                 //for testing
                 BYTE test_output_SB = mem[SB_reg];
                 BYTE test_output_SC = mem[SC_reg];
                 while(true)
                 {
+//                    ofstream outMemoryFile("../memory_status.txt", std::ios::app);
+//                    if (!outMemoryFile) {
+//                        std::cerr << "Error: Could not open the file!" << std::endl;
+//                        return;
+//                    }
 //                    if(test_output_SB != mem[SB_reg] || test_output_SC != mem[SC_reg])
 //                    {
 //                        //cout << "SB/SC change detected! : ";
