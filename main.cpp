@@ -959,6 +959,7 @@ class gameboy
                         else
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_ZERO
 
+                        //THE ACTUAL FUNCTION
                         (*r8[A]) = (*r8[A]) - (*r8[(OPCODE & 0x07)]);
 
                         //flags
@@ -967,11 +968,6 @@ class gameboy
                         else
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_Z))); //should turn off FLAG_ZERO
                         AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_N))); //should turn off FLAG_N
-
-                        if(testing_mode && (OPCODE == 0x96))
-                        {
-                            print_memory_writes(r16[HL_16]->reg, (*r8[(OPCODE & 0x07)]));
-                        }
 
                         break;
 
@@ -1024,6 +1020,7 @@ class gameboy
                         AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_C); //OFF
                         AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_H); //OFF
                         AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_N); //OFF
+
                         break;
 
 
