@@ -733,7 +733,7 @@ class gameboy
 
 
                     case(0xE0): //LD (a8), A
-                        tmp_uChar = mem[PC];
+                        tmp_uChar = mem[PC]; //FIX!
                         PC++;
                         tmp = (WORD)0xFF00|tmp_uChar;
                         mem[tmp] = *r8[A]; //MSB is FF, LSB is the PC byte
