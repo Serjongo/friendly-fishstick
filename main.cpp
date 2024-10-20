@@ -249,14 +249,14 @@ class gameboy
             }
 
 
-            static void print_memory_writes(WORD address, BYTE val)
+            static void print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             {
                 outMemoryFile.open("../memory_status.txt", ios::app);
                 if (!outMemoryFile) {
                     std::cerr << "Error: Could not open 'memory_status.txt'" << std::endl;
                     return;
                 }
-                outMemoryFile << std::uppercase  << std::setfill('0') << loop_counter << ": " << hex << "mem[" << address << "] <- "<< std::setw(2) << (int)val << dec << endl;
+                outMemoryFile << std::uppercase  << std::setfill('0') << loop_counter << ": (0x" << hex << OPCODE << ") " << "mem[" << address << "] <- "<< std::setw(2) << (int)val << dec << endl;
                 outMemoryFile.close();
             }
 
@@ -422,7 +422,7 @@ class gameboy
                         mem[r16[tmp]->reg] = *r8[A];
 
                         if(testing_mode)
-                            print_memory_writes(r16[tmp]->reg,*r8[A]);
+                            print_memory_writes(OPCODE, r16[tmp]->reg,*r8[A]);
 //                        outMemoryFile << loop_counter << ": " << hex << "Store the contents of register A: " << (int)*r8[A] << " in the memory location: mem[" << r16[tmp]->reg << "] specified by register pair " << r16[tmp] << dec << endl;
 
 
@@ -441,8 +441,8 @@ class gameboy
 
                         if(testing_mode)
                         {
-                            print_memory_writes(mem[tmp], r16[SP]->lo);
-                            print_memory_writes(mem[tmp+1], r16[SP]->hi);
+                            print_memory_writes(OPCODE, mem[tmp], r16[SP]->lo);
+                            print_memory_writes(OPCODE, mem[tmp+1], r16[SP]->hi);
                         }
 
                         break;
@@ -587,7 +587,7 @@ class gameboy
                         r16[HL_16]->reg++; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
 
                         if(testing_mode)
-                            print_memory_writes(r16[HL_16]->reg,*r8[A]);
+                            print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
 
                         break;
 
@@ -597,7 +597,7 @@ class gameboy
                         r16[HL_16]->reg--; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
 
                         if(testing_mode)
-                            print_memory_writes(r16[HL_16]->reg,*r8[A]);
+                            print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
 
                         break;
 
@@ -638,7 +638,7 @@ class gameboy
                         if(testing_mode && (OPCODE == 0x34))
                         {
                             cout << "0x34\n";
-                            print_memory_writes(r16[HL_16]->reg, mem[r16[HL_16]->reg]+1);
+                            print_memory_writes(OPCODE, r16[HL_16]->reg, mem[r16[HL_16]->reg]+1);
                         }
 
                         break;
@@ -664,8 +664,7 @@ class gameboy
 
                         if(testing_mode && (OPCODE == 0x35))
                         {
-                            cout << "0x35\n";
-                            print_memory_writes(r16[HL_16]->reg, mem[r16[HL_16]->reg]-1);
+                            print_memory_writes(OPCODE, r16[HL_16]->reg, mem[r16[HL_16]->reg]-1);
                         }
 
                         break;
@@ -678,7 +677,7 @@ class gameboy
 
                         if(testing_mode && (OPCODE == 0x36))
                         {
-                            print_memory_writes(r16[HL_16]->reg, mem[PC-1]);
+                            print_memory_writes(OPCODE, r16[HL_16]->reg, mem[PC-1]);
                         }
 
                         break;
@@ -699,8 +698,7 @@ class gameboy
                         (*r8[(OPCODE & 0x38)>>3]) = (*r8[(OPCODE & 0x07)]); //dst: relevant opcode bits in r8 are 3rd, 4th & 5th, src: rel bits 0,1,2
                         if(testing_mode && (OPCODE == 0x70 || OPCODE == 0x71 || OPCODE == 0x72 || OPCODE == 0x73 || OPCODE == 0x74 || OPCODE == 0x75 || OPCODE == 0x77))
                         {
-                            cout << "0x7-\n";
-                            print_memory_writes(r16[HL_16]->reg, (*r8[(OPCODE & 0x07)]));
+                            print_memory_writes(OPCODE ,r16[HL_16]->reg, (*r8[(OPCODE & 0x07)]));
                         }
                         break;
 
@@ -739,7 +737,7 @@ class gameboy
 
                         if(testing_mode)
                         {
-                            print_memory_writes((WORD)0xFF00|(BYTE)(PC-1), *r8[A]);
+                            print_memory_writes(OPCODE,(WORD)0xFF00|(BYTE)(PC-1), *r8[A]);
                         }
 
                         break;
@@ -755,7 +753,7 @@ class gameboy
 
                         if(testing_mode)
                         {
-                            print_memory_writes((WORD)0xFF00|*r8[C], *r8[A]);
+                            print_memory_writes(OPCODE, (WORD)0xFF00|*r8[C], *r8[A]);
                         }
 
                         break;
@@ -776,7 +774,7 @@ class gameboy
 
                         if(testing_mode)
                         {
-                            print_memory_writes(tmp, *r8[A]);
+                            print_memory_writes(OPCODE, tmp, *r8[A]);
                         }
 
                         break;
