@@ -311,6 +311,7 @@ class gameboy
                 mem[0xFF40] = 0x91 ;
                 mem[0xFF42] = 0x00 ;
                 mem[0xFF43] = 0x00 ;
+                mem[0xFF44] = 0x90; //for testing, only for now since we don't have an LCD
                 mem[0xFF45] = 0x00 ;
                 mem[0xFF47] = 0xFC ;
                 mem[0xFF48] = 0xFF ;
@@ -318,6 +319,7 @@ class gameboy
                 mem[0xFF4A] = 0x00 ;
                 mem[0xFF4B] = 0x00 ;
                 mem[0xFFFF] = 0x00 ;
+
             }
 
 
