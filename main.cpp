@@ -678,7 +678,7 @@ class gameboy
 
                         if(testing_mode && (OPCODE == 0x36))
                         {
-                            print_memory_writes(r16[HL_16]->reg, mem[PC-1];
+                            print_memory_writes(r16[HL_16]->reg, mem[PC-1]);
                         }
 
                         break;
@@ -736,6 +736,12 @@ class gameboy
                     case(0xE0): //LD (a8), A
                         mem[(WORD)0xFF00|(BYTE)PC] = *r8[A]; //MSB is FF, LSB is the PC byte
                         PC++;
+
+                        if(testing_mode)
+                        {
+                            print_memory_writes((WORD)0xFF00|(BYTE)(PC-1), *r8[A]);
+                        }
+
                         break;
 
                     case(0xF0): //LD A, (a8)
@@ -746,6 +752,14 @@ class gameboy
 
                     case(0xE2): //LD (C), A
                         mem[(WORD)0xFF00|*r8[C]] = *r8[A]; //MSB is FF, LSB is the PC byte
+
+                        if(testing_mode)
+                        {
+                            print_memory_writes((WORD)0xFF00|*r8[C], *r8[A]);
+                        }
+
+                        break;
+
                         break;
 
                     case(0xF2): //LD A, (C)
@@ -759,6 +773,12 @@ class gameboy
                         tmp = (tmp | (mem[PC]<<8));
                         PC++;
                         mem[tmp] = *r8[A];
+
+                        if(testing_mode)
+                        {
+                            print_memory_writes(tmp, *r8[A]);
+                        }
+
                         break;
 
                     case(0xFA): //LD A, (a16)
