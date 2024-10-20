@@ -61,6 +61,7 @@ class gameboy
 
             //declarations - data structures etc
                 BYTE mem[0x10000]; //2^16 bytes
+
                 BYTE IME = 0; //IME FLAG, interrupts enabled/disabled
                 BYTE is_halted = 0; //used for halt commands, perhaps temporarily. credit : https://rylev.github.io/DMG-01/public/book/cpu/conclusion.html
 
@@ -278,7 +279,7 @@ class gameboy
             {
                 //fill memory with zeroes
                 memset(m_CartridgeMemory,0,sizeof(m_CartridgeMemory));
-                //memset(mem,0,sizeof(mem));
+
 
                 PC = 0x100 ;
                 AF_reg.reg = (WORD)0x01B0;
@@ -1705,7 +1706,7 @@ class gameboy
             {
                 //read_from_file("../test.bin");
 
-
+                memset(mem,0,sizeof(mem));
                 //tester, gameboy cartridge, 0x100 offset and all
                 read_from_file("../TESTS/01-special.gb");
 
