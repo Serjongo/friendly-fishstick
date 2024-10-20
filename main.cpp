@@ -435,7 +435,7 @@ class gameboy
                         tmp = 0;
                         tmp = mem[PC];
                         PC++;
-                        tmp = (tmp | (mem[PC]<<8));
+                        tmp = ((mem[PC]<<8) | tmp);
                         PC++;
                         mem[tmp] = r16[SP]->lo;
                         mem[tmp+1] = r16[SP]->hi;
@@ -733,12 +733,15 @@ class gameboy
 
 
                     case(0xE0): //LD (a8), A
-                        mem[(WORD)0xFF00|(BYTE)PC] = *r8[A]; //MSB is FF, LSB is the PC byte
+                        tmp_uChar = mem[PC];
                         PC++;
+                        tmp = (WORD)0xFF00|tmp_uChar;
+                        mem[tmp] = *r8[A]; //MSB is FF, LSB is the PC byte
+
 
                         if(testing_mode)
                         {
-                            print_memory_writes(OPCODE,(WORD)0xFF00|(BYTE)(PC-1), *r8[A]);
+                            print_memory_writes(OPCODE,(WORD)tmp, *r8[A]);
                         }
 
                         break;
@@ -752,7 +755,7 @@ class gameboy
                         break;
 
                     case(0xE2): //LD (C), A
-                        mem[(WORD)0xFF00|*r8[C]] = *r8[A]; //MSB is FF, LSB is the PC byte
+                        mem[(WORD)0xFF00|*r8[C]] = *r8[A]; //MSB is FF, LSB is the C subreg
 
                         if(testing_mode)
                         {
@@ -769,7 +772,7 @@ class gameboy
                         tmp = 0;
                         tmp = mem[PC];
                         PC++;
-                        tmp = (tmp | (mem[PC]<<8));
+                        tmp = ((mem[PC]<<8) | tmp);
                         PC++;
                         mem[tmp] = *r8[A];
 
