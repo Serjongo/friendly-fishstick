@@ -128,7 +128,8 @@ class gameboy
             //BYTE *OP_1 = &OPCODE;
 
 
-
+            //TESTING RELATED
+            BYTE testing_mode = 1; //when turned on, will print testing related info, as well as logging data in text files
 
             //flags
             //may not work, check bitwise arithemtic
@@ -204,11 +205,11 @@ class gameboy
 
 
             //testing funcs
-            void init_status_file(){
+            void init_register_file(){
                 ofstream outStatusFile("../registers_status.txt"); //overwriting the file if it exists
 
                 if (!outStatusFile) {
-                    std::cerr << "Error: Could not open the file!" << endl;
+                    std::cerr << "Error: Could not open 'registers_status.txt'" << endl;
                 }
                 outStatusFile.close();
             }
@@ -216,7 +217,7 @@ class gameboy
                 ofstream outMemoryFile("../memory_status.txt"); //overwriting the file if it exists
 
                 if (!outMemoryFile) {
-                    std::cerr << "Error: Could not open the file!" << endl;
+                    std::cerr << "Error: Could not open 'memory_status.txt'" << endl;
                 }
                 outMemoryFile.close();
             }
@@ -225,7 +226,7 @@ class gameboy
                 ofstream outStatusFile("../registers_status.txt", ios::app);
 
                 if (!outStatusFile) {
-                    std::cerr << "Error: Could not open the file!" << endl;
+                    std::cerr << "Error: Could not open 'registers_status.txt'" << endl;
                     return;
                 }
 
@@ -245,21 +246,20 @@ class gameboy
                                            std::setw(2) << std::setfill('0')  <<(int)mem[PC + 3] << ")\n" << dec;
                 outStatusFile.close();
 
-//                cout << "F: " << hex << AF_reg.lo << " " << dec;
-//                cout << "B: " << hex << r8[B] << " " << dec;
-//                cout << "C: " << hex << r8[C] << " " << dec;
-//                cout << "D: " << hex << r8[D] << " " << dec;
-//                cout << "E: " << hex << r8[E] << " " << dec;
-//                cout << "H: " << hex << r8[H] << " " << dec;
-//                cout << "L: " << hex << r8[L] << " " << dec;
-//                cout << "SP: " << hex << r16[SP] << " " << dec;
-//                cout << "PC: 00:" << hex << PC << " " << dec;
-//                cout << "(" << mem[PC] << " " << mem[PC + 1] << dec << ")\n";
             }
-//            void print_registers_r16()
-//            {
-//
-//            }
+
+
+            static void print_memory_writes(WORD address, BYTE val)
+            {
+                outMemoryFile.open("../memory_status.txt", ios::app);
+                if (!outMemoryFile) {
+                    std::cerr << "Error: Could not open 'memory_status.txt'" << std::endl;
+                    return;
+                }
+                outMemoryFile << std::uppercase  << std::setfill('0') << loop_counter << ": " << hex << "mem[" << address << "] <- "<< std::setw(2) << (int)val << dec << endl;
+                outMemoryFile.close();
+            }
+
 
 
 
@@ -416,20 +416,17 @@ class gameboy
 
                     //tested
                     case(0x02): case(0x12): //LD (BC) OR (DE), A
-                        outMemoryFile.open("../memory_status.txt", ios::app);
-                        if (!outMemoryFile) {
-                            std::cerr << "Error: Could not open the file!" << std::endl;
-                            return;
-                        }
+
 
                         tmp = (OPCODE & 0x30)>>4;
                         mem[r16[tmp]->reg] = *r8[A];
 
+                        if(testing_mode)
+                            print_memory_writes(r16[tmp]->reg,*r8[A]);
 //                        outMemoryFile << loop_counter << ": " << hex << "Store the contents of register A: " << (int)*r8[A] << " in the memory location: mem[" << r16[tmp]->reg << "] specified by register pair " << r16[tmp] << dec << endl;
 
 
-                        outMemoryFile << std::uppercase  << std::setfill('0') << loop_counter << ": " << hex << "mem[" << r16[tmp]->reg << "] <- "<< std::setw(2) << (int)*r8[A] << dec << endl;
-                        outMemoryFile.close();
+
 
                         break;
 
@@ -441,6 +438,13 @@ class gameboy
                         PC++;
                         mem[tmp] = r16[SP]->lo;
                         mem[tmp+1] = r16[SP]->hi;
+
+                        if(testing_mode)
+                        {
+                            print_memory_writes(mem[tmp], r16[SP]->lo);
+                            print_memory_writes(mem[tmp+1], r16[SP]->hi);
+                        }
+
                         break;
 
                     case(0x07): // RLCA
@@ -579,14 +583,22 @@ class gameboy
                     //tested
                     case(0x22): //LD (HL), A
                         //tmp = (OPCODE & 0x30)>>4;
-                        mem[r16[2]->reg] = *r8[A];
-                        r16[2]->reg++; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
+                        mem[r16[HL_16]->reg] = *r8[A];
+                        r16[HL_16]->reg++; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
+
+                        if(testing_mode)
+                            print_memory_writes(r16[HL_16]->reg,*r8[A]);
+
                         break;
 
                     //tested
                     case(0x32):
-                        mem[r16[2]->reg] = *r8[A];
-                        r16[2]->reg--; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
+                        mem[r16[HL_16]->reg] = *r8[A];
+                        r16[HL_16]->reg--; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
+
+                        if(testing_mode)
+                            print_memory_writes(r16[HL_16]->reg,*r8[A]);
+
                         break;
 
 
@@ -622,6 +634,13 @@ class gameboy
 
                         AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_N))); //should turn off FLAG_N
 
+
+                        if(testing_mode && (OPCODE == 0x34))
+                        {
+                            cout << "0x34\n";
+                            print_memory_writes(r16[HL_16]->reg, mem[r16[HL_16]->reg]+1);
+                        }
+
                         break;
 
                     //tested
@@ -642,6 +661,13 @@ class gameboy
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_Z))); //should turn off FLAG_ZERO
 
                         AF_reg.lo = (AF_reg.lo | (BYTE)((1 << FLAG_N))); //should turn on FLAG_N
+
+                        if(testing_mode && (OPCODE == 0x35))
+                        {
+                            cout << "0x35\n";
+                            print_memory_writes(r16[HL_16]->reg, mem[r16[HL_16]->reg]-1);
+                        }
+
                         break;
 
                     //to-test
@@ -649,6 +675,12 @@ class gameboy
                         tmp = (OPCODE & 0x38)>>3;
                         (*r8[tmp]) = mem[PC];
                         PC++;
+
+                        if(testing_mode && (OPCODE == 0x36))
+                        {
+                            print_memory_writes(r16[HL_16]->reg, mem[PC-1];
+                        }
+
                         break;
 
                     ///LD INSTRUCTIONS WITH REGISTERS - MAY UNIFY THEM ALL INTO ONE COMMAND SOON
@@ -658,13 +690,18 @@ class gameboy
                     case(0x40): case(0x41): case(0x42): case(0x43): case(0x44): case(0x45): case(0x46): case(0x47): //LD B,*SUBREG*
                     case(0x50): case(0x51): case(0x52): case(0x53): case(0x54): case(0x55): case(0x56): case(0x57): //LD D,*SUBREG*
                     case(0x60): case(0x61): case(0x62): case(0x63): case(0x64): case(0x65): case(0x66): case(0x67): //LD H,*SUBREG*
-                    case(0x70): case(0x71): case(0x72): case(0x73): case(0x74): case(0x75): case(0x77): //LD H,*SUBREG*
+                    case(0x70): case(0x71): case(0x72): case(0x73): case(0x74): case(0x75): case(0x77): //LD (HL),*SUBREG*
                     case(0x48): case(0x49): case(0x4A): case(0x4B): case(0x4C): case(0x4D): case(0x4E): case(0x4F): //LD C,*SUBREG*
-                    case(0x58): case(0x59): case(0x5A): case(0x5B): case(0x5C): case(0x5D): case(0x5E): case(0x5F): //LD C,*SUBREG*
-                    case(0x68): case(0x69): case(0x6A): case(0x6B): case(0x6C): case(0x6D): case(0x6E): case(0x6F): //LD C,*SUBREG*
-                    case(0x78): case(0x79): case(0x7A): case(0x7B): case(0x7C): case(0x7D): case(0x7E): case(0x7F): //LD C,*SUBREG*
+                    case(0x58): case(0x59): case(0x5A): case(0x5B): case(0x5C): case(0x5D): case(0x5E): case(0x5F): //LD E,*SUBREG*
+                    case(0x68): case(0x69): case(0x6A): case(0x6B): case(0x6C): case(0x6D): case(0x6E): case(0x6F): //LD L,*SUBREG*
+                    case(0x78): case(0x79): case(0x7A): case(0x7B): case(0x7C): case(0x7D): case(0x7E): case(0x7F): //LD A,*SUBREG*
 
                         (*r8[(OPCODE & 0x38)>>3]) = (*r8[(OPCODE & 0x07)]); //dst: relevant opcode bits in r8 are 3rd, 4th & 5th, src: rel bits 0,1,2
+                        if(testing_mode && (OPCODE == 0x70 || OPCODE == 0x71 || OPCODE == 0x72 || OPCODE == 0x73 || OPCODE == 0x74 || OPCODE == 0x75 || OPCODE == 0x77))
+                        {
+                            cout << "0x7-\n";
+                            print_memory_writes(r16[HL_16]->reg, (*r8[(OPCODE & 0x07)]));
+                        }
                         break;
 
                     ///
@@ -910,6 +947,12 @@ class gameboy
                         else
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_Z))); //should turn off FLAG_ZERO
                         AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_N))); //should turn off FLAG_N
+
+                        if(testing_mode && (OPCODE == 0x96))
+                        {
+                            print_memory_writes(r16[HL_16]->reg, (*r8[(OPCODE & 0x07)]));
+                        }
+
                         break;
 
 
@@ -1602,7 +1645,7 @@ class gameboy
                 //bootstrap rom, 0x0 offset
                 //read_from_file("../TESTS/DMG_ROM.bin");
                 init();
-                init_status_file();
+                init_register_file();
                 init_memory_file();
                 //for testing
                 BYTE test_output_SB = mem[SB_reg];
