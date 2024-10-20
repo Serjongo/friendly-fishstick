@@ -755,11 +755,12 @@ class gameboy
                         break;
 
                     case(0xE2): //LD (C), A
-                        mem[(WORD)0xFF00|*r8[C]] = *r8[A]; //MSB is FF, LSB is the C subreg
+                        tmp = (WORD)0xFF00|*r8[C];
+                        mem[tmp] = *r8[A]; //MSB is FF, LSB is the C subreg
 
                         if(testing_mode)
                         {
-                            print_memory_writes(OPCODE, (WORD)0xFF00|*r8[C], *r8[A]);
+                            print_memory_writes(OPCODE, tmp, *r8[A]);
                         }
 
                         break;
