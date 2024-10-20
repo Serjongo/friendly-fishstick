@@ -761,8 +761,6 @@ class gameboy
 
                         break;
 
-                        break;
-
                     case(0xF2): //LD A, (C)
                         *r8[A] = mem[(WORD)0xFF00|*r8[C]]; //MSB is FF, LSB is the PC byte
                         break;
