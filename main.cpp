@@ -441,8 +441,8 @@ class gameboy
 
                         if(testing_mode)
                         {
-                            print_memory_writes(OPCODE, mem[tmp], r16[SP]->lo);
-                            print_memory_writes(OPCODE, mem[tmp+1], r16[SP]->hi);
+                            print_memory_writes(OPCODE, tmp, r16[SP]->lo);
+                            print_memory_writes(OPCODE, tmp+1, r16[SP]->hi);
                         }
 
                         break;
@@ -745,7 +745,9 @@ class gameboy
                     case(0xF0): //LD A, (a8)
                         tmp_uChar = mem[PC];
                         PC++;
-                        *r8[A] = mem[(WORD)0xFF00|(WORD)tmp_uChar]; //MSB is FF, LSB is the PC byte
+                        tmp = (WORD)0xFF00|(WORD)tmp_uChar;
+                        *r8[A] = mem[tmp]; //MSB is FF, LSB is the PC byte
+
                         break;
 
                     case(0xE2): //LD (C), A
@@ -1132,6 +1134,13 @@ class gameboy
                         mem[r16[SP]->reg] = r16[tmp]->hi;
                         r16[SP]->reg = (r16[SP]->reg) - 1;
                         mem[r16[SP]->reg] = r16[tmp]->lo;
+
+                        if(testing_mode)
+                        {
+                            print_memory_writes(OPCODE, r16[SP]->reg+1, r16[tmp]->hi);
+                            print_memory_writes(OPCODE, r16[SP]->reg, r16[tmp]->lo);
+                        }
+
                         break;
 
                     case(0xF5): //PUSH AF,stk
@@ -1139,6 +1148,13 @@ class gameboy
                         mem[r16[SP]->reg] = AF_reg.hi;
                         r16[SP]->reg = (r16[SP]->reg) - 1;
                         mem[r16[SP]->reg] = AF_reg.lo;
+
+                        if(testing_mode)
+                        {
+                            print_memory_writes(OPCODE, r16[SP]->reg+1, AF_reg.hi);
+                            print_memory_writes(OPCODE, r16[SP]->reg, AF_reg.lo);
+                        }
+
                         break;
 
                     case(0xC2): //JP NZ, a16
@@ -1218,6 +1234,12 @@ class gameboy
                         mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
                         PC = tmp;
 
+                        if(testing_mode)
+                        {
+                            print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
+                            print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
+                        }
+
                         break;
 
                     case(0xC4): //CALL NZ, a16
@@ -1232,6 +1254,12 @@ class gameboy
                             r16[SP]->reg = (r16[SP]->reg) - 1;
                             mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
                             PC = tmp;
+
+                            if(testing_mode)
+                            {
+                                print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
+                                print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
+                            }
                         }
                         break;
 
@@ -1248,6 +1276,12 @@ class gameboy
                             r16[SP]->reg = (r16[SP]->reg) - 1;
                             mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
                             PC = tmp;
+
+                            if(testing_mode)
+                            {
+                                print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
+                                print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
+                            }
                         }
                         break;
 
@@ -1263,6 +1297,12 @@ class gameboy
                             r16[SP]->reg = (r16[SP]->reg) - 1;
                             mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
                             PC = tmp;
+
+                            if(testing_mode)
+                            {
+                                print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
+                                print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
+                            }
                         }
                         break;
 
@@ -1278,6 +1318,12 @@ class gameboy
                             r16[SP]->reg = (r16[SP]->reg) - 1;
                             mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
                             PC = tmp;
+
+                            if(testing_mode)
+                            {
+                                print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
+                                print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
+                            }
                         }
                         break;
 
@@ -1290,6 +1336,13 @@ class gameboy
                         r16[SP]->reg = (r16[SP]->reg) - 1;
                         mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
                         PC = tmp;
+
+                        if(testing_mode)
+                        {
+                            print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (0X00FF & ((PC) >> 8)));
+                            print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
+                        }
+
                         break;
 
                     case(0xC6): //ADD A, d8
