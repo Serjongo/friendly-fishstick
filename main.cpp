@@ -1393,7 +1393,7 @@ class gameboy
                         break;
 
                     case(0xCE): //ADC A,d8
-                        tmp = (*r8[A]) + mem[PC] + ((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C);
+                        tmp_uChar = (*r8[A]) + mem[PC] + ((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C);
                         //no incrementing PC yet, because we're calculating the flags now
 
                         //FLAG_C
@@ -1402,13 +1402,13 @@ class gameboy
                         else
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF FLAG_CARRY
                         //FLAG_H
-                        if ( ( (((tmp) & 0x0F)+((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C)+((mem[PC]) & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
+                        if ( ( (((*r8[A]) & 0x0F)+((AF_reg.lo & (BYTE)(1 << FLAG_C))>>FLAG_C)+((mem[PC]) & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
                             AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_H)); //should turn on FLAG_HALF
                         else
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_HALF
 
 
-                        (*r8[A]) = tmp;
+                        (*r8[A]) = tmp_uChar;
                         PC++;
                         AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_N); //OFF
                         if((*r8[A]) == 0)
@@ -1449,7 +1449,7 @@ class gameboy
                         //NOTE that I'm delaying the PC increment (although it should be immediately after) so I can calculate the flags beforehand
 
                         //FLAG_C
-                        if ( (((tmp_uChar & 0x7F) - (mem[PC] & 0x7F) ) & carry_8bit) == carry_8bit)
+                        if ( tmp_uChar - mem[PC] < 0) // credit: https://stackoverflow.com/questions/31409444/what-is-the-behavior-of-the-carry-flag-for-cp-on-a-game-boy/31415312
                             AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on FLAG_CARRY
                         else
                             AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF FLAG_CARRY
