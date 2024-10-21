@@ -729,7 +729,7 @@ class gameboy
 
                     //to-test
                     case(0x0A): case(0x1A):  //LD A, (REG)
-                        tmp = (OPCODE & 0x38)>>3;
+                        tmp = (OPCODE & 0x30)>>4;
                         (*r8[A]) = mem[r16[tmp]->reg];
                         break;
 
@@ -744,6 +744,10 @@ class gameboy
                         if(testing_mode)
                         {
                             print_memory_writes(OPCODE,(WORD)tmp, *r8[A]);
+                            if(tmp == SC_reg && *r8[A] == 0x81)
+                            {
+                                cout << mem[SB_reg];
+                            }
                         }
 
                         break;
@@ -763,6 +767,10 @@ class gameboy
                         if(testing_mode)
                         {
                             print_memory_writes(OPCODE, tmp, *r8[A]);
+                            if(tmp == SC_reg && *r8[A] == 0x81)
+                            {
+                                cout << mem[SB_reg];
+                            }
                         }
 
                         break;
@@ -1737,13 +1745,13 @@ class gameboy
 //                        test_output_SB = mem[SB_reg];
 //                        test_output_SC = mem[SC_reg];
 //                    }
-                    if(0x81 == mem[SC_reg])
-                    {
-                        //cout << "SB/SC change detected! : ";
-                        cout << mem[SB_reg];
-//                        test_output_SB = mem[SB_reg];
-//                        test_output_SC = mem[SC_reg];
-                    }
+//                    if(0x81 == mem[SC_reg])
+//                    {
+//                        //cout << "SB/SC change detected! : ";
+//                        cout << mem[SB_reg];
+////                        test_output_SB = mem[SB_reg];
+////                        test_output_SC = mem[SC_reg];
+//                    }
 
                     print_registers_r8(); //for testing
                     fetch();
