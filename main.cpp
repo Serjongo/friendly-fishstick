@@ -79,6 +79,8 @@ class gameboy
             signed short tmp_sWord;
             BYTE tmp_uChar;
             char tmp_sChar;
+            WORD operand_1;//note that I'll be using these for both 8bit and 16bit arithmetics, which will also assist in detecting "overflow" in 8 bit
+            WORD operand_2;
 
             BYTE nn_lsb; //least significant byte
             BYTE nn_msb; //most significant byte
@@ -250,6 +252,43 @@ class gameboy
             }
 
 
+            //for gameboy_doctor
+            void gbdoctor_init_register_file(){
+                ofstream outStatusFile("../gbdoctor.txt"); //overwriting the file if it exists
+
+                if (!outStatusFile) {
+                    std::cerr << "Error: Could not open 'registers_status.txt'" << endl;
+                }
+                outStatusFile.close();
+            }
+            void gbdoctor_print_registers_r8()
+            {
+                ofstream outStatusFile("../gbdoctor.txt", ios::app);
+
+                if (!outStatusFile) {
+                    std::cerr << "Error: Could not open 'registers_status.txt'" << endl;
+                    return;
+                }
+
+                outStatusFile << "A:" << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)(*r8[A])<< " " << dec;
+                outStatusFile << "F:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(AF_reg.lo)<< " " << dec;
+                outStatusFile << "B:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[B])<< " " << dec;
+                outStatusFile << "C:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[C])<< " " << dec;
+                outStatusFile << "D:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[D])<< " " << dec;
+                outStatusFile << "E:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[E])<< " " << dec;
+                outStatusFile << "H:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[H])<< " " << dec;
+                outStatusFile << "L:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[L])<< " " << dec;
+                outStatusFile << "SP:" << std::hex << std::setw(4) << std::setfill('0')  << (int)(r16[SP]->reg)<< " " << dec;
+                outStatusFile << "PC:" << std::hex << std::setw(4) << std::setfill('0')  << PC << " " << dec;
+                outStatusFile << "PCMEM:" << std::hex << std::setw(2) << std::setfill('0')  << (int)mem[PC] << "," <<
+                              std::setw(2) << std::setfill('0')  << (int)mem[PC + 1] << "," <<
+                              std::setw(2) << std::setfill('0')  <<(int)mem[PC + 2] << "," <<
+                              std::setw(2) << std::setfill('0')  <<(int)mem[PC + 3] << "\n" << dec;
+                outStatusFile.close();
+
+            }
+
+
             static void print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             {
                 outMemoryFile.open("../memory_status.txt", ios::app);
@@ -260,6 +299,7 @@ class gameboy
                 outMemoryFile << std::uppercase  << std::setfill('0') << loop_counter << ": (0x" << hex << OPCODE << ") " << "mem[" << address << "] <- "<< std::setw(2) << (int)val << dec << endl;
                 outMemoryFile.close();
             }
+
 
 
 
@@ -717,21 +757,22 @@ class gameboy
                     ///
 
                     case(0x09):case(0x19):case(0x29):case(0x39): //ADD HL, rr: Add 16bit reg to HL
-                        tmp = (r16[HL_16]->reg); // for flags
-                        (r16[HL_16]->reg) = (r16[HL_16]->reg) + (r16[((OPCODE & 0x30)>>4)]->reg);
+                        operand_1 = (r16[HL_16]->reg); // for flags
+                        operand_2 = (r16[((OPCODE & 0x30)>>4)]->reg);
+                        (r16[HL_16]->reg) = operand_1 + operand_2;
                         //FLAGS
-                        AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_N))); //should turn off FLAG_N
+                        set_N_flag_status(0); //should turn off FLAG_N
 
                         //FLAG_C
-                        if ( ((((tmp) & 0x7FFF)+((r16[((OPCODE & 0x30)>>4)]->reg) ) & 0x7FFF) & carry_16bit) == carry_16bit) //16 BIT!!!
-                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on FLAG_CARRY
+                        if (operand_1 + operand_2 < operand_1) //16 BIT!!!
+                            set_C_flag_status(1); //should turn on FLAG_CARRY
                         else
-                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF FLAG_CARRY
+                            set_C_flag_status(0); //should turn OFF FLAG_CARRY
                         //FLAG_H
-                        if ((((((tmp & 0x0FFF) + r16[((OPCODE & 0x30)>>4)]->reg ) & 0x0FFF)) & half_carry_16bit) == half_carry_16bit) //16 BIT!!!
-                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_H)); //should turn on FLAG_HALF
+                        if ((((operand_1 & 0x0FFF) + (operand_2 & 0x0FFF)) & half_carry_16bit) == half_carry_16bit) //16 BIT!!!
+                            set_H_flag_status(1); //should turn on FLAG_HALF
                         else
-                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_HALF
+                            set_H_flag_status(0); //should turn OFF FLAG_HALF
                         break;
 
 
@@ -1736,6 +1777,7 @@ class gameboy
                 //read_from_file("../TESTS/DMG_ROM.bin");
                 init();
                 init_register_file();
+                gbdoctor_init_register_file();
                 init_memory_file();
                 //for testing
                 BYTE test_output_SB = mem[SB_reg];
@@ -1763,6 +1805,7 @@ class gameboy
 //                    }
 
                     print_registers_r8(); //for testing
+                    gbdoctor_print_registers_r8();
                     fetch();
 
                     decode_execute();
