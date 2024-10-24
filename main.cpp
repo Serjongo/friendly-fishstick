@@ -943,45 +943,44 @@ class gameboy
                         break;
 
                     case(0x80): case(0x81): case(0x82):case(0x83): case(0x84): case(0x85): case(0x86): case(0x87): //ADD r8,r8
-                        //FLAG_C
-                        if ( ((((*r8[(OPCODE & 0x38)>>3]) & 0x7F)+((*r8[(OPCODE & 0x07)]) & 0x7F) ) & carry_8bit) == carry_8bit)
-                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on FLAG_CARRY
-                        else
-                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF FLAG_CARRY
-                        //FLAG_H
-                        if ( ((((*r8[(OPCODE & 0x38)>>3]) & 0x0F)+((*r8[(OPCODE & 0x07)]) & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
-                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_H)); //should turn on FLAG_HALF
-                        else
-                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_HALF
-
-                        (*r8[(OPCODE & 0x38)>>3]) = (*r8[(OPCODE & 0x38)>>3]) + (*r8[(OPCODE & 0x07)]);
+                        operand_1 = (*r8[(OPCODE & 0x38)>>3]);
+                        operand_2 = (*r8[(OPCODE & 0x07)]);
+                        (*r8[(OPCODE & 0x38)>>3]) = operand_1 + operand_2;
 
                         //flags
-                        if ((*r8[(OPCODE & 0x38)>>3]) == 0)
-                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_Z)); //should turn on FLAG_ZERO
+                        //FLAG_C
+                        if (operand_1 + operand_2 > UCHAR_MAX)
+                            set_C_flag_status(1); //should turn on FLAG_CARRY
                         else
-                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_Z))); //should turn off FLAG_ZERO
+                            set_C_flag_status(0); //should turn OFF FLAG_CARRY
+                        //FLAG_H
+                        if ( (((operand_1 & 0x0F)+(operand_2 & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
+                            set_H_flag_status(1); //should turn on FLAG_HALF
+                        else
+                            set_H_flag_status(0); //should turn off FLAG_HALF
 
-                        AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_N))); //should turn off FLAG_N
+                        set_Z_flag_status((*r8[(OPCODE & 0x38)>>3]));
+                        set_N_flag_status(0); //should turn off FLAG_N
                         break;
 
                     case(0xE8): //ADD SP, e (relative)
+                        tmp_sChar = (char)(mem[PC]);
+                        operand_1 = r16[SP]->reg;
+                        PC++;
+                        r16[SP]->reg = operand_1 + tmp_sChar;
+
+                        //flags
                         //FLAG_C
-                        if ( (((r16[SP]->reg & 0x7F)+((char)(mem[PC]) & 0x7F) ) & carry_8bit) == carry_8bit)
+                        if (operand_1 + tmp_sChar  > UCHAR_MAX)
                             set_C_flag_status(1); //should turn on CARRY
                         else
                             set_C_flag_status(0); //should turn off CARRY
                         //FLAG_H
-                        if ( (((r16[SP]->reg & 0x0F)+((char)(mem[PC]) & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
+                        if ( (((operand_1 & 0x0F)+(tmp_sChar & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
                             set_H_flag_status(1); //should turn on FLAG_HALF
                         else
                             set_H_flag_status(0); //should turn OFF FLAG_HALF
 
-                        r16[SP]->reg = r16[SP]->reg + (char)(mem[PC]);
-
-                        PC++;
-
-                        //flags
                         set_Z_flag_status(0);
                         set_N_flag_status(0);
                         break;
@@ -1772,7 +1771,19 @@ class gameboy
 
                 memset(mem,0,sizeof(mem));
                 //tester, gameboy cartridge, 0x100 offset and all
-                read_from_file("../TESTS/01-special.gb");
+                //checklist of tests
+                // 01-special.gb - V
+                // 02-interrupts.gb
+                // 03-op sp,hl.gb
+                // 04-op r,imm.gb
+                // 05-op rp.gb - V
+                // 06-ld r,r.gb - V
+                // 07-jr,jp,call,ret,rst.gb - V
+                // 08-misc instrs.gb - V
+                // 09-op r,r.gb
+                // 10-bit ops.gb
+                // 11-op a,(hl).gb
+                read_from_file("../TESTS/03-op sp,hl.gb");
 
 
                 //bootstrap rom, 0x0 offset
