@@ -132,7 +132,7 @@ class gameboy
 
 
             //TESTING RELATED
-            BYTE testing_mode = 1; //when turned on, will print testing related info, as well as logging data in text files
+            BYTE testing_mode = 0; //when turned on, will print testing related info, as well as logging data in text files
 
             //flags
             //may not work, check bitwise arithemtic
@@ -790,14 +790,15 @@ class gameboy
                         tmp = (WORD)0xFF00|tmp_uChar;
                         mem[tmp] = *r8[A]; //MSB is FF, LSB is the PC byte
 
-
+                        //this is for blaarg's test suite, can be moved to testing_mode if causes problems
+                        if(tmp == SC_reg && *r8[A] == 0x81)
+                        {
+                            cout << mem[SB_reg];
+                        }
                         if(testing_mode)
                         {
                             print_memory_writes(OPCODE,(WORD)tmp, *r8[A]);
-                            if(tmp == SC_reg && *r8[A] == 0x81)
-                            {
-                                cout << mem[SB_reg];
-                            }
+
                         }
 
                         break;
