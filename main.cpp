@@ -764,7 +764,7 @@ class gameboy
                         set_N_flag_status(0); //should turn off FLAG_N
 
                         //FLAG_C
-                        if (operand_1 + operand_2 < operand_1) //16 BIT!!!
+                        if (operand_1 + operand_2 > USHRT_MAX) //16 BIT!!!
                             set_C_flag_status(1); //should turn on FLAG_CARRY
                         else
                             set_C_flag_status(0); //should turn OFF FLAG_CARRY
@@ -1184,10 +1184,12 @@ class gameboy
                         break;
 
                     case(0xF1): //POP AF,stk
-                        AF_reg.lo = mem[r16[SP]->reg];
+                        AF_reg.lo = mem[r16[SP]->reg] & 0xF0; //4 lower bits of F are always 0
                         r16[SP]->reg = (r16[SP]->reg) + 1;
                         AF_reg.hi = (mem[r16[SP]->reg]);
                         r16[SP]->reg = (r16[SP]->reg) + 1;
+
+
                         break;
 
                     case(0xC5): case(0xD5): case(0xE5): //PUSH r16stk
@@ -1411,25 +1413,24 @@ class gameboy
                     case(0xC6): //ADD A, d8
                         tmp = (*r8[A]); //backup for flag calculation
                         (*r8[A]) = (*r8[A]) + mem[PC];
+                        //PC++;
                         //NOTE that I'm delaying the PC increment (although it should be immediately after) so I can calculate the flags beforehand
 
                         //FLAG_C
-                        if ( ( ((tmp & 0x7F)+(mem[PC] & 0x7F) ) & carry_8bit) == carry_8bit)
-                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on FLAG_CARRY
+                        if ((tmp + mem[PC]) > UCHAR_MAX)
+                            set_C_flag_status(1); //should turn on FLAG_CARRY
                         else
-                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_C))); //should turn OFF FLAG_CARRY
+                            set_C_flag_status(0); //should turn OFF FLAG_CARRY
                         //FLAG_H
                         if ( ( (((tmp) & 0x0F)+((mem[PC]) & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
-                            AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_H)); //should turn on FLAG_HALF
+                            set_H_flag_status(1); //should turn on FLAG_HALF
                         else
-                            AF_reg.lo = (AF_reg.lo & (BYTE)(~(1 << FLAG_H))); //should turn OFF FLAG_HALF
+                            set_H_flag_status(0); //should turn OFF FLAG_HALF
                         PC++;
                         //flags
-                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_N); //OFF
-                        if((*r8[A]) == 0)
-                            AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
-                        else
-                            AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
+                        set_N_flag_status(0); //OFF
+                        set_Z_flag_status((*r8[A]));
+
 
                         break;
 
@@ -1776,9 +1777,13 @@ class gameboy
                 //bootstrap rom, 0x0 offset
                 //read_from_file("../TESTS/DMG_ROM.bin");
                 init();
-                init_register_file();
-                gbdoctor_init_register_file();
-                init_memory_file();
+                if(testing_mode)
+                {
+                    init_register_file();
+                    gbdoctor_init_register_file();
+                    init_memory_file();
+                }
+
                 //for testing
                 BYTE test_output_SB = mem[SB_reg];
                 BYTE test_output_SC = mem[SC_reg];
@@ -1804,8 +1809,10 @@ class gameboy
 ////                        test_output_SC = mem[SC_reg];
 //                    }
 
-                    print_registers_r8(); //for testing
-                    gbdoctor_print_registers_r8();
+                    if(testing_mode) {
+                        print_registers_r8(); //for testing
+                        gbdoctor_print_registers_r8();
+                    }
                     fetch();
 
                     decode_execute();
