@@ -132,7 +132,7 @@ class gameboy
 
 
             //TESTING RELATED
-            BYTE testing_mode = 1; //when turned on, will print testing related info, as well as logging data in text files
+            BYTE testing_mode = 0; //when turned on, will print testing related info, as well as logging data in text files
 
             //flags
             //may not work, check bitwise arithemtic
@@ -693,7 +693,7 @@ class gameboy
                     case(0x05):case(0x15):case(0x25):case(0x35): //DEC r8[reg]
                     case(0x0D):case(0x1D):case(0x2D):case(0x3D): //DEC r8[reg]
                         tmp_uChar = *r8[(OPCODE & 0x38)>>3];
-                        (*r8[tmp])--; ///may cause error when incrementing B
+                        (*r8[(OPCODE & 0x38)>>3])--; ///may cause error when incrementing B
 
 
                         //flags
@@ -703,7 +703,7 @@ class gameboy
                         else
                             set_H_flag_status(0); //should turn OFF FLAG_ZERO
 
-                        set_Z_flag_status((*r8[tmp]) == 0);
+                        set_Z_flag_status((*r8[(OPCODE & 0x38)>>3]));
                         set_N_flag_status(1);
 
                         if(testing_mode && (OPCODE == 0x35))
@@ -1746,7 +1746,7 @@ class gameboy
                 // 09-op r,r.gb
                 // 10-bit ops.gb
                 // 11-op a,(hl).gb
-                read_from_file("../TESTS/05-op rp.gb");
+                read_from_file("../TESTS/01-special.gb");
 
 
                 //bootstrap rom, 0x0 offset
