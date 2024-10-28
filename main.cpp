@@ -1563,12 +1563,14 @@ class gameboy
                     case(0xCB50): case(0xCB51): case(0xCB52): case(0xCB53): case(0xCB54): case(0xCB55): case(0xCB56): case(0xCB57): case(0xCB58): case(0xCB59): case(0xCB5A): case(0xCB5B): case(0xCB5C): case(0xCB5D): case(0xCB5E): case(0xCB5F):
                     case(0xCB60): case(0xCB61): case(0xCB62): case(0xCB63): case(0xCB64): case(0xCB65): case(0xCB66): case(0xCB67): case(0xCB68): case(0xCB69): case(0xCB6A): case(0xCB6B): case(0xCB6C): case(0xCB6D): case(0xCB6E): case(0xCB6F):
                     case(0xCB70): case(0xCB71): case(0xCB72): case(0xCB73): case(0xCB74): case(0xCB75): case(0xCB76): case(0xCB77): case(0xCB78): case(0xCB79): case(0xCB7A): case(0xCB7B): case(0xCB7C): case(0xCB7D): case(0xCB7E): case(0xCB7F):
-                        tmp = (*r8[(OPCODE & 0x38)>>3]);
+                        tmp_uChar = (*r8[(OPCODE & 0x38)>>3]);
                         ///SHOULD BE THE Z-FLAG OF THE PROGRAM STATUS REGISTER / STAT REGISTER. UNSURE WHAT IT IS FOR NOW, TO-CHECK!~~~~~
-                        if((0x01 & (tmp >> (OPCODE & 0x07))) == 0) //input the complement of the given bit into the Z_FLAG
+                        if((0x01 & (tmp_uChar >> (OPCODE & 0x07))) == 0) //input the complement of the given bit into the Z_FLAG
                             AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
                         else
                             AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
+                        set_H_flag_status(1);
+                        set_N_flag_status(0);
                         break;
 
                         //RES (reset)
