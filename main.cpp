@@ -25,6 +25,9 @@ typedef unsigned int DWORD; // 32-bit number
 #define FLAG_C 4
 #define SB_reg 0xFF01 //Serial transfer data
 #define SC_reg 0xFF02 //Serial transfer control
+#define IF_reg 0xFF0F //Interrupt Flag
+#define IE_reg 0xFFFF //interrupt Enabler
+
 
 
 int loop_counter = 1;
@@ -104,6 +107,19 @@ class gameboy
                 HL_16,
                 SP,
             };
+
+            enum interrupts
+            {
+                vblank,
+                lcd,
+                timer,
+                serial_link,
+                joypad
+            };
+            //used for convenience for interrupts setters and getters
+            int interrupts[5] = {0,1,2,3,4};
+
+
         //those are the full registers
             Register* r16[4] = {
                     &BC_reg,
@@ -160,6 +176,13 @@ class gameboy
                 return (AF_reg.lo & (BYTE)(1 << FLAG_C)) == (BYTE)(1 << FLAG_C);
             }
 
+            //interrupt getters
+            BYTE get_interrupt_bit_status(WORD IE_IF, int interrupt_type)
+            {
+                return (mem[IE_IF] & (0x01 << interrupts[interrupt_type]));
+            }
+
+
             //flag setters
             void set_Z_flag_status(BYTE status)
             {
@@ -205,6 +228,13 @@ class gameboy
                     AF_reg.lo = (AF_reg.lo | (BYTE)(1 << FLAG_C)); //should turn on FLAG_ZERO
                 }
             }
+
+            //interrupt setters
+            void set_off_interrupt_bit(int interrupt_type)
+            {
+                mem[IF_reg] = mem[IF_reg] & (BYTE)(~(0x01) << interrupts[interrupt_type]);
+            }
+
 
 
             //testing funcs
@@ -358,7 +388,7 @@ class gameboy
                 mem[0xFF49] = 0xFF ;
                 mem[0xFF4A] = 0x00 ;
                 mem[0xFF4B] = 0x00 ;
-                mem[0xFFFF] = 0x00 ;
+                mem[0xFFFF] = 0x00 ; //Interrupt Enabler
 
             }
 
@@ -419,6 +449,39 @@ class gameboy
 
 
             }
+            void check_interrupts()
+            {
+                //https://robertovaccari.com/blog/2020_09_26_gameboy/
+                if(mem[IF_reg] != 0 && IME == 1)
+                {
+                    if(get_interrupt_bit_status(IF_reg,vblank) && get_interrupt_bit_status(IE_reg,vblank)) //Vblank
+                    {
+                        IME = 0;
+                        set_off_interrupt_bit(vblank);
+                    }
+                    else if(get_interrupt_bit_status(IF_reg,lcd) && get_interrupt_bit_status(IE_reg,lcd)) //LCD
+                    {
+                        IME = 0;
+                        set_off_interrupt_bit(lcd);
+                    }
+                    else if(get_interrupt_bit_status(IF_reg,timer) && get_interrupt_bit_status(IE_reg,timer)) //Timer
+                    {
+                        IME = 0;
+                        set_off_interrupt_bit(timer);
+                    }
+                    else if(get_interrupt_bit_status(IF_reg,serial_link) && get_interrupt_bit_status(IE_reg,serial_link)) //Serial Link
+                    {
+                        IME = 0;
+                        set_off_interrupt_bit(serial_link);
+                    }
+                    else if(get_interrupt_bit_status(IF_reg,joypad) && get_interrupt_bit_status(IE_reg,joypad)) //Joypad
+                    {
+                        IME = 0;
+                        set_off_interrupt_bit(joypad);
+                    }
+                }
+            }
+
             void decode_execute()
             {
                 if(is_halted) //if HALT command was executed, we will not execute new commands until the status changes back
@@ -1731,7 +1794,7 @@ class gameboy
                 // 09-op r,r.gb
                 // 10-bit ops.gb - VV
                 // 11-op a,(hl).gb
-                read_from_file("../TESTS/11-op a,(hl).gb");
+                read_from_file("../TESTS/02-interrupts.gb");
 
 
                 //bootstrap rom, 0x0 offset
