@@ -1566,9 +1566,9 @@ class gameboy
                         tmp_uChar = (*r8[(OPCODE & 0x38)>>3]);
                         ///SHOULD BE THE Z-FLAG OF THE PROGRAM STATUS REGISTER / STAT REGISTER. UNSURE WHAT IT IS FOR NOW, TO-CHECK!~~~~~
                         if((0x01 & (tmp_uChar >> (OPCODE & 0x07))) == 0) //input the complement of the given bit into the Z_FLAG
-                            AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
+                            set_Z_flag_status(1); //ON
                         else
-                            AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
+                            set_Z_flag_status(0); //OFF
                         set_H_flag_status(1);
                         set_N_flag_status(0);
                         break;
