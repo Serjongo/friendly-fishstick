@@ -1493,18 +1493,9 @@ class gameboy
                     case(0xF6): //OR A, d8
                         (*r8[A]) = (*r8[A]) | mem[PC];
                         PC++;
-                        //FLAG_C
-                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_C); //OFF
-                        //FLAG_H
-                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_H); //OFF
-
                         //flags
-                        AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_N); //OFF
-
-                        if((*r8[A]) == 0)
-                            AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
-                        else
-                            AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
+                        set_Z_flag_status(*r8[A]);
+                        set_C_flag_status(0);
                         set_H_flag_status(0);
                         set_N_flag_status(0);
                         break;
