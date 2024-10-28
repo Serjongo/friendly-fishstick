@@ -683,7 +683,7 @@ class gameboy
 
                         if(testing_mode && (OPCODE == 0x34))
                         {
-                            cout << "0x34\n";
+                            //cout << "0x34\n";
                             print_memory_writes(OPCODE, r16[HL_16]->reg, mem[r16[HL_16]->reg]+1);
                         }
 
@@ -1644,7 +1644,7 @@ class gameboy
                     case(0xCB20): case(0xCB21): case(0xCB22): case(0xCB23): case(0xCB24): case(0xCB25): case(0xCB26): case(0xCB27): //SLA - shift left arithmetic
                         tmp = 0;
                         tmp = (*r8[(OPCODE & 0x07)] & 0x80); //msb
-                        *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] << 1); //shift all bits to the left
+                        *r8[(OPCODE & 0x07)] = ((char)(*r8[(OPCODE & 0x07)]) << 1); //shift all bits to the left
                         *r8[(OPCODE & 0x07)] = *r8[(OPCODE & 0x07)] & 0xFE; //reset bit 0
 
                         //flags
@@ -1656,8 +1656,20 @@ class gameboy
 
                     case(0xCB28): case(0xCB29): case(0xCB2A): case(0xCB2B): case(0xCB2C): case(0xCB2D): case(0xCB2E): case(0xCB2F): //SRA - shift right arithmetic
                         tmp = 0;
+                        tmp_uChar = (*r8[(OPCODE & 0x07)] & 0x80); //msb
                         tmp = (*r8[(OPCODE & 0x07)] & 0x01); //lsb
-                        *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] >> 1); //shift all bits to the right
+                        *r8[(OPCODE & 0x07)] = ((char)(*r8[(OPCODE & 0x07)]) >> 1); //shift all bits to the right
+
+
+//                        if(tmp_uChar == 0)
+//                        {
+//                            *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] & (BYTE)(~(1 << 7))); //should turn off bit 7
+//                        }
+//                        else
+//                        {
+//                            *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] | (BYTE)(1 << 7)); //should turn on bit 7
+//                        }
+
                         //new bit 7 is unchanged as per the instructions, although it should automatically default to 0 since unsigned
 
                         //flags
