@@ -132,7 +132,7 @@ class gameboy
 
 
             //TESTING RELATED
-            BYTE testing_mode = 0; //when turned on, will print testing related info, as well as logging data in text files
+            BYTE testing_mode = 1; //when turned on, will print testing related info, as well as logging data in text files
 
             //flags
             //may not work, check bitwise arithemtic
@@ -1505,6 +1505,8 @@ class gameboy
                             AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
                         else
                             AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
+                        set_H_flag_status(0);
+                        set_N_flag_status(0);
                         break;
 
 
@@ -1726,7 +1728,7 @@ class gameboy
                 // 09-op r,r.gb
                 // 10-bit ops.gb - VV
                 // 11-op a,(hl).gb
-                read_from_file("../TESTS/03-op sp,hl.gb");
+                read_from_file("../TESTS/11-op a,(hl).gb");
 
 
                 //bootstrap rom, 0x0 offset
