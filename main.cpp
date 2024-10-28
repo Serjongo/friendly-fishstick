@@ -858,12 +858,12 @@ class gameboy
                         set_Z_flag_status(1); //non zero, meaning set flag off
                         set_N_flag_status(0);
 
-                        if ( (( (operand_1 & 0x0F) + (tmp_sChar & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
+                        if ( (( ((short)operand_1 & 0x0F) + (tmp_sChar & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
                             set_H_flag_status(1);
                         else
                             set_H_flag_status(0);
 
-                        if(operand_1 + tmp_sChar > USHRT_MAX)
+                        if((short)(operand_1 & 0xFF) + (tmp_sChar & 0xFF) > UCHAR_MAX)
                             set_C_flag_status(1);
                         else
                             set_C_flag_status(0);
@@ -1726,7 +1726,7 @@ class gameboy
                 // 09-op r,r.gb
                 // 10-bit ops.gb - VV
                 // 11-op a,(hl).gb
-                read_from_file("../TESTS/11-op a,(hl).gb");
+                read_from_file("../TESTS/03-op sp,hl.gb");
 
 
                 //bootstrap rom, 0x0 offset
