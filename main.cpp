@@ -1505,7 +1505,7 @@ class gameboy
                             AF_reg.lo = AF_reg.lo | (BYTE)(1 << FLAG_Z); //ON
                         else
                             AF_reg.lo = AF_reg.lo & (BYTE)~(1 << FLAG_Z); //OFF
-                        set_H_flag_status(1);
+                        set_H_flag_status(0);
                         set_N_flag_status(0);
                         break;
 
@@ -1728,7 +1728,7 @@ class gameboy
                 // 09-op r,r.gb
                 // 10-bit ops.gb - VV
                 // 11-op a,(hl).gb
-                read_from_file("../TESTS/11-op a,(hl).gb");
+                read_from_file("../TESTS/04-op r,imm.gb");
 
 
                 //bootstrap rom, 0x0 offset
