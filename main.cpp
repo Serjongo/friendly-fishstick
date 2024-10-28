@@ -132,7 +132,7 @@ class gameboy
 
 
             //TESTING RELATED
-            BYTE testing_mode = 0; //when turned on, will print testing related info, as well as logging data in text files
+            BYTE testing_mode = 1; //when turned on, will print testing related info, as well as logging data in text files
 
             //flags
             //may not work, check bitwise arithemtic
@@ -999,7 +999,7 @@ class gameboy
 
                         //flags
                         set_Z_flag_status(*r8[A]);
-                        set_N_flag_status(0);
+                        set_N_flag_status(1);
                         //FLAG_C
                         if (operand_1 < operand_2)
                             set_C_flag_status(1);
