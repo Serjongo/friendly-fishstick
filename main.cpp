@@ -217,37 +217,37 @@ class gameboy
                 outStatusFile.close();
             }
             void init_memory_file(){
-                ofstream outMemoryFile("../memory_status.txt"); //overwriting the file if it exists
-
-                if (!outMemoryFile) {
-                    std::cerr << "Error: Could not open 'memory_status.txt'" << endl;
-                }
-                outMemoryFile.close();
+//                ofstream outMemoryFile("../memory_status.txt"); //overwriting the file if it exists
+//
+//                if (!outMemoryFile) {
+//                    std::cerr << "Error: Could not open 'memory_status.txt'" << endl;
+//                }
+//                outMemoryFile.close();
             }
             void print_registers_r8()
             {
-                ofstream outStatusFile("../registers_status.txt", ios::app);
-
-                if (!outStatusFile) {
-                    std::cerr << "Error: Could not open 'registers_status.txt'" << endl;
-                    return;
-                }
-
-                outStatusFile << "A: " << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)(*r8[A])<< " " << dec;
-                outStatusFile << "F: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(AF_reg.lo)<< " " << dec;
-                outStatusFile << "B: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[B])<< " " << dec;
-                outStatusFile << "C: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[C])<< " " << dec;
-                outStatusFile << "D: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[D])<< " " << dec;
-                outStatusFile << "E: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[E])<< " " << dec;
-                outStatusFile << "H: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[H])<< " " << dec;
-                outStatusFile << "L: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[L])<< " " << dec;
-                outStatusFile << "SP: " << std::hex << std::setw(4) << std::setfill('0')  << (int)(r16[SP]->reg)<< " " << dec;
-                outStatusFile << "PC: 00:" << std::hex << std::setw(4) << std::setfill('0')  << PC << " " << dec;
-                outStatusFile << "(" << std::hex << std::setw(2) << std::setfill('0')  << (int)mem[PC] << " " <<
-                                           std::setw(2) << std::setfill('0')  << (int)mem[PC + 1] << " " <<
-                                           std::setw(2) << std::setfill('0')  <<(int)mem[PC + 2] << " " <<
-                                           std::setw(2) << std::setfill('0')  <<(int)mem[PC + 3] << ")\n" << dec;
-                outStatusFile.close();
+//                ofstream outStatusFile("../registers_status.txt", ios::app);
+//
+//                if (!outStatusFile) {
+//                    std::cerr << "Error: Could not open 'registers_status.txt'" << endl;
+//                    return;
+//                }
+//
+//                outStatusFile << "A: " << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)(*r8[A])<< " " << dec;
+//                outStatusFile << "F: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(AF_reg.lo)<< " " << dec;
+//                outStatusFile << "B: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[B])<< " " << dec;
+//                outStatusFile << "C: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[C])<< " " << dec;
+//                outStatusFile << "D: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[D])<< " " << dec;
+//                outStatusFile << "E: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[E])<< " " << dec;
+//                outStatusFile << "H: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[H])<< " " << dec;
+//                outStatusFile << "L: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[L])<< " " << dec;
+//                outStatusFile << "SP: " << std::hex << std::setw(4) << std::setfill('0')  << (int)(r16[SP]->reg)<< " " << dec;
+//                outStatusFile << "PC: 00:" << std::hex << std::setw(4) << std::setfill('0')  << PC << " " << dec;
+//                outStatusFile << "(" << std::hex << std::setw(2) << std::setfill('0')  << (int)mem[PC] << " " <<
+//                                           std::setw(2) << std::setfill('0')  << (int)mem[PC + 1] << " " <<
+//                                           std::setw(2) << std::setfill('0')  <<(int)mem[PC + 2] << " " <<
+//                                           std::setw(2) << std::setfill('0')  <<(int)mem[PC + 3] << ")\n" << dec;
+//                outStatusFile.close();
 
             }
 
@@ -858,12 +858,12 @@ class gameboy
                         set_Z_flag_status(1); //non zero, meaning set flag off
                         set_N_flag_status(0);
 
-                        if ( (( (operand_1 & 0x0F) + (tmp_sChar & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
+                        if ( (( ((short)operand_1 & 0x0F) + (tmp_sChar & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
                             set_H_flag_status(1);
                         else
                             set_H_flag_status(0);
 
-                        if(operand_1 + tmp_sChar > USHRT_MAX)
+                        if(((short)operand_1 & 0xFF) + (tmp_sChar & 0xFF) > UCHAR_MAX)
                             set_C_flag_status(1);
                         else
                             set_C_flag_status(0);
@@ -949,24 +949,24 @@ class gameboy
                         break;
 
                     case(0xE8): //ADD SP, e (relative)
-                        tmp_sChar = (char)(mem[PC]);
+                        tmp_sChar = (signed char)(mem[PC]);
                         operand_1 = r16[SP]->reg;
                         PC++;
                         r16[SP]->reg = operand_1 + tmp_sChar;
 
                         //flags
                         //FLAG_C
-                        if (operand_1 + tmp_sChar  > UCHAR_MAX)
+                        if ((((short)operand_1 & 0xFF) + (tmp_sChar & 0xFF))  > UCHAR_MAX)
                             set_C_flag_status(1); //should turn on CARRY
                         else
                             set_C_flag_status(0); //should turn off CARRY
                         //FLAG_H
-                        if ( (((operand_1 & 0x0F)+(tmp_sChar & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
+                        if ( ((((short)operand_1 & 0x0F)+(tmp_sChar & 0x0F) ) & half_carry_8bit) == half_carry_8bit)
                             set_H_flag_status(1); //should turn on FLAG_HALF
                         else
                             set_H_flag_status(0); //should turn OFF FLAG_HALF
 
-                        set_Z_flag_status(0);
+                        set_Z_flag_status(1); //OFF
                         set_N_flag_status(0);
                         break;
 
@@ -1565,7 +1565,7 @@ class gameboy
                     case(0xCB70): case(0xCB71): case(0xCB72): case(0xCB73): case(0xCB74): case(0xCB75): case(0xCB76): case(0xCB77): case(0xCB78): case(0xCB79): case(0xCB7A): case(0xCB7B): case(0xCB7C): case(0xCB7D): case(0xCB7E): case(0xCB7F):
                         tmp_uChar = (*r8[(OPCODE & 0x38)>>3]);
                         ///SHOULD BE THE Z-FLAG OF THE PROGRAM STATUS REGISTER / STAT REGISTER. UNSURE WHAT IT IS FOR NOW, TO-CHECK!~~~~~
-                        if((0x01 & (tmp_uChar >> (OPCODE & 0x07))) == 0) //input the complement of the given bit into the Z_FLAG
+                        if(((tmp_uChar >> (OPCODE & 0x07)) & 0x01) == 0) //input the complement of the given bit into the Z_FLAG
                             set_Z_flag_status(1); //ON
                         else
                             set_Z_flag_status(0); //OFF
@@ -1726,7 +1726,7 @@ class gameboy
                 // 09-op r,r.gb
                 // 10-bit ops.gb
                 // 11-op a,(hl).gb
-                read_from_file("../TESTS/03-op sp,hl.gb");
+                read_from_file("../TESTS/11-op a,(hl).gb");
 
 
                 //bootstrap rom, 0x0 offset
