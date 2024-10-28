@@ -132,7 +132,7 @@ class gameboy
 
 
             //TESTING RELATED
-            BYTE testing_mode = 1; //when turned on, will print testing related info, as well as logging data in text files
+            BYTE testing_mode = 0; //when turned on, will print testing related info, as well as logging data in text files
 
             //flags
             //may not work, check bitwise arithemtic
@@ -977,16 +977,16 @@ class gameboy
                         (*r8[A]) = operand_1 + operand_2 + get_C_flag_status();
 
                         //flags
-                        //FLAG_C
-                        if (operand_1 + operand_2 + get_C_flag_status() > UCHAR_MAX)
-                            set_C_flag_status(1);
-                        else
-                            set_C_flag_status(0);
                         //FLAG_H
                         if ( ( ( (operand_1 & 0x0F) + (operand_2 & 0x0F) + get_C_flag_status() ) & half_carry_8bit) == half_carry_8bit)
                             set_H_flag_status(1);
                         else
                             set_H_flag_status(0);
+                        //FLAG_C
+                        if (operand_1 + operand_2 + get_C_flag_status() > UCHAR_MAX)
+                            set_C_flag_status(1);
+                        else
+                            set_C_flag_status(0);
 
                         set_Z_flag_status(*r8[A]);
                         set_N_flag_status(0);
@@ -1710,8 +1710,8 @@ class gameboy
                 //checklist of tests
                 // 01-special.gb - VV
                 // 02-interrupts.gb
-                // 03-op sp,hl.gb
-                // 04-op r,imm.gb
+                // 03-op sp,hl.gb - V
+                // 04-op r,imm.gb - VV
                 // 05-op rp.gb - VV
                 // 06-ld r,r.gb - VV
                 // 07-jr,jp,call,ret,rst.gb - VV
