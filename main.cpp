@@ -118,7 +118,16 @@ class gameboy
             };
             //used for convenience for interrupts setters and getters
             int interrupts[5] = {0,1,2,3,4};
+            //check if we are dealing with an interrupt request
+            BYTE interrupt_mode = 0;
 
+            WORD interrupt_routine_addresses[5] = {
+                    0x0040,
+                    0x0048,
+                    0x0050,
+                    0x0058,
+                    0x0060
+            };
 
         //those are the full registers
             Register* r16[4] = {
@@ -446,9 +455,31 @@ class gameboy
                     OPCODE = OPCODE<<8 | mem[PC];
                     PC++;
                 }
-
-
             }
+
+            //move PC to interrupt handler, backup PC in stack
+            void PC_to_interrupt(int interrupt_routine_type)
+            {
+                interrupt_mode = 1;
+                IME = 0;
+                set_off_interrupt_bit(interrupt_routine_type);
+                //PUSH r16stk command
+                r16[SP]->reg = (r16[SP]->reg) - 1;
+                mem[r16[SP]->reg] = (PC >> 8); //this is the MSByte of PC
+                r16[SP]->reg = (r16[SP]->reg) - 1;
+                mem[r16[SP]->reg] = PC; //this is the LSByte of PC
+
+                if(testing_mode)
+                {
+                    print_memory_writes(OPCODE, r16[SP]->reg+1, r16[tmp]->hi);
+                    print_memory_writes(OPCODE, r16[SP]->reg, r16[tmp]->lo);
+                }
+
+                PC = interrupt_routine_addresses[interrupt_routine_type];
+            }
+
+
+
             void check_interrupts()
             {
                 //https://robertovaccari.com/blog/2020_09_26_gameboy/
@@ -456,30 +487,37 @@ class gameboy
                 {
                     if(get_interrupt_bit_status(IF_reg,vblank) && get_interrupt_bit_status(IE_reg,vblank)) //Vblank
                     {
-                        IME = 0;
-                        set_off_interrupt_bit(vblank);
+                        PC_to_interrupt(vblank);
                     }
                     else if(get_interrupt_bit_status(IF_reg,lcd) && get_interrupt_bit_status(IE_reg,lcd)) //LCD
                     {
-                        IME = 0;
-                        set_off_interrupt_bit(lcd);
+                        PC_to_interrupt(lcd);
                     }
                     else if(get_interrupt_bit_status(IF_reg,timer) && get_interrupt_bit_status(IE_reg,timer)) //Timer
                     {
-                        IME = 0;
-                        set_off_interrupt_bit(timer);
+                        PC_to_interrupt(timer);
                     }
                     else if(get_interrupt_bit_status(IF_reg,serial_link) && get_interrupt_bit_status(IE_reg,serial_link)) //Serial Link
                     {
-                        IME = 0;
-                        set_off_interrupt_bit(serial_link);
+                        PC_to_interrupt(serial_link);
                     }
                     else if(get_interrupt_bit_status(IF_reg,joypad) && get_interrupt_bit_status(IE_reg,joypad)) //Joypad
                     {
-                        IME = 0;
-                        set_off_interrupt_bit(joypad);
+                        PC_to_interrupt(joypad);
                     }
                 }
+            }
+
+            void post_interrupt()
+            {
+                interrupt_mode = 0;
+                IME = 1;
+                tmp = 0;
+                tmp = mem[r16[SP]->reg];
+                r16[SP]->reg = (r16[SP]->reg) + 1;
+                tmp = ((r16[SP]->reg) << 8) | tmp; // PC[HI] | PC[LO]
+                r16[SP]->reg = (r16[SP]->reg) + 1;
+                PC = tmp;
             }
 
             void decode_execute()
@@ -1837,7 +1875,7 @@ class gameboy
                         gbdoctor_print_registers_r8();
                     }
                     fetch();
-
+                    interrupt_mode ? post_interrupt(): check_interrupts(); //if interrupt mode is on, we return to normal with post_interrupt(), otherwise we check for interrupts
                     decode_execute();
                     loop_counter++;
                 }
