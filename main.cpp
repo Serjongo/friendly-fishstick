@@ -459,7 +459,7 @@ class gameboy
             {
                 OPCODE = mem[PC];
                 PC++;
-                gb_machine_cycles++;
+                num_of_machine_cycles(1);
                 if(OPCODE == 0xCB)
                 {
                     OPCODE = OPCODE<<8 | mem[PC];
@@ -866,7 +866,6 @@ class gameboy
                         }
 
                         //machine cycles update
-                        gb_machine_cycles++;
                         if(OPCODE == 0x46 || OPCODE == 0x56)
                         {
                             num_of_machine_cycles(2);
