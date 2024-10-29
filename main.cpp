@@ -27,7 +27,11 @@ typedef unsigned int DWORD; // 32-bit number
 #define SC_reg 0xFF02 //Serial transfer control
 #define IF_reg 0xFF0F //Interrupt Flag
 #define IE_reg 0xFFFF //interrupt Enabler
-
+//timers
+#define DIV_register 0xFF04 //DIV: Divider register
+#define TIMA_register 0xFF05 // TIMA: Timer counter
+#define TMA_register 0xFF06 // TMA: Timer modulo
+#define TAC_register 0xFF07 // TAC: Timer control
 
 
 int loop_counter = 1;
@@ -67,7 +71,8 @@ class gameboy
 
                 BYTE IME = 0; //IME FLAG, interrupts enabled/disabled
                 BYTE is_halted = 0; //used for halt commands, perhaps temporarily. credit : https://rylev.github.io/DMG-01/public/book/cpu/conclusion.html
-
+                unsigned int gb_clock = 0; //will count cost of operations, will reset every second
+                const unsigned int max_clock_val =  4194304; //max amount of cycles per sec
 
             //registers
             Register AF_reg; //Accumulator + Flags
@@ -76,6 +81,8 @@ class gameboy
             Register HL_reg;
             Register StackPointer_reg; //stack pointer
             WORD PC; //program counter
+
+
 
             //a variable for general usage (as one can't declare vars in switch cases)
             WORD tmp; //unsigned short
@@ -116,6 +123,8 @@ class gameboy
                 serial_link,
                 joypad
             };
+
+
             //used for convenience for interrupts setters and getters
             int interrupts[5] = {0,1,2,3,4};
             //check if we are dealing with an interrupt request
