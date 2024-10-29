@@ -166,7 +166,7 @@ class gameboy
 
 
             //TESTING RELATED
-            BYTE testing_mode = 1; //when turned on, will print testing related info, as well as logging data in text files
+            BYTE testing_mode = 0; //when turned on, will print testing related info, as well as logging data in text files
 
             //flags
             //may not work, check bitwise arithemtic
@@ -1474,6 +1474,10 @@ class gameboy
                             print_memory_writes(OPCODE, r16[SP]->reg, r16[tmp]->lo);
                         }
 
+                        //machine cycles update
+
+                        num_of_machine_cycles(4);
+
                         break;
 
                     case(0xF5): //PUSH AF,stk
@@ -1488,6 +1492,10 @@ class gameboy
                             print_memory_writes(OPCODE, r16[SP]->reg, AF_reg.lo);
                         }
 
+                        //machine cycles update
+
+                        num_of_machine_cycles(4);
+
                         break;
 
                     case(0xC2): //JP NZ, a16
@@ -1497,8 +1505,14 @@ class gameboy
                             PC = PC + 1;
                             tmp = tmp | (mem[PC]) << 8;
                             PC = PC + 1; // May not be necessary
-                        if(!get_Z_flag_status())
+                        if(!get_Z_flag_status()) {
                             PC = tmp;
+                            num_of_machine_cycles(1);
+                        }
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(3);
 
                         break;
 
@@ -1509,8 +1523,14 @@ class gameboy
                         PC = PC + 1;
                         tmp = tmp | (mem[PC]) << 8;
                         PC = PC + 1; // May not be necessary
-                        if(get_Z_flag_status())
+                        if(get_Z_flag_status()) {
                             PC = tmp;
+                            num_of_machine_cycles(1);
+                        }
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(3);
 
                         break;
 
@@ -1521,8 +1541,14 @@ class gameboy
                         PC = PC + 1;
                         tmp = tmp | (mem[PC]) << 8;
                         PC = PC + 1; // May not be necessary
-                        if(!get_C_flag_status())
+                        if(!get_C_flag_status()) {
                             PC = tmp;
+                            num_of_machine_cycles(1);
+                        }
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(3);
 
                         break;
 
@@ -1533,8 +1559,14 @@ class gameboy
                         PC = PC + 1;
                         tmp = tmp | (mem[PC]) << 8;
                         PC = PC + 1; // May not be necessary
-                        if(get_C_flag_status())
+                        if(get_C_flag_status()) {
                             PC = tmp;
+                            num_of_machine_cycles(1);
+                        }
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(3);
 
                         break;
 
@@ -1548,10 +1580,19 @@ class gameboy
                         PC = PC + 1; // May not be necessary
                         PC = tmp;
 
+                        //machine cycles update
+
+                        num_of_machine_cycles(4);
+
                         break;
 
                     case(0xE9): //JP HL
                         PC = r16[HL_16]->reg;
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(1);
+
                         break;
 
 
@@ -1573,6 +1614,10 @@ class gameboy
                             print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                         }
 
+                        //machine cycles update
+
+                        num_of_machine_cycles(6);
+
                         break;
 
                     case(0xC4): //CALL NZ, a16
@@ -1593,7 +1638,15 @@ class gameboy
                                 print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
                                 print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                             }
+
+                            num_of_machine_cycles(3);
+
                         }
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(3);
+
                         break;
 
 
@@ -1615,7 +1668,14 @@ class gameboy
                                 print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
                                 print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                             }
+
+                            num_of_machine_cycles(3);
                         }
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(3);
+
                         break;
 
                     case(0xD4): //CALL NC, a16
@@ -1636,7 +1696,14 @@ class gameboy
                                 print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
                                 print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                             }
+
+                            num_of_machine_cycles(3);
                         }
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(3);
+
                         break;
 
                     case(0xDC): //CALL C, a16
@@ -1657,7 +1724,14 @@ class gameboy
                                 print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
                                 print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                             }
+
+                            num_of_machine_cycles(3);
                         }
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(3);
+
                         break;
 
                     case(0xC7): case(0xD7): case(0xE7): case(0xF7):
@@ -1675,6 +1749,10 @@ class gameboy
                             print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (0X00FF & ((PC) >> 8)));
                             print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                         }
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(4);
 
                         break;
 
@@ -1699,6 +1777,9 @@ class gameboy
                         set_N_flag_status(0); //OFF
                         set_Z_flag_status((*r8[A]));
 
+                        //machine cycles update
+
+                        num_of_machine_cycles(2);
 
                         break;
 
@@ -1722,6 +1803,10 @@ class gameboy
                         else
                             set_C_flag_status(0);
 
+                        //machine cycles update
+
+                        num_of_machine_cycles(2);
+
                         break;
 
                     case(0xDE): //SBC A,d8
@@ -1744,6 +1829,11 @@ class gameboy
 
                         set_N_flag_status(1);
                         set_Z_flag_status(*r8[A]);
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(2);
+
                         break;
 
                     case(0xD6): //SUB A, d8
@@ -1766,6 +1856,11 @@ class gameboy
 
                         set_N_flag_status(1);
                         set_Z_flag_status(*r8[A]);
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(2);
+
                         break;
 
                     case(0xE6): //AND A, d8
@@ -1778,6 +1873,11 @@ class gameboy
                         //FLAG_H
                         set_H_flag_status(1); //ON
                         set_Z_flag_status(*r8[A]);
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(2);
+
                         break;
 
                     case(0xEE): //XOR A, d8
@@ -1789,6 +1889,11 @@ class gameboy
                         set_H_flag_status(0);
                         set_N_flag_status(0);
                         set_Z_flag_status(*r8[A]);
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(2);
+
                         break;
 
                     case(0xF6): //OR A, d8
@@ -1799,6 +1904,11 @@ class gameboy
                         set_C_flag_status(0);
                         set_H_flag_status(0);
                         set_N_flag_status(0);
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(2);
+
                         break;
 
 
@@ -1822,6 +1932,10 @@ class gameboy
 
                         set_Z_flag_status(tmp_uChar);
                         set_N_flag_status(1);
+
+                        //machine cycles update
+
+                        num_of_machine_cycles(2);
 
                         break;
 
@@ -1847,6 +1961,15 @@ class gameboy
                         else
                             set_H_flag_status(0);
 
+                        //machine cycles update
+                        if(OPCODE == 0xBE)
+                        {
+                            num_of_machine_cycles(2);
+                        }
+                        else
+                        {
+                            num_of_machine_cycles(1);
+                        }
 
                         break;
 
@@ -1865,6 +1988,17 @@ class gameboy
                             set_Z_flag_status(1); //OFF
                         set_H_flag_status(1);
                         set_N_flag_status(0);
+
+                        //machine cycles update
+                        if(OPCODE == 0xCB4E || OPCODE == 0xCB5E || OPCODE == 0xCB6E || OPCODE == 0xCB7E || OPCODE == 0xCB46 || OPCODE == 0xCB56 || OPCODE == 0xCB66 || OPCODE == 0xCB76)
+                        {
+                            num_of_machine_cycles(3);
+                        }
+                        else
+                        {
+                            num_of_machine_cycles(2);
+                        }
+
                         break;
 
                         //RES (reset)
@@ -1876,6 +2010,16 @@ class gameboy
                         tmp = ((OPCODE & 0x38)>>3);
                         *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] & (BYTE)(~(1 << tmp)));
 
+                        //machine cycles update
+                        if(OPCODE == 0xCB8E || OPCODE == 0xCB9E || OPCODE == 0xCBAE || OPCODE == 0xCBBE || OPCODE == 0xCB86 || OPCODE == 0xCB96 || OPCODE == 0xCBA6 || OPCODE == 0xCBB6)
+                        {
+                            num_of_machine_cycles(4);
+                        }
+                        else
+                        {
+                            num_of_machine_cycles(2);
+                        }
+
                         break;
 
                         //SET
@@ -1886,6 +2030,16 @@ class gameboy
 
                         tmp = ((OPCODE & 0x38)>>3);
                         *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] | (BYTE)((1 << tmp)));
+
+                        //machine cycles update
+                        if(OPCODE == 0xCBCE || OPCODE == 0xCBDE || OPCODE == 0xCBEE || OPCODE == 0xCBFE || OPCODE == 0xCBC6 || OPCODE == 0xCBD6 || OPCODE == 0xCBE6 || OPCODE == 0xCBF6)
+                        {
+                            num_of_machine_cycles(4);
+                        }
+                        else
+                        {
+                            num_of_machine_cycles(2);
+                        }
 
                         break;
 
@@ -1901,6 +2055,17 @@ class gameboy
                         set_N_flag_status(0);
                         set_H_flag_status(0);
                         set_C_flag_status(tmp); //tmp is either 1 or 0 at this point
+
+                        //machine cycles update
+                        if(OPCODE == 0xCB06)
+                        {
+                            num_of_machine_cycles(4);
+                        }
+                        else
+                        {
+                            num_of_machine_cycles(2);
+                        }
+
                         break;
 
                     case(0xCB08): case(0xCB09): case(0xCB0A): case(0xCB0B): case(0xCB0C): case(0xCB0D): case(0xCB0E): case(0xCB0F): //RRC(rotate right carry) - bits 0 1 2 - operand
@@ -1914,6 +2079,17 @@ class gameboy
                         set_N_flag_status(0);
                         set_H_flag_status(0);
                         set_C_flag_status(tmp); //tmp is either 1 or 0 at this point
+
+                        //machine cycles update
+                        if(OPCODE == 0xCB0E)
+                        {
+                            num_of_machine_cycles(4);
+                        }
+                        else
+                        {
+                            num_of_machine_cycles(2);
+                        }
+
                         break;
 
                     case(0xCB10): case(0xCB11): case(0xCB12): case(0xCB13): case(0xCB14): case(0xCB15): case(0xCB16): case(0xCB17): //RL (rotate left) - bits 0 1 2 - operand
@@ -1927,6 +2103,17 @@ class gameboy
                         set_N_flag_status(0);
                         set_H_flag_status(0);
                         set_C_flag_status(tmp); //tmp is either 0x80 or 0 at this point (we only care if its 0 or not)
+
+                        //machine cycles update
+                        if(OPCODE == 0xCB16)
+                        {
+                            num_of_machine_cycles(4);
+                        }
+                        else
+                        {
+                            num_of_machine_cycles(2);
+                        }
+
                         break;
 
                     case(0xCB18): case(0xCB19): case(0xCB1A): case(0xCB1B): case(0xCB1C): case(0xCB1D): case(0xCB1E): case(0xCB1F): //RR (rotate right) - bits 0 1 2 - operand
@@ -1940,12 +2127,23 @@ class gameboy
                         set_N_flag_status(0);
                         set_H_flag_status(0);
                         set_C_flag_status(tmp); //tmp is either 1 or 0 at this point
+
+                        //machine cycles update
+                        if(OPCODE == 0xCB1E)
+                        {
+                            num_of_machine_cycles(4);
+                        }
+                        else
+                        {
+                            num_of_machine_cycles(2);
+                        }
+
                         break;
 
                     case(0xCB20): case(0xCB21): case(0xCB22): case(0xCB23): case(0xCB24): case(0xCB25): case(0xCB26): case(0xCB27): //SLA - shift left arithmetic
                         tmp = 0;
                         tmp = (*r8[(OPCODE & 0x07)] & 0x80); //msb
-                        *r8[(OPCODE & 0x07)] = ((char)(*r8[(OPCODE & 0x07)]) << 1); //shift all bits to the left
+                        *r8[(OPCODE & 0x07)] = (*r8[(OPCODE & 0x07)] << 1); //shift all bits to the left
                         *r8[(OPCODE & 0x07)] = *r8[(OPCODE & 0x07)] & 0xFE; //reset bit 0
 
                         //flags
@@ -1953,6 +2151,17 @@ class gameboy
                         set_N_flag_status(0);
                         set_H_flag_status(0);
                         set_C_flag_status(tmp); //tmp is either 1 or 0 at this point
+
+                        //machine cycles update
+                        if(OPCODE == 0xCB26)
+                        {
+                            num_of_machine_cycles(4);
+                        }
+                        else
+                        {
+                            num_of_machine_cycles(2);
+                        }
+
                         break;
 
                     case(0xCB28): case(0xCB29): case(0xCB2A): case(0xCB2B): case(0xCB2C): case(0xCB2D): case(0xCB2E): case(0xCB2F): //SRA - shift right arithmetic
@@ -1978,6 +2187,17 @@ class gameboy
                         set_N_flag_status(0);
                         set_H_flag_status(0);
                         set_C_flag_status(tmp); //tmp is either 1 or 0 at this point
+
+                        //machine cycles update
+                        if(OPCODE == 0xCB2E)
+                        {
+                            num_of_machine_cycles(4);
+                        }
+                        else
+                        {
+                            num_of_machine_cycles(2);
+                        }
+
                         break;
 
                     case(0xCB30): case(0xCB31): case(0xCB32): case(0xCB33): case(0xCB34): case(0xCB35): case(0xCB36): case(0xCB37): //SWAP
@@ -1990,6 +2210,16 @@ class gameboy
                         set_N_flag_status(0);
                         set_H_flag_status(0);
                         set_C_flag_status(0); //tmp is either 1 or 0 at this point
+
+                        //machine cycles update
+                        if(OPCODE == 0xCB36)
+                        {
+                            num_of_machine_cycles(4);
+                        }
+                        else
+                        {
+                            num_of_machine_cycles(2);
+                        }
 
                         break;
 
@@ -2004,6 +2234,17 @@ class gameboy
                         set_N_flag_status(0);
                         set_H_flag_status(0);
                         set_C_flag_status(tmp); //tmp is either 1 or 0 at this point
+
+                        //machine cycles update
+                        if(OPCODE == 0xCB3E)
+                        {
+                            num_of_machine_cycles(4);
+                        }
+                        else
+                        {
+                            num_of_machine_cycles(2);
+                        }
+
                         break;
 
                     default:
