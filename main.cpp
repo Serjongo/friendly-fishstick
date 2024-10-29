@@ -71,8 +71,8 @@ class gameboy
 
                 BYTE IME = 0; //IME FLAG, interrupts enabled/disabled
                 BYTE is_halted = 0; //used for halt commands, perhaps temporarily. credit : https://rylev.github.io/DMG-01/public/book/cpu/conclusion.html
-                unsigned int gb_clock = 0; //will count cost of operations, will reset every second
-                const unsigned int max_clock_val =  4194304; //max amount of cycles per sec
+                unsigned int gb_machine_cycles = 0; //will count cost of operations, will reset every second
+                const unsigned int max_machine_cycles_val =  4194304/4; //max amount of cycles per sec. 1 machine cycle = 4 clock cycles
 
             //registers
             Register AF_reg; //Accumulator + Flags
