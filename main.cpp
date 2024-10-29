@@ -459,6 +459,7 @@ class gameboy
             {
                 OPCODE = mem[PC];
                 PC++;
+                gb_machine_cycles++;
                 if(OPCODE == 0xCB)
                 {
                     OPCODE = OPCODE<<8 | mem[PC];
@@ -528,6 +529,13 @@ class gameboy
                 r16[SP]->reg = (r16[SP]->reg) + 1;
                 PC = tmp;
 
+            }
+
+
+            //machine cycles management
+            void num_of_machine_cycles(int num)
+            {
+                gb_machine_cycles = gb_machine_cycles + num;
             }
 
             void decode_execute()
@@ -856,6 +864,18 @@ class gameboy
                         {
                             print_memory_writes(OPCODE ,r16[HL_16]->reg, (*r8[(OPCODE & 0x07)]));
                         }
+
+                        //machine cycles update
+                        gb_machine_cycles++;
+                        if(OPCODE == 0x46 || OPCODE == 0x56)
+                        {
+                            num_of_machine_cycles(2);
+                        }
+                        else
+                        {
+                            num_of_machine_cycles(1);
+                        }
+
                         break;
 
                     ///
