@@ -471,8 +471,8 @@ class gameboy
 
                 if(testing_mode)
                 {
-                    print_memory_writes(OPCODE, r16[SP]->reg+1, r16[tmp]->hi);
-                    print_memory_writes(OPCODE, r16[SP]->reg, r16[tmp]->lo);
+                    print_memory_writes(0xF4, r16[SP]->reg+1, (PC>>8)); //0xF4 is an arbitrary opcode for interrupt push
+                    print_memory_writes(0xF4, r16[SP]->reg, (PC));
                 }
 
                 PC = interrupt_routine_addresses[interrupt_routine_type];
@@ -518,6 +518,7 @@ class gameboy
                 tmp = ((r16[SP]->reg) << 8) | tmp; // PC[HI] | PC[LO]
                 r16[SP]->reg = (r16[SP]->reg) + 1;
                 PC = tmp;
+
             }
 
             void decode_execute()
@@ -1874,8 +1875,9 @@ class gameboy
 //                        print_registers_r8(); //for testing
                         gbdoctor_print_registers_r8();
                     }
+                    //interrupt_mode ? post_interrupt(): check_interrupts(); //if interrupt mode is on, we return to normal with post_interrupt(), otherwise we check for interrupts
+                    check_interrupts();
                     fetch();
-                    interrupt_mode ? post_interrupt(): check_interrupts(); //if interrupt mode is on, we return to normal with post_interrupt(), otherwise we check for interrupts
                     decode_execute();
                     loop_counter++;
                 }
