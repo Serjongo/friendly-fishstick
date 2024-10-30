@@ -3,6 +3,8 @@
 #include <cstring>
 #include <fstream>
 #include <iomanip>  // For std::setw and std::setfill
+#include <chrono>
+#include <thread>
 
 
 using namespace std;
@@ -73,6 +75,7 @@ class gameboy
                 BYTE is_halted = 0; //used for halt commands, perhaps temporarily. credit : https://rylev.github.io/DMG-01/public/book/cpu/conclusion.html
                 unsigned int gb_machine_cycles = 0; //will count cost of operations, will reset every second
                 const unsigned int max_machine_cycles_val =  4194304/4; //max amount of cycles per sec. 1 machine cycle = 4 clock cycles
+                const unsigned int div_timer_freq = 16384/4; //in hz, in machine cycles
 
             //registers
             Register AF_reg; //Accumulator + Flags
@@ -82,7 +85,9 @@ class gameboy
             Register StackPointer_reg; //stack pointer
             WORD PC; //program counter
 
-
+            //timers
+            WORD DIV_timer = 0; // only the most significant byte will be used for the actual div_timer, since it increments every 256 cycles
+            WORD TIMA_timer = 0; //this will use the most significant m-bits, as appropriate for the speed, according to TAC val
 
             //a variable for general usage (as one can't declare vars in switch cases)
             WORD tmp; //unsigned short
@@ -136,6 +141,13 @@ class gameboy
                     0x0050,
                     0x0058,
                     0x0060
+            };
+
+            BYTE TAC_speeds[4] = { //timer speed mods for TIMA
+                    8, //every 256 machine cycles
+                    2, //every 4 machine cycles
+                    4, // every 16 machine cycles
+                    6 // every 64 machine cycles
             };
 
         //those are the full registers
@@ -248,9 +260,17 @@ class gameboy
             }
 
             //interrupt setters
-            void set_off_interrupt_bit(int interrupt_type)
+            void set_interrupt_bit(int interrupt_type, int mode)
             {
-                mem[IF_reg] = mem[IF_reg] & (BYTE)(~(0x01) << interrupts[interrupt_type]);
+                if(mode)
+                {
+                    mem[IF_reg] = mem[IF_reg] | (BYTE)((0x01) << interrupts[interrupt_type]);
+                }
+                else
+                {
+                    mem[IF_reg] = mem[IF_reg] & (BYTE)(~(0x01) << interrupts[interrupt_type]);
+                }
+
             }
 
 
@@ -472,7 +492,7 @@ class gameboy
             {
                 interrupt_mode = 1;
                 IME = 0;
-                set_off_interrupt_bit(interrupt_routine_type);
+                set_interrupt_bit(interrupt_routine_type,0);
                 //PUSH r16stk command
                 r16[SP]->reg = (r16[SP]->reg) - 1;
                 mem[r16[SP]->reg] = (PC >> 8); //this is the MSByte of PC
@@ -529,6 +549,29 @@ class gameboy
                 r16[SP]->reg = (r16[SP]->reg) + 1;
                 PC = tmp;
 
+            }
+
+            //timer related funcs
+            void update_timers(unsigned int machine_cycles_added)
+            {
+                DIV_timer = DIV_timer + machine_cycles_added;
+
+                mem[DIV_register] = (DIV_timer >> 8); //this means that every 256 machine cycles, this will increment by one
+                if(mem[TAC_register] >> 2) //check if the "enable" bit is on, 3rd bit from lsb
+                {
+                    TIMA_timer = TIMA_timer + machine_cycles_added;
+                    if( (TIMA_timer >> (mem[TAC_register] & 0x03) )  > 0xFF)
+                    {
+                        TIMA_timer = mem[TMA_register];
+                        mem[TIMA_register] = TIMA_timer;
+                        //set interrupt bit
+                        set_interrupt_bit(timer,1);
+                    }
+                    else
+                    {
+                        mem[TIMA_register] = (TIMA_timer >> (mem[TAC_register] & 0x03)); //only 2 first bits relevant
+                    }
+                }
             }
 
 
@@ -2289,6 +2332,11 @@ class gameboy
                 //for testing
                 BYTE test_output_SB = mem[SB_reg];
                 BYTE test_output_SC = mem[SC_reg];
+
+
+
+
+
                 while(true)
                 {
 //                    ofstream outMemoryFile("../memory_status.txt", std::ios::app);
@@ -2315,11 +2363,34 @@ class gameboy
 //                        print_registers_r8(); //for testing
                         gbdoctor_print_registers_r8();
                     }
+
                     //interrupt_mode ? post_interrupt(): check_interrupts(); //if interrupt mode is on, we return to normal with post_interrupt(), otherwise we check for interrupts
-                    check_interrupts();
-                    fetch();
-                    decode_execute();
-                    loop_counter++;
+                    chrono::duration<double> one_second_timer = chrono::duration<double>::zero();
+                    if(gb_machine_cycles < max_machine_cycles_val) //1 million microseconds = 1 second
+                    {
+                        unsigned int gb_machine_cycles_prev = gb_machine_cycles;
+                        check_interrupts();
+                        fetch();
+                        decode_execute();
+
+                        update_timers(gb_machine_cycles_prev - gb_machine_cycles);
+
+                        //reset machine cycles every second
+                        if(one_second_timer >= chrono::seconds(1))
+                        {
+                            one_second_timer -= chrono::seconds(1);
+                            gb_machine_cycles = 0; //may change to max(0,curr_val-max_val)
+                        }
+
+                        loop_counter++;
+                    }
+                    else //wait until the remainder of the second passes
+                    {
+                        this_thread::sleep_for((chrono::seconds(1)-one_second_timer));
+                        gb_machine_cycles = 0; //may change to max(0,curr_val-max_val)
+
+                    }
+
                 }
 
             }
