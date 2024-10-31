@@ -131,7 +131,7 @@ class gameboy
 
 
             //used for convenience for interrupts setters and getters
-            int interrupts[5] = {0,1,2,3,4};
+            int interrupts[5] = {vblank,lcd,timer,serial_link,joypad};
             //check if we are dealing with an interrupt request
             BYTE interrupt_mode = 0;
 
@@ -178,7 +178,7 @@ class gameboy
 
 
             //TESTING RELATED
-            BYTE testing_mode = 0; //when turned on, will print testing related info, as well as logging data in text files
+            BYTE testing_mode = 1; //when turned on, will print testing related info, as well as logging data in text files
 
             //flags
             //may not work, check bitwise arithemtic
@@ -512,29 +512,36 @@ class gameboy
 
             void check_interrupts()
             {
+                //check if HALT status can be disabled
+
                 //https://robertovaccari.com/blog/2020_09_26_gameboy/
-                if(mem[IF_reg] != 0 && IME == 1)
+                if(( mem[IF_reg] & mem[IE_reg] ) != 0)
                 {
-                    if(get_interrupt_bit_status(IF_reg,vblank) && get_interrupt_bit_status(IE_reg,vblank)) //Vblank
+                    is_halted = 0;
+                    if(IME == 1)
                     {
-                        PC_to_interrupt(vblank);
+                        if(get_interrupt_bit_status(IF_reg,vblank) && get_interrupt_bit_status(IE_reg,vblank)) //Vblank
+                        {
+                            PC_to_interrupt(vblank);
+                        }
+                        else if(get_interrupt_bit_status(IF_reg,lcd) && get_interrupt_bit_status(IE_reg,lcd)) //LCD
+                        {
+                            PC_to_interrupt(lcd);
+                        }
+                        else if(get_interrupt_bit_status(IF_reg,timer) && get_interrupt_bit_status(IE_reg,timer)) //Timer
+                        {
+                            PC_to_interrupt(timer);
+                        }
+                        else if(get_interrupt_bit_status(IF_reg,serial_link) && get_interrupt_bit_status(IE_reg,serial_link)) //Serial Link
+                        {
+                            PC_to_interrupt(serial_link);
+                        }
+                        else if(get_interrupt_bit_status(IF_reg,joypad) && get_interrupt_bit_status(IE_reg,joypad)) //Joypad
+                        {
+                            PC_to_interrupt(joypad);
+                        }
                     }
-                    else if(get_interrupt_bit_status(IF_reg,lcd) && get_interrupt_bit_status(IE_reg,lcd)) //LCD
-                    {
-                        PC_to_interrupt(lcd);
-                    }
-                    else if(get_interrupt_bit_status(IF_reg,timer) && get_interrupt_bit_status(IE_reg,timer)) //Timer
-                    {
-                        PC_to_interrupt(timer);
-                    }
-                    else if(get_interrupt_bit_status(IF_reg,serial_link) && get_interrupt_bit_status(IE_reg,serial_link)) //Serial Link
-                    {
-                        PC_to_interrupt(serial_link);
-                    }
-                    else if(get_interrupt_bit_status(IF_reg,joypad) && get_interrupt_bit_status(IE_reg,joypad)) //Joypad
-                    {
-                        PC_to_interrupt(joypad);
-                    }
+
                 }
             }
 
@@ -560,7 +567,9 @@ class gameboy
                 if(mem[TAC_register] >> 2) //check if the "enable" bit is on, 3rd bit from lsb
                 {
                     TIMA_timer = TIMA_timer + machine_cycles_added;
-                    if( (TIMA_timer >> (mem[TAC_register] & 0x03) )  > 0xFF)
+                    BYTE shift_amount = TAC_speeds[mem[TAC_register] & 0x03];
+                    WORD result = (WORD)(TIMA_timer >> shift_amount);
+                    if( result  > UCHAR_MAX)
                     {
                         TIMA_timer = mem[TMA_register];
                         mem[TIMA_register] = TIMA_timer;
@@ -569,7 +578,7 @@ class gameboy
                     }
                     else
                     {
-                        mem[TIMA_register] = (TIMA_timer >> (mem[TAC_register] & 0x03)); //only 2 first bits relevant
+                        mem[TIMA_register] = (TIMA_timer >> (TAC_speeds[mem[TAC_register] & 0x03])); //only 2 first bits relevant
                     }
                 }
             }
@@ -583,10 +592,6 @@ class gameboy
 
             void decode_execute()
             {
-                if(is_halted) //if HALT command was executed, we will not execute new commands until the status changes back
-                {
-                    return;
-                }
 
                 r8[6] = &mem[HL_reg.reg]; ///temporary fix to r8[6] not pointing to the correct memory
 
@@ -2326,7 +2331,7 @@ class gameboy
                 {
 //                    init_register_file();
                     gbdoctor_init_register_file();
-//                    init_memory_file();
+                    init_memory_file();
                 }
 
                 //for testing
@@ -2339,25 +2344,6 @@ class gameboy
 
                 while(true)
                 {
-//                    ofstream outMemoryFile("../memory_status.txt", std::ios::app);
-//                    if (!outMemoryFile) {
-//                        std::cerr << "Error: Could not open the file!" << std::endl;
-//                        return;
-//                    }
-//                    if(test_output_SB != mem[SB_reg] || test_output_SC != mem[SC_reg])
-//                    {
-//                        //cout << "SB/SC change detected! : ";
-//                        cout << test_output_SB;
-//                        test_output_SB = mem[SB_reg];
-//                        test_output_SC = mem[SC_reg];
-//                    }
-//                    if(0x81 == mem[SC_reg])
-//                    {
-//                        //cout << "SB/SC change detected! : ";
-//                        cout << mem[SB_reg];
-////                        test_output_SB = mem[SB_reg];
-////                        test_output_SC = mem[SC_reg];
-//                    }
 
                     if(testing_mode) {
 //                        print_registers_r8(); //for testing
@@ -2370,10 +2356,22 @@ class gameboy
                     {
                         unsigned int gb_machine_cycles_prev = gb_machine_cycles;
                         check_interrupts();
+                        if(is_halted) //if HALT command was executed, we will not execute new commands until the status changes back
+                        {
+                            continue;
+                        }
                         fetch();
                         decode_execute();
+                        //ought to fix the value so it doesnt become negative at any point
+                        unsigned int machine_cycle_cost_iter = gb_machine_cycles - gb_machine_cycles_prev;
 
-                        update_timers(gb_machine_cycles_prev - gb_machine_cycles);
+                        //sanity check
+                        if(machine_cycle_cost_iter < 0)
+                        {
+                            cerr << "Error: Negative cycle cost this iteration\n" << endl;
+                            exit(1);
+                        }
+                        update_timers(machine_cycle_cost_iter);
 
                         //reset machine cycles every second
                         if(one_second_timer >= chrono::seconds(1))
