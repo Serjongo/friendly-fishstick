@@ -178,7 +178,7 @@ class gameboy
 
 
             //TESTING RELATED
-            BYTE testing_mode = 1; //when turned on, will print testing related info, as well as logging data in text files
+            BYTE testing_mode = 0; //when turned on, will print testing related info, as well as logging data in text files
 
             //flags
             //may not work, check bitwise arithemtic
@@ -517,6 +517,8 @@ class gameboy
                 //https://robertovaccari.com/blog/2020_09_26_gameboy/
                 if(( mem[IF_reg] & mem[IE_reg] ) != 0)
                 {
+                    if(is_halted)
+                        cout << "HALT STOPPED\n";
                     is_halted = 0;
                     if(IME == 1)
                     {
@@ -2340,18 +2342,17 @@ class gameboy
 
 
 
-
-
+                chrono::duration<double> time_span = chrono::milliseconds(0);
                 while(true)
                 {
-
+                    chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
                     if(testing_mode) {
 //                        print_registers_r8(); //for testing
                         gbdoctor_print_registers_r8();
                     }
 
                     //interrupt_mode ? post_interrupt(): check_interrupts(); //if interrupt mode is on, we return to normal with post_interrupt(), otherwise we check for interrupts
-                    chrono::duration<double> one_second_timer = chrono::duration<double>::zero();
+
                     if(gb_machine_cycles < max_machine_cycles_val) //1 million microseconds = 1 second
                     {
                         unsigned int gb_machine_cycles_prev = gb_machine_cycles;
@@ -2374,9 +2375,12 @@ class gameboy
                         update_timers(machine_cycle_cost_iter);
 
                         //reset machine cycles every second
-                        if(one_second_timer >= chrono::seconds(1))
+                        chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
+                        time_span += duration_cast<chrono::duration<double>>(t2 - t1);
+                        if(time_span >= chrono::milliseconds (1000))
                         {
-                            one_second_timer -= chrono::seconds(1);
+                            cout << "hi!";
+                            time_span -= chrono::seconds(1);
                             gb_machine_cycles = 0; //may change to max(0,curr_val-max_val)
                         }
 
@@ -2384,7 +2388,8 @@ class gameboy
                     }
                     else //wait until the remainder of the second passes
                     {
-                        this_thread::sleep_for((chrono::seconds(1)-one_second_timer));
+                        cout << "hi!";
+                        this_thread::sleep_for((chrono::seconds(1)-time_span));
                         gb_machine_cycles = 0; //may change to max(0,curr_val-max_val)
 
                     }
