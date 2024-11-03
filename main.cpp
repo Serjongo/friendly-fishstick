@@ -72,7 +72,7 @@ class gameboy
                 BYTE mem[0x10000]; //2^16 bytes
 
                 BYTE IME = 0; //IME FLAG, interrupts enabled/disabled
-                BYTE is_halted = 0; //used for halt commands, perhaps temporarily. credit : https://rylev.github.io/DMG-01/public/book/cpu/conclusion.html
+                BYTE is_halted = 0; //used for halt commands, will have values of 1 - to be halted, 2 - halted. credit : https://rylev.github.io/DMG-01/public/book/cpu/conclusion.html
                 unsigned int gb_machine_cycles = 0; //will count cost of operations, will reset every second
                 const unsigned int max_machine_cycles_val =  4194304/4; //max amount of cycles per sec. 1 machine cycle = 4 clock cycles
                 const unsigned int div_timer_freq = 16384/4; //in hz, in machine cycles
@@ -517,7 +517,7 @@ class gameboy
                 //https://robertovaccari.com/blog/2020_09_26_gameboy/
                 if(( mem[IF_reg] & mem[IE_reg] ) != 0)
                 {
-                    if(is_halted)
+                    if(is_halted == 2)
                         cout << "HALT STOPPED\n";
                     is_halted = 0;
                     if(IME == 1)
@@ -563,12 +563,12 @@ class gameboy
             //timer related funcs
             void update_timers(unsigned int machine_cycles_added)
             {
-                DIV_timer = DIV_timer + machine_cycles_added;
+                DIV_timer = DIV_timer + 4*machine_cycles_added;
 
-                mem[DIV_register] = (DIV_timer >> 8); //this means that every 256 machine cycles, this will increment by one
+                mem[DIV_register] = (DIV_timer >> 8); //this means that every 256 clock cycles, this will increment by one
                 if(mem[TAC_register] >> 2) //check if the "enable" bit is on, 3rd bit from lsb
                 {
-                    TIMA_timer = TIMA_timer + machine_cycles_added;
+                    TIMA_timer = TIMA_timer + 4*machine_cycles_added;
                     BYTE shift_amount = TAC_speeds[mem[TAC_register] & 0x03];
                     WORD result = (WORD)(TIMA_timer >> shift_amount);
                     if( result  > UCHAR_MAX)
@@ -585,6 +585,15 @@ class gameboy
                 }
             }
 
+            //https://github.com/Hacktix/GBEDG/blob/master/timers/index.md#-ff04---divider-register--div-
+            void check_div_reg_change(WORD address)//checks if DIV_register mem was written into, if so, it is reset to 0
+            {
+                if (address == DIV_register)
+                {
+                    DIV_timer = 0;
+                    mem[DIV_register] = 0;
+                }
+            }
 
             //machine cycles management
             void num_of_machine_cycles(int num)
@@ -653,7 +662,7 @@ class gameboy
                             print_memory_writes(OPCODE, r16[tmp]->reg,*r8[A]);
 //                        outMemoryFile << loop_counter << ": " << hex << "Store the contents of register A: " << (int)*r8[A] << " in the memory location: mem[" << r16[tmp]->reg << "] specified by register pair " << r16[tmp] << dec << endl;
 
-
+                        check_div_reg_change(r16[tmp]->reg);
 
                         num_of_machine_cycles(2);
                         break;
@@ -672,6 +681,10 @@ class gameboy
                             print_memory_writes(OPCODE, tmp, r16[SP]->lo);
                             print_memory_writes(OPCODE, tmp+1, r16[SP]->hi);
                         }
+
+                        check_div_reg_change(tmp);
+                        check_div_reg_change(tmp+1);
+
                         num_of_machine_cycles(5);
                         break;
 
@@ -825,6 +838,8 @@ class gameboy
                         if(testing_mode)
                             print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
 
+                        check_div_reg_change(r16[HL_16]->reg);
+
                         num_of_machine_cycles(2);
                         break;
 
@@ -836,6 +851,7 @@ class gameboy
                         if(testing_mode)
                             print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
 
+                        check_div_reg_change(r16[HL_16]->reg);
                         num_of_machine_cycles(2);
                         break;
 
@@ -881,6 +897,7 @@ class gameboy
                         if(OPCODE == 0x34)
                         {
                             num_of_machine_cycles(3);
+                            check_div_reg_change(r16[HL_16]->reg);
                         }
                         else
                         {
@@ -913,6 +930,7 @@ class gameboy
                         if(OPCODE == 0x35)
                         {
                             num_of_machine_cycles(3);
+                            check_div_reg_change(r16[HL_16]->reg);
                         }
                         else
                         {
@@ -935,6 +953,7 @@ class gameboy
                         if(OPCODE == 0x36)
                         {
                             num_of_machine_cycles(3);
+                            check_div_reg_change(r16[HL_16]->reg);
                         }
                         else
                         {
@@ -963,19 +982,11 @@ class gameboy
                         }
 
                         //machine cycles update
-                        if(OPCODE == 0x46 || OPCODE == 0x56)
-                        {
-                            num_of_machine_cycles(2);
-                        }
-                        else
-                        {
-                            num_of_machine_cycles(1);
-                        }
-
                         if(OPCODE == 0x46 || OPCODE == 0x56 || OPCODE == 0x66 || OPCODE == 0x70 || OPCODE == 0x71 || OPCODE == 0x72 || OPCODE == 0x73 ||
                         OPCODE == 0x74 || OPCODE == 0x75 || OPCODE == 0x77 || OPCODE == 0x4E || OPCODE == 0x5E || OPCODE == 0x6E || OPCODE == 0x7E )
                         {
                             num_of_machine_cycles(2);
+                            check_div_reg_change(r16[HL_16]->reg);
                         }
                         else
                         {
@@ -1032,7 +1043,7 @@ class gameboy
                             print_memory_writes(OPCODE,(WORD)tmp, *r8[A]);
 
                         }
-
+                        check_div_reg_change(tmp);
                         num_of_machine_cycles(3);
                         break;
 
@@ -1057,6 +1068,7 @@ class gameboy
                             }
                         }
 
+                        check_div_reg_change(tmp);
                         num_of_machine_cycles(2);
                         break;
 
@@ -1078,6 +1090,7 @@ class gameboy
                             print_memory_writes(OPCODE, tmp, *r8[A]);
                         }
 
+                        check_div_reg_change(tmp);
                         num_of_machine_cycles(4);
                         break;
 
@@ -1524,8 +1537,9 @@ class gameboy
                             print_memory_writes(OPCODE, r16[SP]->reg, r16[tmp]->lo);
                         }
 
+                        check_div_reg_change(r16[SP]->reg+1);
+                        check_div_reg_change(r16[SP]->reg);
                         //machine cycles update
-
                         num_of_machine_cycles(4);
 
                         break;
@@ -1542,6 +1556,8 @@ class gameboy
                             print_memory_writes(OPCODE, r16[SP]->reg, AF_reg.lo);
                         }
 
+                        check_div_reg_change(r16[SP]->reg+1);
+                        check_div_reg_change(r16[SP]->reg);
                         //machine cycles update
 
                         num_of_machine_cycles(4);
@@ -1663,6 +1679,8 @@ class gameboy
                             print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
                             print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                         }
+                        check_div_reg_change(r16[SP]->reg);
+                        check_div_reg_change(r16[SP]->reg+1);
 
                         //machine cycles update
 
@@ -1688,6 +1706,8 @@ class gameboy
                                 print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
                                 print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                             }
+                            check_div_reg_change(r16[SP]->reg);
+                            check_div_reg_change(r16[SP]->reg+1);
 
                             num_of_machine_cycles(3);
 
@@ -1718,6 +1738,8 @@ class gameboy
                                 print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
                                 print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                             }
+                            check_div_reg_change(r16[SP]->reg);
+                            check_div_reg_change(r16[SP]->reg+1);
 
                             num_of_machine_cycles(3);
                         }
@@ -1746,6 +1768,8 @@ class gameboy
                                 print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
                                 print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                             }
+                            check_div_reg_change(r16[SP]->reg);
+                            check_div_reg_change(r16[SP]->reg+1);
 
                             num_of_machine_cycles(3);
                         }
@@ -1774,6 +1798,8 @@ class gameboy
                                 print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
                                 print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                             }
+                            check_div_reg_change(r16[SP]->reg);
+                            check_div_reg_change(r16[SP]->reg+1);
 
                             num_of_machine_cycles(3);
                         }
@@ -1799,6 +1825,8 @@ class gameboy
                             print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (0X00FF & ((PC) >> 8)));
                             print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                         }
+                        check_div_reg_change(r16[SP]->reg);
+                        check_div_reg_change(r16[SP]->reg+1);
 
                         //machine cycles update
 
@@ -2357,9 +2385,13 @@ class gameboy
                     {
                         unsigned int gb_machine_cycles_prev = gb_machine_cycles;
                         check_interrupts();
-                        if(is_halted) //if HALT command was executed, we will not execute new commands until the status changes back
+                        if(is_halted > 0) //if HALT command was executed, first cycle we are in intermittent mode, and the cycle after that halts execution fully
                         {
-                            continue;
+                            if(is_halted == 2) //is halt in full effect yet
+                                continue;
+                            else //if it wasn't, it will be now
+                                is_halted = 2;
+
                         }
                         fetch();
                         decode_execute();
@@ -2379,7 +2411,7 @@ class gameboy
                         time_span += duration_cast<chrono::duration<double>>(t2 - t1);
                         if(time_span >= chrono::milliseconds (1000))
                         {
-                            cout << "hi!";
+                            //cout << "hi!";
                             time_span -= chrono::seconds(1);
                             gb_machine_cycles = 0; //may change to max(0,curr_val-max_val)
                         }
@@ -2388,7 +2420,7 @@ class gameboy
                     }
                     else //wait until the remainder of the second passes
                     {
-                        cout << "hi!";
+                        //cout << "hi!";
                         this_thread::sleep_for((chrono::seconds(1)-time_span));
                         gb_machine_cycles = 0; //may change to max(0,curr_val-max_val)
 
