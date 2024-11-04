@@ -87,7 +87,7 @@ class gameboy
 
             //timers
             WORD DIV_timer = 0; // only the most significant byte will be used for the actual div_timer, since it increments every 256 cycles
-            WORD TIMA_timer = 0; //this will use the most significant m-bits, as appropriate for the speed, according to TAC val
+            BYTE TIMA_timer = 0; //this will use the most significant m-bits, as appropriate for the speed, according to TAC val
 
             //a variable for general usage (as one can't declare vars in switch cases)
             WORD tmp; //unsigned short
@@ -178,7 +178,7 @@ class gameboy
 
 
             //TESTING RELATED
-            BYTE testing_mode = 0; //when turned on, will print testing related info, as well as logging data in text files
+            BYTE testing_mode = 1; //when turned on, will print testing related info, as well as logging data in text files
 
             //flags
             //may not work, check bitwise arithemtic
@@ -561,26 +561,52 @@ class gameboy
             }
 
             //timer related funcs
-            void update_timers(unsigned int machine_cycles_added)
+            void update_timers(unsigned int machine_cycles_added,int running_mode) //running modes - 0: reguler, 1: pause: 2:stop
             {
-                DIV_timer = DIV_timer + 4*machine_cycles_added;
-
-                mem[DIV_register] = (DIV_timer >> 8); //this means that every 256 clock cycles, this will increment by one
-                if(mem[TAC_register] >> 2) //check if the "enable" bit is on, 3rd bit from lsb
+                if(running_mode < 2) //meaning un-stopped
                 {
-                    TIMA_timer = TIMA_timer + 4*machine_cycles_added;
-                    BYTE shift_amount = TAC_speeds[mem[TAC_register] & 0x03];
-                    WORD result = (WORD)(TIMA_timer >> shift_amount);
-                    if( result  > UCHAR_MAX)
+                    //previous TIMA result
+                    tmp_uChar = (mem[TAC_register] >> 2) & ((DIV_timer >> TAC_speeds[mem[TAC_register] & 0x03]) & 0x01); //result of previous cycle
+
+
+                    DIV_timer = DIV_timer + 4*machine_cycles_added;
+                    mem[DIV_register] = (DIV_timer >> 8); //this means that every 256 clock cycles, this will increment by one
+                    tmp = (mem[TAC_register] >> 2) & ((DIV_timer >> TAC_speeds[mem[TAC_register] & 0x03]) & 0x01);
+
+                    if(running_mode < 1) //meaning un-paused
                     {
-                        TIMA_timer = mem[TMA_register];
-                        mem[TIMA_register] = TIMA_timer;
-                        //set interrupt bit
-                        set_interrupt_bit(timer,1);
-                    }
-                    else
-                    {
-                        mem[TIMA_register] = (TIMA_timer >> (TAC_speeds[mem[TAC_register] & 0x03])); //only 2 first bits relevant
+                        //result of current cycle
+                        if(tmp_uChar & !(tmp))
+                        {
+                            if(mem[TIMA_register] + 1 > UCHAR_MAX)
+                            {
+                                mem[TIMA_register] = 0;
+                                set_interrupt_bit(timer,1);
+                            }
+                            else
+                            {
+                                mem[TIMA_register] = mem[TIMA_register] + machine_cycles_added;
+                            }
+
+
+                        }
+//                        if(mem[TAC_register] >> 2) //check if the "enable" bit is on, 3rd bit from lsb
+//                        {
+//                            TIMA_timer = TIMA_timer + machine_cycles_added*4;
+//                            BYTE shift_amount = TAC_speeds[mem[TAC_register] & 0x03];
+//                            WORD result = (WORD)(TIMA_timer >> shift_amount);
+//                            if( result  > UCHAR_MAX)
+//                            {
+//                                TIMA_timer = mem[TMA_register];
+//                                mem[TIMA_register] = TIMA_timer;
+//                                //set interrupt bit
+//                                set_interrupt_bit(timer,1);
+//                            }
+//                            else
+//                            {
+//                                mem[TIMA_register] = result; //only 2 first bits relevant
+//                            }
+//                        }
                     }
                 }
             }
@@ -2388,7 +2414,10 @@ class gameboy
                         if(is_halted > 0) //if HALT command was executed, first cycle we are in intermittent mode, and the cycle after that halts execution fully
                         {
                             if(is_halted == 2) //is halt in full effect yet
+                            {
+                                update_timers(1,1); //paused, 1 machine clock is placeholder
                                 continue;
+                            }
                             else //if it wasn't, it will be now
                                 is_halted = 2;
 
@@ -2404,7 +2433,7 @@ class gameboy
                             cerr << "Error: Negative cycle cost this iteration\n" << endl;
                             exit(1);
                         }
-                        update_timers(machine_cycle_cost_iter);
+                        update_timers(machine_cycle_cost_iter,0); //regular
 
                         //reset machine cycles every second
                         chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
