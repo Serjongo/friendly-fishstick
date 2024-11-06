@@ -178,7 +178,7 @@ class gameboy
 
 
             //TESTING RELATED
-            BYTE testing_mode = 1; //when turned on, will print testing related info, as well as logging data in text files
+            BYTE testing_mode = 0; //when turned on, will print testing related info, as well as logging data in text files
 
             //flags
             //may not work, check bitwise arithemtic
@@ -563,8 +563,8 @@ class gameboy
             //timer related funcs
             void update_timers(unsigned int machine_cycles_added,int running_mode) //running modes - 0: reguler, 1: pause: 2:stop
             {
-                if(running_mode < 2) //meaning un-stopped
-                {
+//                if(running_mode < 2) //meaning un-stopped
+//                {
                     //previous TIMA result
                     tmp_uChar = (mem[TAC_register] >> 2) & ((DIV_timer >> TAC_speeds[mem[TAC_register] & 0x03]) & 0x01); //result of previous cycle
 
@@ -573,23 +573,23 @@ class gameboy
                     mem[DIV_register] = (DIV_timer >> 8); //this means that every 256 clock cycles, this will increment by one
                     tmp = (mem[TAC_register] >> 2) & ((DIV_timer >> TAC_speeds[mem[TAC_register] & 0x03]) & 0x01);
 
-                    if(running_mode < 1) //meaning un-paused
+//                    if(running_mode < 1) //meaning un-paused
+//                    {
+                    //result of current cycle
+                    if(tmp_uChar & !(tmp))
                     {
-                        //result of current cycle
-                        if(tmp_uChar & !(tmp))
+                        if(mem[TIMA_register] + 1 > UCHAR_MAX)
                         {
-                            if(mem[TIMA_register] + 1 > UCHAR_MAX)
-                            {
-                                mem[TIMA_register] = 0;
-                                set_interrupt_bit(timer,1);
-                            }
-                            else
-                            {
-                                mem[TIMA_register] = mem[TIMA_register] + machine_cycles_added;
-                            }
-
-
+                            mem[TIMA_register] = 0;
+                            set_interrupt_bit(timer,1);
                         }
+                        else
+                        {
+                            mem[TIMA_register] = mem[TIMA_register] + machine_cycles_added;
+                        }
+
+
+                    }
 //                        if(mem[TAC_register] >> 2) //check if the "enable" bit is on, 3rd bit from lsb
 //                        {
 //                            TIMA_timer = TIMA_timer + machine_cycles_added*4;
@@ -607,8 +607,8 @@ class gameboy
 //                                mem[TIMA_register] = result; //only 2 first bits relevant
 //                            }
 //                        }
-                    }
-                }
+
+
             }
 
             //https://github.com/Hacktix/GBEDG/blob/master/timers/index.md#-ff04---divider-register--div-
@@ -2377,7 +2377,7 @@ class gameboy
                 // 09-op r,r.gb
                 // 10-bit ops.gb - VV
                 // 11-op a,(hl).gb
-                read_from_file("../TESTS/02-interrupts.gb");
+                read_from_file("../TESTS/11-op a,(hl).gb");
 
 
                 //bootstrap rom, 0x0 offset
@@ -2400,7 +2400,7 @@ class gameboy
                 while(true)
                 {
                     chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
-                    if(testing_mode) {
+                    if(testing_mode && (is_halted != 2) || (( mem[IF_reg] & mem[IE_reg] ) != 0)) { //either we are not halted, or we are about to exit halt_mode and the opcode will run
 //                        print_registers_r8(); //for testing
                         gbdoctor_print_registers_r8();
                     }
@@ -2420,6 +2420,7 @@ class gameboy
                             }
                             else //if it wasn't, it will be now
                                 is_halted = 2;
+
 
                         }
                         fetch();
