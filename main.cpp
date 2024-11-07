@@ -2377,7 +2377,7 @@ class gameboy
                 // 09-op r,r.gb
                 // 10-bit ops.gb - VV
                 // 11-op a,(hl).gb
-                read_from_file("../TESTS/11-op a,(hl).gb");
+                read_from_file("../TESTS/cpu_instrs.gb");
 
 
                 //bootstrap rom, 0x0 offset
