@@ -580,7 +580,7 @@ class gameboy
                     {
                         if(mem[TIMA_register] + 1 > UCHAR_MAX)
                         {
-                            mem[TIMA_register] = 0;
+                            mem[TIMA_register] = mem[TMA_register];
                             set_interrupt_bit(timer,1);
                         }
                         else
@@ -2377,7 +2377,7 @@ class gameboy
                 // 09-op r,r.gb
                 // 10-bit ops.gb - VV
                 // 11-op a,(hl).gb
-                read_from_file("../TESTS/cpu_instrs.gb");
+                read_from_file("../TESTS/02-interrupts.gb");
 
 
                 //bootstrap rom, 0x0 offset
