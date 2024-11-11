@@ -118,7 +118,11 @@ public:
         joypad
     };
 
-
+    //carry locations in registers
+    BYTE half_carry_8bit = 0x10; //5th bit on, 1st bit of highest nibble
+    WORD half_carry_16bit = 0x1000; //5th bit of the most significant BYTE, 1st of highest nibble
+    BYTE carry_8bit = 0x80; //most significant bit
+    WORD carry_16bit = 0x8000; //most significant bit
 
     //used for convenience for interrupts setters and getters
     int interrupts[5] = {vblank,lcd,timer,serial_link,joypad};
@@ -171,13 +175,82 @@ public:
     BYTE h = *(r8[7]+1) & 0x20; //half carry flag
     BYTE c = *(r8[7]+1) & 0x10; //carry flag
 
-    //flags getters
+    //flags
     BYTE get_Z_flag_status() const; //returns 1 or 0
     BYTE get_N_flag_status() const; //returns 1 or 0
     BYTE get_H_flag_status() const; //returns 1 or 0
     BYTE get_C_flag_status() const; //returns 1 or 0
-    //flags setters
 
+    void set_Z_flag_status(BYTE status);
+    void set_N_flag_status(BYTE status);
+    void set_H_flag_status(BYTE status);
+    void set_C_flag_status(BYTE status);
+
+    //interrupts
+    BYTE get_interrupt_bit_status(WORD IE_IF, int interrupt_type);
+    void set_interrupt_bit(int interrupt_type, int mode);
+
+    //TESTING -- this will be broken into a testing class
+    void init_register_file();
+    void init_memory_file();
+    void print_registers_r8();
+    void gbdoctor_init_register_file();
+    void gbdoctor_print_registers_r8();
+    void print_memory_writes(WORD OPCODE,WORD address, BYTE val);
+
+    //private methods
+    void init();
+
+    //deep copy function from cartridge to mem ~@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    ///This is a temporary placeholder of a function. In reality, moving the cartridge mem to gb mem is more complicated, for now we just dump it
+    void cartridge_to_mem(long long bytes);
+
+    void read_from_file(string path); //basic version, will change as the project develops
+
+    void fetch();
+
+    //move PC to interrupt handler, backup PC in stack
+    void PC_to_interrupt(int interrupt_routine_type);
+
+    void check_interrupts();
+    void post_interrupt();
+    //timer related funcs
+    void update_timers(unsigned int machine_cycles_added,int running_mode);//running modes - 0: reguler, 1: pause: 2:stop
+    void check_div_reg_change(WORD address);//checks if DIV_register mem was written into, if so, it is reset to 0
+    //machine cycles management
+    void num_of_machine_cycles(int num);
+
+    void decode_execute();
+    void main_loop();
+
+    //public methods
+    //getters
+    Register get_reg_AF();
+    BYTE get_subreg_A();
+    BYTE get_subreg_F();
+    Register get_reg_BC();
+    BYTE get_subreg_B();
+    BYTE get_subreg_C();
+    Register get_reg_HL();
+    BYTE get_subreg_H();
+    BYTE get_subreg_L();
+    Register get_reg_SP();
+    WORD get_PC();
+
+
+
+    //setters
+    void set_reg_AF(WORD input);
+    void set_subreg_A(BYTE input);
+    void set_subreg_F(BYTE input);
+    void set_reg_BC(WORD input);
+    void set_subreg_B(BYTE input);
+    void set_subreg_C(BYTE input);
+    void set_reg_HL(WORD input);
+    void set_subreg_H(BYTE input);
+    void set_subreg_L(BYTE input);
+    void set_reg_SP(WORD input);
+    void set_PC(WORD input);
 
 };
 
