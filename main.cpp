@@ -1,12 +1,8 @@
 
 #include "main.h"
 
-int loop_counter = 1;
-
 //constants
 BYTE m_CartridgeMemory[0x200000];
-
-
 
 //flag getters
 BYTE gameboy::get_Z_flag_status() const //returns 1 or 0
@@ -93,7 +89,7 @@ void gameboy::set_interrupt_bit(int interrupt_type, int mode)
 
 
 //testing funcs
-void gameboy::init_register_file(){
+void gameboy_testing::init_register_file(){
     ofstream outStatusFile("../registers_status.txt"); //overwriting the file if it exists
 
     if (!outStatusFile) {
@@ -101,7 +97,7 @@ void gameboy::init_register_file(){
     }
     outStatusFile.close();
 }
-void gameboy::init_memory_file(){
+void gameboy_testing::init_memory_file(){
     ofstream outMemoryFile("../memory_status.txt"); //overwriting the file if it exists
 
     if (!outMemoryFile) {
@@ -109,7 +105,7 @@ void gameboy::init_memory_file(){
     }
     outMemoryFile.close();
 }
-void gameboy::print_registers_r8()
+void gameboy_testing::print_registers_r8(gameboy& gb)
 {
     ofstream outStatusFile("../registers_status.txt", ios::app);
 
@@ -118,27 +114,27 @@ void gameboy::print_registers_r8()
         return;
     }
 
-    outStatusFile << "A: " << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)(*r8[A])<< " " << dec;
-    outStatusFile << "F: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(AF_reg.lo)<< " " << dec;
-    outStatusFile << "B: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[B])<< " " << dec;
-    outStatusFile << "C: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[C])<< " " << dec;
-    outStatusFile << "D: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[D])<< " " << dec;
-    outStatusFile << "E: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[E])<< " " << dec;
-    outStatusFile << "H: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[H])<< " " << dec;
-    outStatusFile << "L: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[L])<< " " << dec;
-    outStatusFile << "SP: " << std::hex << std::setw(4) << std::setfill('0')  << (int)(r16[SP]->reg)<< " " << dec;
-    outStatusFile << "PC: 00:" << std::hex << std::setw(4) << std::setfill('0')  << PC << " " << dec;
-    outStatusFile << "(" << std::hex << std::setw(2) << std::setfill('0')  << (int)mem[PC] << " " <<
-                  std::setw(2) << std::setfill('0')  << (int)mem[PC + 1] << " " <<
-                  std::setw(2) << std::setfill('0')  <<(int)mem[PC + 2] << " " <<
-                  std::setw(2) << std::setfill('0')  <<(int)mem[PC + 3] << ")\n" << dec;
+    outStatusFile << "A: " << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::A])<< " " << dec;
+    outStatusFile << "F: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(gb.AF_reg.lo)<< " " << dec;
+    outStatusFile << "B: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::B])<< " " << dec;
+    outStatusFile << "C: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::C])<< " " << dec;
+    outStatusFile << "D: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::D])<< " " << dec;
+    outStatusFile << "E: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::E])<< " " << dec;
+    outStatusFile << "H: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::H])<< " " << dec;
+    outStatusFile << "L: " << std::hex << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::L])<< " " << dec;
+    outStatusFile << "SP: " << std::hex << std::setw(4) << std::setfill('0')  << (int)(gb.r16[gameboy::SP]->reg)<< " " << dec;
+    outStatusFile << "PC: 00:" << std::hex << std::setw(4) << std::setfill('0')  << gb.PC << " " << dec;
+    outStatusFile << "(" << std::hex << std::setw(2) << std::setfill('0')  << (int)gb.mem[gb.PC] << " " <<
+                  std::setw(2) << std::setfill('0')  << (int)gb.mem[gb.PC + 1] << " " <<
+                  std::setw(2) << std::setfill('0')  <<(int)gb.mem[gb.PC + 2] << " " <<
+                  std::setw(2) << std::setfill('0')  <<(int)gb.mem[gb.PC + 3] << ")\n" << dec;
     outStatusFile.close();
 
 }
 
 
 //for gameboy_doctor
-void gameboy::gbdoctor_init_register_file(){
+void gameboy_testing::gbdoctor_init_register_file(){
     ofstream outStatusFile("../gbdoctor.txt"); //overwriting the file if it exists
 
     if (!outStatusFile) {
@@ -155,20 +151,20 @@ void gameboy::gbdoctor_print_registers_r8()
         return;
     }
 
-    outStatusFile << "A:" << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)(*r8[A])<< " " << dec;
-    outStatusFile << "F:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(AF_reg.lo)<< " " << dec;
-    outStatusFile << "B:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[B])<< " " << dec;
-    outStatusFile << "C:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[C])<< " " << dec;
-    outStatusFile << "D:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[D])<< " " << dec;
-    outStatusFile << "E:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[E])<< " " << dec;
-    outStatusFile << "H:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[H])<< " " << dec;
-    outStatusFile << "L:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*r8[L])<< " " << dec;
-    outStatusFile << "SP:" << std::hex << std::setw(4) << std::setfill('0')  << (int)(r16[SP]->reg)<< " " << dec;
-    outStatusFile << "PC:" << std::hex << std::setw(4) << std::setfill('0')  << PC << " " << dec;
-    outStatusFile << "PCMEM:" << std::hex << std::setw(2) << std::setfill('0')  << (int)mem[PC] << "," <<
-                  std::setw(2) << std::setfill('0')  << (int)mem[PC + 1] << "," <<
-                  std::setw(2) << std::setfill('0')  <<(int)mem[PC + 2] << "," <<
-                  std::setw(2) << std::setfill('0')  <<(int)mem[PC + 3] << "\n" << dec;
+    outStatusFile << "A:" << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::A])<< " " << dec;
+    outStatusFile << "F:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(gb.AF_reg.lo)<< " " << dec;
+    outStatusFile << "B:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::B])<< " " << dec;
+    outStatusFile << "C:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::C])<< " " << dec;
+    outStatusFile << "D:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::D])<< " " << dec;
+    outStatusFile << "E:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::E])<< " " << dec;
+    outStatusFile << "H:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::H])<< " " << dec;
+    outStatusFile << "L:" << std::hex << std::setw(2) << std::setfill('0')  << (int)(*gb.r8[gameboy::L])<< " " << dec;
+    outStatusFile << "SP:" << std::hex << std::setw(4) << std::setfill('0')  << (int)(gb.r16[gameboy::SP]->reg)<< " " << dec;
+    outStatusFile << "PC:" << std::hex << std::setw(4) << std::setfill('0')  << gb.PC << " " << dec;
+    outStatusFile << "PCMEM:" << std::hex << std::setw(2) << std::setfill('0')  << (int)gb.mem[gb.PC] << "," <<
+                  std::setw(2) << std::setfill('0')  << (int)gb.mem[gb.PC + 1] << "," <<
+                  std::setw(2) << std::setfill('0')  <<(int)gb.mem[gb.PC + 2] << "," <<
+                  std::setw(2) << std::setfill('0')  <<(int)gb.mem[gb.PC + 3] << "\n" << dec;
     outStatusFile.close();
 
 }
@@ -181,7 +177,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
         std::cerr << "Error: Could not open 'memory_status.txt'" << std::endl;
         return;
     }
-    outMemoryFile << std::uppercase  << std::setfill('0') << loop_counter << ": (0x" << hex << OPCODE << ") " << "mem[" << address << "] <- "<< std::setw(2) << (int)val << dec << endl;
+    outMemoryFile << std::uppercase  << std::setfill('0') << gameboy::loop_counter << ": (0x" << hex << OPCODE << ") " << "mem[" << address << "] <- "<< std::setw(2) << (int)val << dec << endl;
     outMemoryFile.close();
 }
 
@@ -314,8 +310,8 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
             if(testing_mode)
             {
-                print_memory_writes(0xF4, r16[SP]->reg+1, (PC>>8)); //0xF4 is an arbitrary opcode for interrupt push
-                print_memory_writes(0xF4, r16[SP]->reg, (PC));
+                gameboy_testing::print_memory_writes(0xF4, r16[SP]->reg+1, (PC>>8)); //0xF4 is an arbitrary opcode for interrupt push
+                gameboy_testing::print_memory_writes(0xF4, r16[SP]->reg, (PC));
             }
 
             PC = interrupt_routine_addresses[interrupt_routine_type];
@@ -498,7 +494,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
                     mem[r16[tmp]->reg] = *r8[A];
 
                     if(testing_mode)
-                        print_memory_writes(OPCODE, r16[tmp]->reg,*r8[A]);
+                        gameboy_testing::print_memory_writes(OPCODE, r16[tmp]->reg,*r8[A]);
 //                        outMemoryFile << loop_counter << ": " << hex << "Store the contents of register A: " << (int)*r8[A] << " in the memory location: mem[" << r16[tmp]->reg << "] specified by register pair " << r16[tmp] << dec << endl;
 
                     check_div_reg_change(r16[tmp]->reg);
@@ -2199,8 +2195,8 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             if(testing_mode)
             {
 //                    init_register_file();
-                gbdoctor_init_register_file();
-                init_memory_file();
+                gameboy_testing::gbdoctor_init_register_file();
+                gameboy_testing::init_memory_file();
             }
 
             //for testing
@@ -2215,7 +2211,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
                 chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
                 if(testing_mode && (is_halted != 2) || (( mem[IF_reg] & mem[IE_reg] ) != 0)) { //either we are not halted, or we are about to exit halt_mode and the opcode will run
 //                        print_registers_r8(); //for testing
-                    gbdoctor_print_registers_r8();
+                    gameboy_testing::gbdoctor_print_registers_r8(*this);
                 }
 
                 //interrupt_mode ? post_interrupt(): check_interrupts(); //if interrupt mode is on, we return to normal with post_interrupt(), otherwise we check for interrupts

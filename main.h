@@ -24,6 +24,9 @@ typedef signed short SIGNED_WORD ;
 typedef unsigned int DWORD; // 32-bit number
 
 
+//clases declarations
+class gameboy_testing;
+
 //credit to codesligner.co.uk for getting started
 
 #define FLAG_Z 7
@@ -57,7 +60,15 @@ union Register
 //gameboy class
 class gameboy
 {
+    friend class gameboy_testing;
+
 public:
+//    //constructors
+//    gameboy(int testing_mode);
+//
+//    gameboy_testing* gb_testing;
+
+
     BYTE mem[0x10000]; //2^16 bytes
     BYTE IME = 0; //IME FLAG, interrupts enabled/disabled
     BYTE is_halted = 0; //used for halt commands, will have values of 1 - to be halted, 2 - halted. credit : https://rylev.github.io/DMG-01/public/book/cpu/conclusion.html
@@ -165,8 +176,6 @@ public:
 
     WORD OPCODE;
 
-    //TESTING RELATED
-    BYTE testing_mode = 0; //when turned on, will print testing related info, as well as logging data in text files
 
     //flags
     //may not work, check bitwise arithemtic
@@ -191,12 +200,12 @@ public:
     void set_interrupt_bit(int interrupt_type, int mode);
 
     //TESTING -- this will be broken into a testing class
-    void init_register_file();
-    void init_memory_file();
-    void print_registers_r8();
-    void gbdoctor_init_register_file();
-    void gbdoctor_print_registers_r8();
-    void print_memory_writes(WORD OPCODE,WORD address, BYTE val);
+//    void init_register_file();
+//    void init_memory_file();
+//    void print_registers_r8();
+//    void gbdoctor_init_register_file();
+//    void gbdoctor_print_registers_r8();
+//    void print_memory_writes(WORD OPCODE,WORD address, BYTE val);
 
     //private methods
     void init();
@@ -254,6 +263,20 @@ public:
 
 };
 
+
+class gameboy_testing{
+public:
+
+
+    void static init_register_file();
+    void static init_memory_file();
+    void static print_registers_r8(gameboy& gb);
+    void static gbdoctor_init_register_file();
+    void static gbdoctor_print_registers_r8(gameboy& gb);
+    void static print_memory_writes(WORD OPCODE,WORD address, BYTE val);
+
+
+};
 
 
 #endif //GB_EMU_2024_MAIN_H
