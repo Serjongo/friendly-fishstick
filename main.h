@@ -12,7 +12,7 @@
 #include <iomanip>  // For std::setw and std::setfill
 #include <chrono>
 #include <thread>
-
+#include <SDL.h>
 
 using namespace std;
 ofstream outMemoryFile;

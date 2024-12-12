@@ -2364,7 +2364,9 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
 
 
-int main() {
+int main(int argc, char* argv[]) {
+//    SDL_Init(SDL_INIT_EVERYTHING);
+//    SDL_Quit();
     std::cout << "Hello, !!!!!!!!" << std::endl;
     gameboy jibby;
     jibby.main_loop();
