@@ -2186,7 +2186,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             // 09-op r,r.gb
             // 10-bit ops.gb - VV
             // 11-op a,(hl).gb
-            read_from_file("../TESTS/02-interrupts.gb");
+            read_from_file("../TESTS/03-op sp,hl.gb");
 
 
             //bootstrap rom, 0x0 offset
@@ -2367,6 +2367,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 int main(int argc, char* argv[]) {
 //    SDL_Init(SDL_INIT_EVERYTHING);
 //    SDL_Quit();
+//
     std::cout << "Hello, !!!!!!!!" << std::endl;
     gameboy jibby;
     jibby.main_loop();
