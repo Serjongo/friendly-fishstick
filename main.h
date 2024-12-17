@@ -12,8 +12,8 @@
 #include <iomanip>  // For std::setw and std::setfill
 #include <chrono>
 #include <thread>
-//#define SDL_MAIN_HANDLED
-//#include <SDL.h>
+#include <SFML/Graphics.hpp>
+#include <SFML/Window.hpp>
 //
 using namespace std;
 ofstream outMemoryFile;

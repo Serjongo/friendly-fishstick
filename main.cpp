@@ -2369,6 +2369,16 @@ int main(int argc, char* argv[]) {
 //    SDL_Quit();
 //
     std::cout << "Hello, !!!!!!!!" << std::endl;
+
+    //
+
+    sf::Window window(sf::VideoMode(800, 600), "My window");
+
+//    std::cout << "SFML window closed successfully!" << std::endl;
+
+
+
+    //
     gameboy jibby;
     jibby.main_loop();
 
