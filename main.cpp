@@ -142,7 +142,7 @@ void gameboy_testing::gbdoctor_init_register_file(){
     }
     outStatusFile.close();
 }
-void gameboy::gbdoctor_print_registers_r8()
+void gameboy_testing::gbdoctor_print_registers_r8(gameboy& gb)
 {
     ofstream outStatusFile("../gbdoctor.txt", ios::app);
 
@@ -170,7 +170,7 @@ void gameboy::gbdoctor_print_registers_r8()
 }
 
 
-void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
+void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 {
     outMemoryFile.open("../memory_status.txt", ios::app);
     if (!outMemoryFile) {
@@ -192,10 +192,10 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
             //private methods
 
-            void init()
-            {
-                //fill memory with zeroes
-                memset(m_CartridgeMemory,0,sizeof(m_CartridgeMemory));
+        void gameboy::init()
+        {
+            //fill memory with zeroes
+            memset(m_CartridgeMemory,0,sizeof(m_CartridgeMemory));
 
 
             PC = 0x100 ;
@@ -240,29 +240,29 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
         }
 
 
-            //deep copy function from cartridge to mem ~@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-            ///This is a temporary placeholder of a function. In reality, moving the cartridge mem to gb mem is more complicated, for now we just dump it
-            void cartridge_to_mem(long long bytes)
+        //deep copy function from cartridge to mem ~@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        ///This is a temporary placeholder of a function. In reality, moving the cartridge mem to gb mem is more complicated, for now we just dump it
+        void gameboy::cartridge_to_mem(long long bytes)
+        {
+            for(long long i = 0 ; i < bytes ; i++)
             {
-                for(long long i = 0 ; i < bytes ; i++)
-                {
-                    mem[i] = m_CartridgeMemory[0x100+i];
+                mem[i] = m_CartridgeMemory[0x100+i];
 //                  mem[i+0x100] = m_CartridgeMemory[i];
 
             }
         }
 
 
-            //what this currently does is simply read from file, and drop into mem from cell 0x100 and onwards.
-            // This is likely temporary and currently done for testing purposes. the reading from cartridge mechanism is more complicated, and we're not there yet
-            void read_from_file(string path) //basic version, will change as the project develops
+        //what this currently does is simply read from file, and drop into mem from cell 0x100 and onwards.
+        // This is likely temporary and currently done for testing purposes. the reading from cartridge mechanism is more complicated, and we're not there yet
+        void gameboy::read_from_file(string path) //basic version, will change as the project develops
+        {
+            ifstream input_file(path,ios::binary);
+            if(!input_file)
             {
-                ifstream input_file(path,ios::binary);
-                if(!input_file)
-                {
-                    cerr << "File error.\n";
-                }
-                input_file.read((char *)m_CartridgeMemory + 0x100, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
+                cerr << "File error.\n";
+            }
+            input_file.read((char *)m_CartridgeMemory + 0x100, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
 //                input_file.read((char *)m_CartridgeMemory, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
 
             m_CartridgeMemory[input_file.gcount()] = '\0';
@@ -284,29 +284,29 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 //                gb_cartridge.seekg(0x100,ios::beg);
 //            }
 
-            void fetch()
+        void gameboy::fetch()
+        {
+            OPCODE = mem[PC];
+            PC++;
+            num_of_machine_cycles(1);
+            if(OPCODE == 0xCB)
             {
-                OPCODE = mem[PC];
+                OPCODE = OPCODE<<8 | mem[PC];
                 PC++;
-                num_of_machine_cycles(1);
-                if(OPCODE == 0xCB)
-                {
-                    OPCODE = OPCODE<<8 | mem[PC];
-                    PC++;
-                }
             }
+        }
 
-            //move PC to interrupt handler, backup PC in stack
-            void PC_to_interrupt(int interrupt_routine_type)
-            {
-                interrupt_mode = 1;
-                IME = 0;
-                set_interrupt_bit(interrupt_routine_type,0);
-                //PUSH r16stk command
-                r16[SP]->reg = (r16[SP]->reg) - 1;
-                mem[r16[SP]->reg] = (PC >> 8); //this is the MSByte of PC
-                r16[SP]->reg = (r16[SP]->reg) - 1;
-                mem[r16[SP]->reg] = PC; //this is the LSByte of PC
+        //move PC to interrupt handler, backup PC in stack
+        void gameboy::PC_to_interrupt(int interrupt_routine_type)
+        {
+            interrupt_mode = 1;
+            IME = 0;
+            set_interrupt_bit(interrupt_routine_type,0);
+            //PUSH r16stk command
+            r16[SP]->reg = (r16[SP]->reg) - 1;
+            mem[r16[SP]->reg] = (PC >> 8); //this is the MSByte of PC
+            r16[SP]->reg = (r16[SP]->reg) - 1;
+            mem[r16[SP]->reg] = PC; //this is the LSByte of PC
 
             if(testing_mode)
             {
@@ -319,9 +319,9 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
 
 
-            void check_interrupts()
-            {
-                //check if HALT status can be disabled
+        void gameboy::check_interrupts()
+        {
+            //check if HALT status can be disabled
 
             //https://robertovaccari.com/blog/2020_09_26_gameboy/
             if(( mem[IF_reg] & mem[IE_reg] ) != 0)
@@ -356,22 +356,22 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             }
         }
 
-            void post_interrupt()
-            {
-                interrupt_mode = 0;
-                IME = 1;
-                tmp = 0;
-                tmp = mem[r16[SP]->reg];
-                r16[SP]->reg = (r16[SP]->reg) + 1;
-                tmp = ((r16[SP]->reg) << 8) | tmp; // PC[HI] | PC[LO]
-                r16[SP]->reg = (r16[SP]->reg) + 1;
-                PC = tmp;
+        void gameboy::post_interrupt()
+        {
+            interrupt_mode = 0;
+            IME = 1;
+            tmp = 0;
+            tmp = mem[r16[SP]->reg];
+            r16[SP]->reg = (r16[SP]->reg) + 1;
+            tmp = ((r16[SP]->reg) << 8) | tmp; // PC[HI] | PC[LO]
+            r16[SP]->reg = (r16[SP]->reg) + 1;
+            PC = tmp;
 
         }
 
-            //timer related funcs
-            void update_timers(unsigned int machine_cycles_added,int running_mode) //running modes - 0: reguler, 1: pause: 2:stop
-            {
+        //timer related funcs
+        void gameboy::update_timers(unsigned int machine_cycles_added,int running_mode) //running modes - 0: reguler, 1: pause: 2:stop
+        {
 //                if(running_mode < 2) //meaning un-stopped
 //                {
                 //previous TIMA result
@@ -420,24 +420,24 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
         }
 
-            //https://github.com/Hacktix/GBEDG/blob/master/timers/index.md#-ff04---divider-register--div-
-            void check_div_reg_change(WORD address)//checks if DIV_register mem was written into, if so, it is reset to 0
+        //https://github.com/Hacktix/GBEDG/blob/master/timers/index.md#-ff04---divider-register--div-
+        void gameboy::check_div_reg_change(WORD address)//checks if DIV_register mem was written into, if so, it is reset to 0
+        {
+            if (address == DIV_register)
             {
-                if (address == DIV_register)
-                {
-                    DIV_timer = 0;
-                    mem[DIV_register] = 0;
-                }
+                DIV_timer = 0;
+                mem[DIV_register] = 0;
             }
+        }
 
-            //machine cycles management
-            void num_of_machine_cycles(int num)
-            {
-                gb_machine_cycles = gb_machine_cycles + num;
-            }
+        //machine cycles management
+        void gameboy::num_of_machine_cycles(int num)
+        {
+            gb_machine_cycles = gb_machine_cycles + num;
+        }
 
-            void decode_execute()
-            {
+        void gameboy::decode_execute()
+        {
 
             r8[6] = &mem[HL_reg.reg]; ///temporary fix to r8[6] not pointing to the correct memory
 
@@ -513,8 +513,8 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                     if(testing_mode)
                     {
-                        print_memory_writes(OPCODE, tmp, r16[SP]->lo);
-                        print_memory_writes(OPCODE, tmp+1, r16[SP]->hi);
+                        gameboy_testing::print_memory_writes(OPCODE, tmp, r16[SP]->lo);
+                        gameboy_testing::print_memory_writes(OPCODE, tmp+1, r16[SP]->hi);
                     }
 
                     check_div_reg_change(tmp);
@@ -671,7 +671,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
                     r16[HL_16]->reg++; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
 
                     if(testing_mode)
-                        print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
+                        gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
 
                     check_div_reg_change(r16[HL_16]->reg);
 
@@ -684,7 +684,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
                     r16[HL_16]->reg--; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
 
                     if(testing_mode)
-                        print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
+                        gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
 
                     check_div_reg_change(r16[HL_16]->reg);
                     num_of_machine_cycles(2);
@@ -726,7 +726,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
                     if(testing_mode && (OPCODE == 0x34))
                     {
                         //cout << "0x34\n";
-                        print_memory_writes(OPCODE, r16[HL_16]->reg, mem[r16[HL_16]->reg]+1);
+                        gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg, mem[r16[HL_16]->reg]+1);
                     }
 
                     if(OPCODE == 0x34)
@@ -759,7 +759,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                     if(testing_mode && (OPCODE == 0x35))
                     {
-                        print_memory_writes(OPCODE, r16[HL_16]->reg, mem[r16[HL_16]->reg]-1);
+                        gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg, mem[r16[HL_16]->reg]-1);
                     }
 
                     if(OPCODE == 0x35)
@@ -782,7 +782,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                     if(testing_mode && (OPCODE == 0x36))
                     {
-                        print_memory_writes(OPCODE, r16[HL_16]->reg, mem[PC-1]);
+                        gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg, mem[PC-1]);
                     }
 
                     if(OPCODE == 0x36)
@@ -813,7 +813,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
                     (*r8[(OPCODE & 0x38)>>3]) = (*r8[(OPCODE & 0x07)]); //dst: relevant opcode bits in r8 are 3rd, 4th & 5th, src: rel bits 0,1,2
                     if(testing_mode && (OPCODE == 0x70 || OPCODE == 0x71 || OPCODE == 0x72 || OPCODE == 0x73 || OPCODE == 0x74 || OPCODE == 0x75 || OPCODE == 0x77))
                     {
-                        print_memory_writes(OPCODE ,r16[HL_16]->reg, (*r8[(OPCODE & 0x07)]));
+                        gameboy_testing::print_memory_writes(OPCODE ,r16[HL_16]->reg, (*r8[(OPCODE & 0x07)]));
                     }
 
                     //machine cycles update
@@ -875,7 +875,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
                     }
                     if(testing_mode)
                     {
-                        print_memory_writes(OPCODE,(WORD)tmp, *r8[A]);
+                        gameboy_testing::print_memory_writes(OPCODE,(WORD)tmp, *r8[A]);
 
                     }
                     check_div_reg_change(tmp);
@@ -896,7 +896,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                     if(testing_mode)
                     {
-                        print_memory_writes(OPCODE, tmp, *r8[A]);
+                        gameboy_testing::print_memory_writes(OPCODE, tmp, *r8[A]);
                         if(tmp == SC_reg && *r8[A] == 0x81)
                         {
                             cout << mem[SB_reg];
@@ -922,7 +922,7 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                     if(testing_mode)
                     {
-                        print_memory_writes(OPCODE, tmp, *r8[A]);
+                        gameboy_testing::print_memory_writes(OPCODE, tmp, *r8[A]);
                     }
 
                     check_div_reg_change(tmp);
@@ -1368,8 +1368,8 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                     if(testing_mode)
                     {
-                        print_memory_writes(OPCODE, r16[SP]->reg+1, r16[tmp]->hi);
-                        print_memory_writes(OPCODE, r16[SP]->reg, r16[tmp]->lo);
+                        gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg+1, r16[tmp]->hi);
+                        gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg, r16[tmp]->lo);
                     }
 
                     check_div_reg_change(r16[SP]->reg+1);
@@ -1387,8 +1387,8 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                     if(testing_mode)
                     {
-                        print_memory_writes(OPCODE, r16[SP]->reg+1, AF_reg.hi);
-                        print_memory_writes(OPCODE, r16[SP]->reg, AF_reg.lo);
+                        gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg+1, AF_reg.hi);
+                        gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg, AF_reg.lo);
                     }
 
                     check_div_reg_change(r16[SP]->reg+1);
@@ -1511,8 +1511,8 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                     if(testing_mode)
                     {
-                        print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
-                        print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
+                        gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
+                        gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                     }
                     check_div_reg_change(r16[SP]->reg);
                     check_div_reg_change(r16[SP]->reg+1);
@@ -1538,8 +1538,8 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                         if(testing_mode)
                         {
-                            print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
-                            print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
+                            gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
+                            gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                         }
                         check_div_reg_change(r16[SP]->reg);
                         check_div_reg_change(r16[SP]->reg+1);
@@ -1570,8 +1570,8 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                         if(testing_mode)
                         {
-                            print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
-                            print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
+                            gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
+                            gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                         }
                         check_div_reg_change(r16[SP]->reg);
                         check_div_reg_change(r16[SP]->reg+1);
@@ -1600,8 +1600,8 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                         if(testing_mode)
                         {
-                            print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
-                            print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
+                            gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
+                            gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                         }
                         check_div_reg_change(r16[SP]->reg);
                         check_div_reg_change(r16[SP]->reg+1);
@@ -1630,8 +1630,8 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                         if(testing_mode)
                         {
-                            print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
-                            print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
+                            gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (BYTE) (0X00FF & ((PC) >> 8)));
+                            gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                         }
                         check_div_reg_change(r16[SP]->reg);
                         check_div_reg_change(r16[SP]->reg+1);
@@ -1657,8 +1657,8 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                     if(testing_mode)
                     {
-                        print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (0X00FF & ((PC) >> 8)));
-                        print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
+                        gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg+1, (BYTE) (0X00FF & ((PC) >> 8)));
+                        gameboy_testing::print_memory_writes(OPCODE, r16[SP]->reg, (BYTE) (0X00FF & (PC)));
                     }
                     check_div_reg_change(r16[SP]->reg);
                     check_div_reg_change(r16[SP]->reg+1);
@@ -2166,11 +2166,11 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
                     break;
 
 
-                }
             }
-            void main_loop()
-            {
-                //read_from_file("../test.bin");
+        }
+        void gameboy::main_loop()
+        {
+            //read_from_file("../test.bin");
 
             memset(mem,0,sizeof(mem));
             //tester, gameboy cartridge, 0x100 offset and all
@@ -2254,8 +2254,8 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
                         time_span -= chrono::seconds(1);
                         gb_machine_cycles = 0; //may change to max(0,curr_val-max_val)
                     }
-
                     loop_counter++;
+//                    loop_counter++;
                 }
                 else //wait until the remainder of the second passes
                 {
@@ -2269,52 +2269,52 @@ void gameboy::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
         }
 
-            //public methods
-            //getters
-            Register get_reg_AF()
-            {
-                return AF_reg;
-            }
-            BYTE get_subreg_A()
-            {
-                return AF_reg.hi;
-            }
-            BYTE get_subreg_F()
-            {
-                return AF_reg.lo;
-            }
-            Register get_reg_BC()
-            {
-                return BC_reg;
-            }
-            BYTE get_subreg_B()
-            {
-                return BC_reg.hi;
-            }
-            BYTE get_subreg_C()
-            {
-                return BC_reg.lo;
-            }
-            Register get_reg_HL()
-            {
-                return HL_reg;
-            }
-            BYTE get_subreg_H()
-            {
-                return HL_reg.hi;
-            }
-            BYTE get_subreg_L()
-            {
-                return HL_reg.lo;
-            }
-            Register get_reg_SP()
-            {
-                return StackPointer_reg;
-            }
-            WORD get_PC()
-            {
-                return PC;
-            }
+        //public methods
+        //getters
+        Register gameboy::get_reg_AF()
+        {
+            return AF_reg;
+        }
+        BYTE gameboy::get_subreg_A()
+        {
+            return AF_reg.hi;
+        }
+        BYTE gameboy::get_subreg_F()
+        {
+            return AF_reg.lo;
+        }
+        Register gameboy::get_reg_BC()
+        {
+            return BC_reg;
+        }
+        BYTE gameboy::get_subreg_B()
+        {
+            return BC_reg.hi;
+        }
+        BYTE gameboy::get_subreg_C()
+        {
+            return BC_reg.lo;
+        }
+        Register gameboy::get_reg_HL()
+        {
+            return HL_reg;
+        }
+        BYTE gameboy::get_subreg_H()
+        {
+            return HL_reg.hi;
+        }
+        BYTE gameboy::get_subreg_L()
+        {
+            return HL_reg.lo;
+        }
+        Register gameboy::get_reg_SP()
+        {
+            return StackPointer_reg;
+        }
+        WORD gameboy::get_PC()
+        {
+            return PC;
+        }
 
         //setters
         void gameboy::set_reg_AF(WORD input)

@@ -100,6 +100,10 @@ public:
     BYTE nn_lsb; //least significant byte
     BYTE nn_msb; //most significant byte
 
+    //TESTING RELATED
+    BYTE testing_mode = 0; //when turned on, will print testing related info, as well as logging data in text files
+    static inline int loop_counter = 1;
+
 
     enum r8
     {
@@ -176,6 +180,7 @@ public:
             &AF_reg.hi}; //A
 
     WORD OPCODE;
+
 
 
     //flags
