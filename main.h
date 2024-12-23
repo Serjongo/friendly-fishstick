@@ -14,6 +14,8 @@
 #include <thread>
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
+#include "PPU.h"
+
 //
 using namespace std;
 ofstream outMemoryFile;
@@ -23,6 +25,10 @@ typedef unsigned char BYTE; //8-bit number
 typedef unsigned short WORD; //16-bit number, 2byte
 typedef signed short SIGNED_WORD ;
 typedef unsigned int DWORD; // 32-bit number
+
+
+
+
 
 
 //clases declarations
@@ -268,6 +274,10 @@ public:
     void set_PC(WORD input);
 
 };
+
+
+
+
 
 
 class gameboy_testing{
