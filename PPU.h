@@ -11,7 +11,12 @@ class PPU{
 public:
     const WORD VRAM_mem_start = 0x8000;
     const WORD VRAM_mem_end = 0x97ff;
+    const WORD WX_reg = 0xFF4A; //leftmost x_coord border of the window (continues till end of screen)
+    const WORD WY_reg = 0xFF4B; //top y_coord border of the window
     const int oam_size = 0xA0; //160 bytes
+    const WORD SCX = 0xFF42; //x-screen coordinate for rendering
+    const WORD SCY = 0xFF43; //y-scrren coordinate for rendering
+
 
 
     BYTE* VRAM; // from the vram start point
@@ -19,6 +24,7 @@ public:
     BYTE* MEM; //1 to 1 memory mapping from the start
 
     BYTE* visible_OAM_buffer[0x0A]; //pointers to 10 OAMs/sprites
+    void pixel_fetcher(WORD tile_num,int lcd_x_coord);
 
     PPU(BYTE* OAM_start,BYTE* VRAM_start,BYTE* MEM_start); //
 
@@ -41,10 +47,15 @@ public:
 
     //h-blank (mode 0) - after every line
 
-    int* OAM_SCAN();
+    void OAM_SCAN();
+    void clean_visible_OAM_buff();
+    void DRAW();
 
     //getters
     BYTE get_LCDC_sprite_size_status() const; // 1 means tall (8X16 pixels),0 = 8x8
+    BYTE get_LCDC_window_display_enable_status() const;
+    BYTE get_LCDC_bg_tile_map_select_status() const;
+    BYTE get_LCDC_window_tile_map_select() const;
     //setters
 
 
