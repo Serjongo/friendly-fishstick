@@ -5,26 +5,26 @@
 #ifndef GB_EMU_2024_PPU_H
 #define GB_EMU_2024_PPU_H
 
+
+#define LY_register 0xFF44
+#define SCX 0xFF43 //mem loc of x-screen coordinate for rendering
+#define SCY 0xFF42 //mem loc of y-scrren coordinate for rendering
+#define WX_reg 0xFF4A //mem loc of leftmost x_coord border of the window (continues till end of screen)
+#define WY_reg 0xFF4B //mem loc of top y_coord border of the window
+#define oam_size 0xA0 // 160 bytes
+#define VRAM_mem_start 0x8000 //mem loc
+#define VRAM_mem_end 0x97ff //mem loc bound
+
 #include "main.h"
 
 class PPU{
 public:
-    const WORD VRAM_mem_start = 0x8000;
-    const WORD VRAM_mem_end = 0x97ff;
-    const WORD WX_reg = 0xFF4A; //leftmost x_coord border of the window (continues till end of screen)
-    const WORD WY_reg = 0xFF4B; //top y_coord border of the window
-    const int oam_size = 0xA0; //160 bytes
-    const WORD SCX = 0xFF42; //x-screen coordinate for rendering
-    const WORD SCY = 0xFF43; //y-scrren coordinate for rendering
-
-
-
     BYTE* VRAM; // from the vram start point
     BYTE* OAM; //from the OAM start point
     BYTE* MEM; //1 to 1 memory mapping from the start
 
     BYTE* visible_OAM_buffer[0x0A]; //pointers to 10 OAMs/sprites
-    void pixel_fetcher(WORD tile_num,int lcd_x_coord);
+    void pixel_fetcher(int lcd_x_coord);
 
     PPU(BYTE* OAM_start,BYTE* VRAM_start,BYTE* MEM_start); //
 
@@ -56,6 +56,7 @@ public:
     BYTE get_LCDC_window_display_enable_status() const;
     BYTE get_LCDC_bg_tile_map_select_status() const;
     BYTE get_LCDC_window_tile_map_select() const;
+    BYTE get_LCDC_tile_data_select() const;
     //setters
 
 
