@@ -12,19 +12,153 @@
 #define WX_reg 0xFF4A //mem loc of leftmost x_coord border of the window (continues till end of screen)
 #define WY_reg 0xFF4B //mem loc of top y_coord border of the window
 #define oam_size 0xA0 // 160 bytes
+#define tilemap_row_length_bytes 32 //window/background, 32 rows of 32 bytes
+#define tilemap_size 0x3ff
+#define tile_size_bytes 16
+#define BG_palette_data_reg 0xFF47
+#define pixel_row_size 8
+#define OEM_mem_start 0xFE00
+#define OEM_mem_end 0xFE9F
 #define VRAM_mem_start 0x8000 //mem loc
 #define VRAM_mem_end 0x97ff //mem loc bound
 
+#include <queue>
 #include "main.h"
 
-class PPU{
-public:
-    BYTE* VRAM; // from the vram start point
-    BYTE* OAM; //from the OAM start point
-    BYTE* MEM; //1 to 1 memory mapping from the start
+class Pixel
+        {
+        private:
+            //bits:
+            // 0-1 - color
+            // 2 - palette
+            // 3 - background priority - val0 for background
+            BYTE data;
+            Pixel(BYTE color, BYTE palette, BYTE background_priority);
 
-    BYTE* visible_OAM_buffer[0x0A]; //pointers to 10 OAMs/sprites
-    void pixel_fetcher(int lcd_x_coord);
+        public:
+            //getters
+            BYTE get_color();
+            BYTE get_palette();
+            BYTE get_background_priority();
+            //setters
+            void set_color(BYTE color);
+            void set_palette(BYTE palette);
+            void set_background_priority(BYTE background_priority);
+
+        };
+
+class Sprite
+        {
+        private:
+            BYTE y_pos;
+            BYTE x_pos;
+            BYTE tile_num;
+            BYTE flags;
+        public:
+            Sprite(BYTE y_pos,BYTE x_pos, BYTE tile_num, BYTE flags)
+            {
+                this->y_pos = y_pos;
+                this->x_pos = x_pos;
+                this->tile_num = tile_num;
+                this->flags = flags;
+            }
+
+            //getters
+            BYTE get_y_pos(){
+                return y_pos;
+            };
+            BYTE get_x_pos()
+            {
+                return x_pos;
+            };
+            BYTE get_tile_num()
+            {
+                return tile_num;
+            };
+            BYTE get_flags()
+            {
+                return flags;
+            };
+
+            BYTE get_palette_number_flag()
+            {
+                return ((flags & 0x10) >> 4);
+            }
+            BYTE get_x_flip_flag()
+            {
+                return ((flags & 0x20) >> 5);
+            }
+            BYTE get_y_flip_flag()
+            {
+                return ((flags & 0x40) >> 6);
+            }
+            BYTE get_obj_to_bg_priority_flag()
+            {
+                return ((flags & 0x80) >> 7);
+            }
+
+
+
+            //setters
+            void set_y_pos(BYTE y_pos)
+            {
+                this->y_pos = y_pos;
+            }
+            void set_x_pos(BYTE x_pos)
+            {
+                this->x_pos = x_pos;
+            }
+            void set_tile_num(BYTE tile_num)
+            {
+                this->tile_num = tile_num;
+            }
+            void set_flags(BYTE flags)
+            {
+                this->flags = flags;
+            }
+
+            void set_palette_number_flag(BYTE palette_number_flag)
+            {
+                flags = flags & 0xEF;
+                flags = flags | (palette_number_flag << 4);
+            }
+            void set_x_flip_flag(BYTE x_flip_flag)
+            {
+                flags = flags & 0xDF;
+                flags = flags | (x_flip_flag << 5);
+            }
+            void set_y_flip_flag(BYTE y_flip_flag)
+            {
+                flags = flags & 0xBF;
+                flags = flags | (y_flip_flag << 6);
+            }
+            void set_obj_to_bg_priority_flag(BYTE obj_to_bg_priority_flag)
+            {
+                flags = flags & 0x7F;
+                flags = flags | (obj_to_bg_priority_flag << 7);
+            }
+
+        };
+
+
+class PPU{
+    public:
+        BYTE* VRAM; // from the vram start point
+        BYTE* OAM; //from the OAM start point
+        BYTE* MEM; //1 to 1 memory mapping from the start
+        std::queue<Pixel> Background_FIFO;
+        std::queue<Pixel> Sprite_FIFO;
+
+        BYTE* visible_OAM_buffer[0x0A]; //pointers to 10 OAMs/sprites
+
+        //pixel fetcher vars
+        WORD pixel_fetcher_x_position_counter = 0;
+        WORD WINDOW_LINE_COUNTER = 0; // credit to: https://hacktix.github.io/GBEDG/ppu/
+        BYTE first_window_encounter = 1; //
+        void pixel_fetcher();
+        //pixel fetcher related funcs
+        WORD tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high);
+        //
 
     PPU(BYTE* OAM_start,BYTE* VRAM_start,BYTE* MEM_start); //
 
@@ -50,6 +184,10 @@ public:
     void OAM_SCAN();
     void clean_visible_OAM_buff();
     void DRAW();
+
+    void main_loop();
+
+
 
     //getters
     BYTE get_LCDC_sprite_size_status() const; // 1 means tall (8X16 pixels),0 = 8x8
