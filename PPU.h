@@ -218,7 +218,7 @@ class PPU{
     void clean_OAM_buff();
     void DRAW();
 
-    void main_loop();
+    void PPU_cycle();
 
 
 

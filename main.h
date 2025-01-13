@@ -63,6 +63,12 @@ union Register
 
 };
 
+
+class CPU
+{
+
+};
+
 //gameboy class
 class gameboy
 {

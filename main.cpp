@@ -2208,7 +2208,7 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             while(true)
             {
                 CPU_cycle();
-                //PPU_cycle();
+                pupy.PPU_cycle();
             }
 
         }

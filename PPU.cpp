@@ -272,10 +272,9 @@ BYTE PPU::get_LCDC_window_tile_map_select() const
     return (MEM[0xFF40] & (BYTE)(1 << 6)) == (BYTE)(1 << 6);
 }
 
-void PPU::main_loop()
+void PPU::PPU_cycle()
 {
     OAM_SCAN();
-
     DRAW();
     //H_BLANK();
     if(pixel_fetcher_x_position_counter >= 160)
