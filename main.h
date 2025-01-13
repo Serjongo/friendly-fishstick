@@ -18,7 +18,6 @@
 
 //
 using namespace std;
-ofstream outMemoryFile;
 
 //shortcuts for code readability
 typedef unsigned char BYTE; //8-bit number
@@ -70,11 +69,14 @@ class gameboy
     friend class gameboy_testing;
 
 public:
-//    //constructors
+    //constructors
 //    gameboy(int testing_mode);
-//
-//    gameboy_testing* gb_testing;
 
+//    gameboy_testing* gb_testing;
+    gameboy();
+
+
+    PPU pupy;
 
     BYTE mem[0x10000]; //2^16 bytes
     BYTE IME = 0; //IME FLAG, interrupts enabled/disabled
@@ -82,6 +84,8 @@ public:
     unsigned int gb_machine_cycles = 0; //will count cost of operations, will reset every second
     const unsigned int max_machine_cycles_val =  4194304/4; //max amount of cycles per sec. 1 machine cycle = 4 clock cycles
     const unsigned int div_timer_freq = 16384/4; //in hz, in machine cycles
+
+    chrono::duration<double> time_span = chrono::milliseconds(0); //this is used as a "1-second timer" and is reset each second, used to throttle performance
 
     //registers
     Register AF_reg; //Accumulator + Flags
@@ -243,6 +247,7 @@ public:
 
     void decode_execute();
     void main_loop();
+    void CPU_cycle(); //may change the function visibility to protected/public later since it'll likely cause problems if we break it down to sub-classes
 
     //public methods
     //getters
@@ -278,10 +283,11 @@ public:
 
 
 
-
+static ofstream outMemoryFile;
 
 class gameboy_testing{
 public:
+
 
 
     void static init_register_file();

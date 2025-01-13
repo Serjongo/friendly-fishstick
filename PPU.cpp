@@ -49,40 +49,45 @@ void Pixel::set_background_priority(BYTE background_priority)
 
 
 //PPU
-PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start)
+PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : parent(gameboy)
 {
     VRAM = VRAM_start;
-    OAM = OAM_start;
+    //OAM = OAM_start;
     MEM = MEM_start;
 }
 
 void PPU::clean_visible_OAM_buff()
 {
-    for(int i = 0 ; i < 10;i++) //size of the array
-    {
-        visible_OAM_buffer[i] = nullptr;
-    }
+    for(Sprite* spr : visible_OAM_buffer)
+        visible_OAM_buffer.pop_back();
+}
+
+void PPU::clean_OAM_buff()
+{
+    for(Sprite* spr : OAM)
+        OAM.pop_back();
 }
 
 void PPU::OAM_SCAN() //mode 2 of the ppu
 {
-    clean_visible_OAM_buff();
+    clean_visible_OAM_buff(); //should set oam size to 0
+    clean_OAM_buff();
     // start of every scanline, find sprites to be rendered, add them to buffer given the following conditions per sprites:
     // xpos > 0, LY+16 > ypos, LY+16 < ypos+height (16 or 8), amount of spirtes < 10
-    int sprites_in_buff = 0;
     BYTE cur_row = MEM[LY_register]; //LY register
     BYTE tile_size = get_LCDC_sprite_size_status() ? 16 : 8;
-    for(int i = 0 ; i < oam_size; i = i+4)
+    for(int i = OAM_mem_start ; i < OAM_mem_end; i = i+4) // goes over 160 bytes, 40 sprites
     {
-        BYTE y_pos = OAM[i];
-        BYTE x_pos = OAM[i+1];
-        BYTE tile_num = OAM[i+2];
-        BYTE attributes = OAM[i+3];
+        Sprite spr = Sprite(MEM[i],MEM[i+1],MEM[i+2],MEM[i+3]);
+        OAM.push_back(&spr);
+//        BYTE y_pos = MEM[i];
+//        BYTE x_pos = MEM[i+1];
+//        BYTE tile_num = MEM[i+2];
+//        BYTE attributes = MEM[i+3];
 
-        if(x_pos > 0 && cur_row + 16 >= y_pos && cur_row + 16 < y_pos + tile_size && sprites_in_buff < 10)
+        if(spr.get_x_pos() > 0 && cur_row + 16 >= spr.get_y_pos() && cur_row + 16 < spr.get_y_pos() + tile_size && visible_OAM_buffer.size() < 10)
         {
-            visible_OAM_buffer[sprites_in_buff] = &OAM[i]; //we point to the first byte of the OAM, currently it is not a distinct struct
-            sprites_in_buff++;
+            visible_OAM_buffer.push_back(&spr); //we point to the first byte of the OAM, currently it is not a distinct struct
         }
     };
 }
@@ -177,7 +182,7 @@ void PPU::pixel_fetcher()
     tile_data_high = MEM[tile_address + 1];
 
     WORD pixel_row = tileData_to_pixel_row(tile_data_low,tile_data_high); //generate the pixel row from the tile data
-    for(int i = 0 ; i < pixel_row_size;i++)
+    for(int i = 0 ; i < pixel_row_size && Background_FIFO.size() < 16 && 16 - Background_FIFO.size() >= 8;i++)
     {
         BYTE temp_pixel_color = ((pixel_row & 0xC0) >> 6);
         Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0);
@@ -187,13 +192,36 @@ void PPU::pixel_fetcher()
 
     //-----------------------------SPRITE FETCHER
 
-    for()
+
+    for(Sprite* spr : visible_OAM_buffer)
+    {
+        if(spr->get_x_pos() <= pixel_fetcher_x_position_counter + 8)
+        {
+            //reset background fetch position, pause it
+
+            //step 1 - fetch tile number
+            BYTE spr_tile_num = spr->get_tile_num();
+
+            //step 2 - fetch tile data - base tile_data_mem loc is always 0x8000
+            WORD sprite_tile_address = 0x8000 + (tile_size_bytes * spr_tile_num) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8));
+            BYTE sprite_tile_data_low = MEM[sprite_tile_address];
+            BYTE sprite_tile_data_high = MEM[sprite_tile_address + 1];
+
+            ///TODO: implement conditions of fifo push, since fifo can only store 16 pixels.
+            /// valid sprite with lowest x-pos takes precedence, other sprites can draw only on free fifo slots (with initial n-taken slots dropped)
+        }
+    }
 
 
+    //------------------------------------- SPRITE FETCHER END -------------------
 
     // pushing pixels from both fifos
-    if(Background_FIFO.size() > pixel_row_size && Sprite_FIFO.size() > pixel_row_size)
+    if(Background_FIFO.size() > pixel_row_size) // && Sprite_FIFO.size() > pixel_row_size)
     {
+        Pixel cur_pixel = Background_FIFO.front();
+        Screen[MEM[LY_register]][pixel_fetcher_x_position_counter] = cur_pixel.get_color();
+        Background_FIFO.pop();
+        cur_pixel.get_color();
         //pushim ve shit ---
     }
 
@@ -247,6 +275,7 @@ BYTE PPU::get_LCDC_window_tile_map_select() const
 void PPU::main_loop()
 {
     OAM_SCAN();
+
     DRAW();
     //H_BLANK();
     if(pixel_fetcher_x_position_counter >= 160)

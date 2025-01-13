@@ -183,14 +183,15 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
 
 
-            //constructor
-            //gameboy();
-            //gameboy() : mem{}{};
+        //constructor
+        gameboy::gameboy() : pupy(PPU(&mem[OAM_mem_start],&mem[VRAM_mem_start],&mem[0],*this))
+        {}
+        //gameboy() : mem{}{};
 
-            //for readability
+        //for readability
 
 
-            //private methods
+        //private methods
 
         void gameboy::init()
         {
@@ -2186,7 +2187,7 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             // 09-op r,r.gb
             // 10-bit ops.gb - VV
             // 11-op a,(hl).gb
-            read_from_file("../TESTS/03-op sp,hl.gb");
+            read_from_file("../TESTS/boot_rom_world.gb");
 
 
             //bootstrap rom, 0x0 offset
@@ -2204,66 +2205,72 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             BYTE test_output_SC = mem[SC_reg];
 
 
-
-            chrono::duration<double> time_span = chrono::milliseconds(0);
             while(true)
             {
-                chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
-                if(testing_mode && (is_halted != 2) || (( mem[IF_reg] & mem[IE_reg] ) != 0)) { //either we are not halted, or we are about to exit halt_mode and the opcode will run
+                CPU_cycle();
+                //PPU_cycle();
+            }
+
+        }
+
+        void gameboy::CPU_cycle()
+        {
+            chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
+            if(testing_mode && (is_halted != 2) || (( mem[IF_reg] & mem[IE_reg] ) != 0)) { //either we are not halted, or we are about to exit halt_mode and the opcode will run
 //                        print_registers_r8(); //for testing
-                    gameboy_testing::gbdoctor_print_registers_r8(*this);
-                }
+                gameboy_testing::gbdoctor_print_registers_r8(*this);
+            }
 
-                //interrupt_mode ? post_interrupt(): check_interrupts(); //if interrupt mode is on, we return to normal with post_interrupt(), otherwise we check for interrupts
+            //interrupt_mode ? post_interrupt(): check_interrupts(); //if interrupt mode is on, we return to normal with post_interrupt(), otherwise we check for interrupts
 
-                if(gb_machine_cycles < max_machine_cycles_val) //1 million microseconds = 1 second
+            if(gb_machine_cycles < max_machine_cycles_val) //1 million microseconds = 1 second
+            {
+                unsigned int gb_machine_cycles_prev = gb_machine_cycles;
+                check_interrupts();
+                if(is_halted > 0) //if HALT command was executed, first cycle we are in intermittent mode, and the cycle after that halts execution fully
                 {
-                    unsigned int gb_machine_cycles_prev = gb_machine_cycles;
-                    check_interrupts();
-                    if(is_halted > 0) //if HALT command was executed, first cycle we are in intermittent mode, and the cycle after that halts execution fully
+                    if(is_halted == 2) //is halt in full effect yet
                     {
-                        if(is_halted == 2) //is halt in full effect yet
-                        {
-                            update_timers(1,1); //paused, 1 machine clock is placeholder
-                            continue;
-                        }
-                        else //if it wasn't, it will be now
-                            is_halted = 2;
-
-
+                        update_timers(1,1); //paused, 1 machine clock is placeholder
+                        return; //replace "continue" to start new cpu iteration
                     }
-                    fetch();
-                    decode_execute();
-                    //ought to fix the value so it doesnt become negative at any point
-                    unsigned int machine_cycle_cost_iter = gb_machine_cycles - gb_machine_cycles_prev;
+                    else //if it wasn't, it will be now
+                        is_halted = 2;
 
-                    //sanity check
-                    if(machine_cycle_cost_iter < 0)
-                    {
-                        cerr << "Error: Negative cycle cost this iteration\n" << endl;
-                        exit(1);
-                    }
-                    update_timers(machine_cycle_cost_iter,0); //regular
 
-                    //reset machine cycles every second
-                    chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
-                    time_span += duration_cast<chrono::duration<double>>(t2 - t1);
-                    if(time_span >= chrono::milliseconds (1000))
-                    {
-                        //cout << "hi!";
-                        time_span -= chrono::seconds(1);
-                        gb_machine_cycles = 0; //may change to max(0,curr_val-max_val)
-                    }
-                    loop_counter++;
-//                    loop_counter++;
                 }
-                else //wait until the remainder of the second passes
+                fetch();
+                decode_execute();
+                //ought to fix the value so it doesnt become negative at any point
+                unsigned int machine_cycle_cost_iter = gb_machine_cycles - gb_machine_cycles_prev;
+
+                //sanity check
+                if(machine_cycle_cost_iter < 0)
+                {
+                    cerr << "Error: Negative cycle cost this iteration\n" << endl;
+                    exit(1);
+                }
+
+
+                update_timers(machine_cycle_cost_iter,0); //regular
+
+                //reset machine cycles every second
+                chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
+                time_span += duration_cast<chrono::duration<double>>(t2 - t1);
+                if(time_span >= chrono::milliseconds (1000))
                 {
                     //cout << "hi!";
-                    this_thread::sleep_for((chrono::seconds(1)-time_span));
+                    time_span -= chrono::seconds(1);
                     gb_machine_cycles = 0; //may change to max(0,curr_val-max_val)
-
                 }
+                loop_counter++;
+//                    loop_counter++;
+            }
+            else //wait until the remainder of the second passes
+            {
+                //cout << "hi!";
+                this_thread::sleep_for((chrono::seconds(1)-time_span));
+                gb_machine_cycles = 0; //may change to max(0,curr_val-max_val)
 
             }
 
@@ -2364,6 +2371,17 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
 
 
+        //taken from stackoverflow for pixel drawing
+        sf::RectangleShape addPixel(sf::Vector2f position, sf::Uint8 red, sf::Uint8 green, sf::Uint8 blue)
+        {
+            sf::RectangleShape pixel;
+            pixel.setSize({ 1.f, 1.f });
+            pixel.setFillColor({ red, green, blue });
+            pixel.setPosition(position);
+            return pixel;
+        }
+
+
 int main(int argc, char* argv[]) {
 //    SDL_Init(SDL_INIT_EVERYTHING);
 //    SDL_Quit();
@@ -2372,14 +2390,29 @@ int main(int argc, char* argv[]) {
 
     //
 
-    sf::Window window(sf::VideoMode(800, 600), "My window");
+//    sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
+//    std::vector<sf::RectangleShape> pixels;
+//    pixels.push_back(addPixel({ 100, 100 }, 255, 0, 0));
+//    pixels.push_back(addPixel({ 101, 100 }, 255, 255, 0));
+//    pixels.push_back(addPixel({ 102, 100 }, 0, 0, 0));
+//    pixels.push_back(addPixel({ 103, 100 }, 255, 0, 255));
+
+//    while (window.isOpen())
+//    {
+//        window.clear();
+//        for (const auto& pixel : pixels)
+//        {
+//            window.draw(pixel);
+//        }
+//        window.display();
+//    }
 
 //    std::cout << "SFML window closed successfully!" << std::endl;
 
 
 
     //
-    gameboy jibby;
+    gameboy jibby = gameboy();
     jibby.main_loop();
 
     return 1;

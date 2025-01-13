@@ -17,13 +17,35 @@
 #define tile_size_bytes 16
 #define BG_palette_data_reg 0xFF47
 #define pixel_row_size 8
-#define OEM_mem_start 0xFE00
-#define OEM_mem_end 0xFE9F
+#define OAM_mem_start 0xFE00
+#define OAM_mem_end 0xFE9F
 #define VRAM_mem_start 0x8000 //mem loc
 #define VRAM_mem_end 0x97ff //mem loc bound
 
 #include <queue>
-#include "main.h"
+//#include "main.h"
+
+
+/// -----TEMPORARY
+//shortcuts for code readability
+typedef unsigned char BYTE; //8-bit number
+typedef unsigned short WORD; //16-bit number, 2byte
+typedef signed short SIGNED_WORD ;
+typedef unsigned int DWORD; // 32-bit number
+#include <iostream>
+#include <cmath> //may not need it, used originally for pow
+#include <cstring>
+#include <fstream>
+#include <iomanip>  // For std::setw and std::setfill
+#include <chrono>
+#include <thread>
+#include <SFML/Graphics.hpp>
+#include <SFML/Window.hpp>
+
+/// -----TEMPORARY END
+
+
+class gameboy;
 
 class Pixel
         {
@@ -33,9 +55,9 @@ class Pixel
             // 2 - palette
             // 3 - background priority - val0 for background
             BYTE data;
-            Pixel(BYTE color, BYTE palette, BYTE background_priority);
 
         public:
+            Pixel(BYTE color, BYTE palette, BYTE background_priority);
             //getters
             BYTE get_color();
             BYTE get_palette();
@@ -142,14 +164,23 @@ class Sprite
 
 
 class PPU{
+    private:
+        gameboy& parent;
+
     public:
+        //for debug purposes
+        BYTE Screen[144][160]; //144 arrays of 160 each
+
+
+
+
         BYTE* VRAM; // from the vram start point
-        BYTE* OAM; //from the OAM start point
+        std::vector<Sprite*> OAM; //all sprites from the MEM as objects, will hold up to 40 sprites, 160 bytes of data in total
         BYTE* MEM; //1 to 1 memory mapping from the start
         std::queue<Pixel> Background_FIFO;
         std::queue<Pixel> Sprite_FIFO;
 
-        BYTE* visible_OAM_buffer[0x0A]; //pointers to 10 OAMs/sprites
+        std::vector<Sprite*> visible_OAM_buffer; //up to 10 pointers to OAMs/sprites which are potentially visible in the line
 
         //pixel fetcher vars
         WORD pixel_fetcher_x_position_counter = 0;
@@ -160,7 +191,8 @@ class PPU{
         WORD tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high);
         //
 
-    PPU(BYTE* OAM_start,BYTE* VRAM_start,BYTE* MEM_start); //
+    PPU(BYTE* OAM_start,BYTE* VRAM_start,BYTE* MEM_start,gameboy& gameboy); //
+    //PPU(gameboy& gameboy) : parent(gameboy){}
 
     //TODO methods:
     //2 bytes make up a row of 8 pixels - each bit of the first byte is combined with the same in the second
@@ -183,6 +215,7 @@ class PPU{
 
     void OAM_SCAN();
     void clean_visible_OAM_buff();
+    void clean_OAM_buff();
     void DRAW();
 
     void main_loop();
