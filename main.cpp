@@ -2207,8 +2207,11 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
             while(true)
             {
+                //TODO:: break it down further from cycle-cycle to tick-tick (machine clock resolution) so facilitate more accurate communication between cpu and ppu
+                // if we are to use a shared clock resource, it'd require refactoring the cpu into a separate class and link the gameboy->ppu->cpu
                 CPU_cycle();
                 pupy.PPU_cycle();
+
             }
 
         }
@@ -2390,21 +2393,21 @@ int main(int argc, char* argv[]) {
 
     //
 
-//    sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
-//    std::vector<sf::RectangleShape> pixels;
-//    pixels.push_back(addPixel({ 100, 100 }, 255, 0, 0));
-//    pixels.push_back(addPixel({ 101, 100 }, 255, 255, 0));
-//    pixels.push_back(addPixel({ 102, 100 }, 0, 0, 0));
-//    pixels.push_back(addPixel({ 103, 100 }, 255, 0, 255));
+    sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
+    std::vector<sf::RectangleShape> pixels;
+    pixels.push_back(addPixel({ 100, 100 }, 255, 0, 0));
+    pixels.push_back(addPixel({ 101, 100 }, 255, 255, 0));
+    pixels.push_back(addPixel({ 102, 100 }, 0, 0, 0));
+    pixels.push_back(addPixel({ 103, 100 }, 255, 0, 255));
 
 //    while (window.isOpen())
 //    {
-//        window.clear();
-//        for (const auto& pixel : pixels)
-//        {
-//            window.draw(pixel);
-//        }
-//        window.display();
+        window.clear();
+        for (const auto& pixel : pixels)
+        {
+            window.draw(pixel);
+        }
+        window.display();
 //    }
 
 //    std::cout << "SFML window closed successfully!" << std::endl;

@@ -172,8 +172,6 @@ class PPU{
         BYTE Screen[144][160]; //144 arrays of 160 each
 
 
-
-
         BYTE* VRAM; // from the vram start point
         std::vector<Sprite*> OAM; //all sprites from the MEM as objects, will hold up to 40 sprites, 160 bytes of data in total
         BYTE* MEM; //1 to 1 memory mapping from the start
@@ -189,6 +187,10 @@ class PPU{
         void pixel_fetcher();
         //pixel fetcher related funcs
         WORD tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high);
+
+        void H_BLANK();
+        void V_BLANK();
+
         //
 
     PPU(BYTE* OAM_start,BYTE* VRAM_start,BYTE* MEM_start,gameboy& gameboy); //

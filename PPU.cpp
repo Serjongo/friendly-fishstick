@@ -96,8 +96,20 @@ void PPU::DRAW() //mode 3 of the ppu
 {
     //calculate lcd_x_coord...
     //add it to tile_dat_mem when calling pixel_fetcher
-    //pixel_fetcher(lcd_x_coord);
+    pixel_fetcher();
 }
+
+void PPU::H_BLANK()
+{
+    //placeholder - count down remaining cycle from 456T cycles = 114 machine cycles
+}
+
+void PPU::V_BLANK()
+{
+    //placeholder - wait for 4560T cycles = 1140 machine cycles
+    //ideally, let the cpu access vram at this point
+}
+
 
 void PPU::pixel_fetcher()
 {
@@ -276,10 +288,10 @@ void PPU::PPU_cycle()
 {
     OAM_SCAN();
     DRAW();
-    //H_BLANK();
+    H_BLANK();
     if(pixel_fetcher_x_position_counter >= 160)
     {
-        //V_BLANK();
+        V_BLANK();
     }
 
 };
