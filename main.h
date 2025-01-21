@@ -93,6 +93,11 @@ public:
 
     chrono::duration<double> time_span = chrono::milliseconds(0); //this is used as a "1-second timer" and is reset each second, used to throttle performance
 
+
+    //SCREEN
+    //sf::RenderWindow window;
+
+
     //registers
     Register AF_reg; //Accumulator + Flags
     Register BC_reg;

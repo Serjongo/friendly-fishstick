@@ -47,6 +47,29 @@ typedef unsigned int DWORD; // 32-bit number
 
 class gameboy;
 
+class Color
+{
+    public:
+        Color(BYTE red, BYTE green, BYTE blue) : red(red),green(green),blue(blue){};
+        Color():red(0),green(0),blue(0){}
+    //getters
+    BYTE get_red();
+    BYTE get_green();
+    BYTE get_blue();
+
+    //setters
+    void set_red(BYTE red);
+    void set_green(BYTE green);
+    void set_blue(BYTE blue);
+
+    private:
+        BYTE red;
+        BYTE green;
+        BYTE blue;
+
+
+};
+
 class Pixel
         {
         private:
@@ -179,6 +202,7 @@ class PPU{
         std::queue<Pixel> Sprite_FIFO;
 
         std::vector<Sprite*> visible_OAM_buffer; //up to 10 pointers to OAMs/sprites which are potentially visible in the line
+        Color background_palette[4];
 
         //pixel fetcher vars
         WORD pixel_fetcher_x_position_counter = 0;
@@ -190,6 +214,8 @@ class PPU{
 
         void H_BLANK();
         void V_BLANK();
+
+        void SFML_draw_screen(int row);
 
         //
 
@@ -233,6 +259,8 @@ class PPU{
     //setters
 
 
+    //SFML functions and fields (LCD)
+    std::vector<sf::RectangleShape> pixels;
 
 };
 

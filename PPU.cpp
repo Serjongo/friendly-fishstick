@@ -2,6 +2,54 @@
 // Created by Serjo on 12/23/2024.
 //
 #include "PPU.h"
+
+
+///SFML FUNCTIONS
+//taken from stackoverflow for pixel drawing
+sf::RectangleShape addPixel(sf::Vector2f position, sf::Uint8 red, sf::Uint8 green, sf::Uint8 blue)
+{
+    sf::RectangleShape pixel;
+    pixel.setSize({ 1.f, 1.f });
+    pixel.setFillColor({ red, green, blue });
+    pixel.setPosition(position);
+    return pixel;
+}
+///END
+
+
+
+//Color
+
+BYTE Color::get_red()
+{
+    return red;
+}
+BYTE Color::get_green()
+{
+    return green;
+}
+BYTE Color::get_blue()
+{
+    return blue;
+}
+
+void Color::set_red(BYTE red)
+{
+    this->red = red;
+}
+void Color::set_green(BYTE green)
+{
+    this->green = green;
+}
+void Color::set_blue(BYTE blue)
+{
+    this->blue = blue;
+}
+
+
+
+
+
 //Pixel
 
 Pixel::Pixel(BYTE color, BYTE palette, BYTE background_priority)
@@ -44,16 +92,16 @@ void Pixel::set_background_priority(BYTE background_priority)
 
 
 
-
-
-
-
 //PPU
 PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : parent(gameboy)
 {
     VRAM = VRAM_start;
     //OAM = OAM_start;
     MEM = MEM_start;
+    background_palette[0] = Color(175,100,70);
+    background_palette[1] = Color(121,170,109);
+    background_palette[2] = Color(34,111,95);
+    background_palette[3] = Color(8,41,85);
 }
 
 void PPU::clean_visible_OAM_buff()
@@ -233,8 +281,16 @@ void PPU::pixel_fetcher()
         Pixel cur_pixel = Background_FIFO.front();
         Screen[MEM[LY_register]][pixel_fetcher_x_position_counter] = cur_pixel.get_color();
         Background_FIFO.pop();
-        cur_pixel.get_color();
+        //push to screen
+        for(int i = 0 ; i < 140; i++)
+        {
+            pixels.push_back(addPixel({(float)i,(float)i},background_palette[0].get_red(),background_palette[0].get_green(),background_palette[0].get_blue()));
+        }
+        pixels.push_back(addPixel({ (float_t)pixel_fetcher_x_position_counter, (float_t)MEM[LY_register] }, background_palette[cur_pixel.get_color()].get_red(), background_palette[cur_pixel.get_color()].get_green(), background_palette[cur_pixel.get_color()].get_blue()));
+
+
         //pushim ve shit ---
+
     }
 
 
@@ -242,6 +298,12 @@ void PPU::pixel_fetcher()
     //if 0, not window
 
 }
+
+void PPU::SFML_draw_screen(int row)
+{
+
+}
+
 
 WORD PPU::tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high)
 {
@@ -289,10 +351,15 @@ void PPU::PPU_cycle()
     OAM_SCAN();
     DRAW();
     H_BLANK();
+    //draw row
     if(pixel_fetcher_x_position_counter >= 160)
     {
         V_BLANK();
     }
 
 };
+
+
+
+//
 

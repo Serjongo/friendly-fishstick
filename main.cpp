@@ -2189,7 +2189,7 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             // 11-op a,(hl).gb
             read_from_file("../TESTS/boot_rom_world.gb");
 
-
+            sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
             //bootstrap rom, 0x0 offset
             //read_from_file("../TESTS/DMG_ROM.bin");
             init();
@@ -2211,6 +2211,17 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
                 // if we are to use a shared clock resource, it'd require refactoring the cpu into a separate class and link the gameboy->ppu->cpu
                 CPU_cycle();
                 pupy.PPU_cycle();
+
+                while (window.isOpen())
+                {
+                    window.clear();
+                    for (const auto& pixel : pupy.pixels)
+                    {
+                        window.draw(pixel);
+                    }
+                    window.display();
+                }
+
 
             }
 
@@ -2374,15 +2385,7 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
 
 
-        //taken from stackoverflow for pixel drawing
-        sf::RectangleShape addPixel(sf::Vector2f position, sf::Uint8 red, sf::Uint8 green, sf::Uint8 blue)
-        {
-            sf::RectangleShape pixel;
-            pixel.setSize({ 1.f, 1.f });
-            pixel.setFillColor({ red, green, blue });
-            pixel.setPosition(position);
-            return pixel;
-        }
+
 
 
 int main(int argc, char* argv[]) {
@@ -2393,21 +2396,21 @@ int main(int argc, char* argv[]) {
 
     //
 
-    sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
-    std::vector<sf::RectangleShape> pixels;
-    pixels.push_back(addPixel({ 100, 100 }, 255, 0, 0));
-    pixels.push_back(addPixel({ 101, 100 }, 255, 255, 0));
-    pixels.push_back(addPixel({ 102, 100 }, 0, 0, 0));
-    pixels.push_back(addPixel({ 103, 100 }, 255, 0, 255));
+
+
+//    pixels.push_back(addPixel({ 100, 100 }, 255, 0, 0));
+//    pixels.push_back(addPixel({ 101, 100 }, 255, 255, 0));
+//    pixels.push_back(addPixel({ 102, 100 }, 0, 0, 0));
+//    pixels.push_back(addPixel({ 103, 100 }, 255, 0, 255));
 
 //    while (window.isOpen())
 //    {
-        window.clear();
-        for (const auto& pixel : pixels)
-        {
-            window.draw(pixel);
-        }
-        window.display();
+//        window.clear();
+//        for (const auto& pixel : pixels)
+//        {
+//            window.draw(pixel);
+//        }
+//        window.display();
 //    }
 
 //    std::cout << "SFML window closed successfully!" << std::endl;
