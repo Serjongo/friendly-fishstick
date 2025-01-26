@@ -20,7 +20,7 @@
 #define OAM_mem_start 0xFE00
 #define OAM_mem_end 0xFE9F
 #define VRAM_mem_start 0x8000 //mem loc
-#define VRAM_mem_end 0x97ff //mem loc bound
+#define VRAM_mem_end 0x9FFF //mem loc bound
 
 #include <queue>
 //#include "main.h"

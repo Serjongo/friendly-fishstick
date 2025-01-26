@@ -16,6 +16,8 @@
 #include <SFML/Window.hpp>
 #include "PPU.h"
 
+//for testing, temporary
+
 //
 using namespace std;
 
@@ -23,7 +25,7 @@ using namespace std;
 typedef unsigned char BYTE; //8-bit number
 typedef unsigned short WORD; //16-bit number, 2byte
 typedef signed short SIGNED_WORD ;
-typedef unsigned int DWORD; // 32-bit number
+//typedef unsigned int DWORD; // 32-bit number
 
 
 
@@ -257,7 +259,7 @@ public:
     void num_of_machine_cycles(int num);
 
     void decode_execute();
-    void main_loop();
+    void main_loop(gameboy& gb);
     void CPU_cycle(); //may change the function visibility to protected/public later since it'll likely cause problems if we break it down to sub-classes
 
     //public methods
@@ -295,10 +297,10 @@ public:
 
 
 static ofstream outMemoryFile;
+static ofstream outVRAMFile;
 
 class gameboy_testing{
 public:
-
 
 
     void static init_register_file();
@@ -307,6 +309,9 @@ public:
     void static gbdoctor_init_register_file();
     void static gbdoctor_print_registers_r8(gameboy& gb);
     void static print_memory_writes(WORD OPCODE,WORD address, BYTE val);
+    void static print_VRAM(gameboy& gb);
+    void static init_VRAM_file();
+    void static inject_VRAM(gameboy& gb);
 
 
 };

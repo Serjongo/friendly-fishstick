@@ -1,6 +1,10 @@
 
 #include "main.h"
 
+//temporary global variable to test vram
+int vram_test_mode = 1;
+int PPU_MODE = 1;
+
 //constants
 BYTE m_CartridgeMemory[0x200000];
 
@@ -105,6 +109,17 @@ void gameboy_testing::init_memory_file(){
     }
     outMemoryFile.close();
 }
+
+void gameboy_testing::init_VRAM_file(){
+    ofstream outVRAMFile("../VRAM_MAP",ios::binary); //overwriting the file if it exists
+
+    if (!outVRAMFile) {
+        std::cerr << "Error: Could not open 'memory_status.txt'" << endl;
+    }
+    outVRAMFile.close();
+}
+
+
 void gameboy_testing::print_registers_r8(gameboy& gb)
 {
     ofstream outStatusFile("../registers_status.txt", ios::app);
@@ -129,6 +144,42 @@ void gameboy_testing::print_registers_r8(gameboy& gb)
                   std::setw(2) << std::setfill('0')  <<(int)gb.mem[gb.PC + 2] << " " <<
                   std::setw(2) << std::setfill('0')  <<(int)gb.mem[gb.PC + 3] << ")\n" << dec;
     outStatusFile.close();
+
+}
+
+void gameboy_testing::print_VRAM(gameboy& gb)
+{
+    outVRAMFile.open("../VRAM_MAP", ios::binary);
+    if (!outVRAMFile) {
+        std::cerr << "Error: Could not open 'VRAM_MAP'" << std::endl;
+        return;
+    }
+    outVRAMFile.write(reinterpret_cast<const char*>(gb.mem + VRAM_mem_start),VRAM_mem_end-VRAM_mem_start);
+//    for(int i = VRAM_mem_start ; i < VRAM_mem_end; i++){
+//        outVRAMFile << std::hex << (int)gb.mem[i] << " " << dec;
+//
+//    }
+    outVRAMFile.close();
+    for(int i = VRAM_mem_start;i< VRAM_mem_end;i++)
+    {
+        cout << (int)gb.mem[i] << ' ';
+    }
+}
+
+void gameboy_testing::inject_VRAM(gameboy& gb)
+{
+    string file_content;
+    ifstream VRAMFile("../VRAM_MAP",ios::binary);
+    if (!VRAMFile) {
+        std::cerr << "Error: Could not open 'VRAM_MAP'" << std::endl;
+        return;
+    }
+    VRAMFile.read(reinterpret_cast<char*>(gb.mem+VRAM_mem_start), VRAM_mem_end-VRAM_mem_start);
+
+//    for(int i = VRAM_mem_start;i< VRAM_mem_end;i++)
+//    {
+//        cout << (int)gb.mem[i] << ' ';
+//    }
 
 }
 //check
@@ -177,7 +228,12 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
         std::cerr << "Error: Could not open 'memory_status.txt'" << std::endl;
         return;
     }
-    outMemoryFile << std::uppercase  << std::setfill('0') << gameboy::loop_counter << ": (0x" << hex << OPCODE << ") " << "mem[" << address << "] <- "<< std::setw(2) << (int)val << dec << endl;
+    if(!vram_test_mode || (vram_test_mode && address >= 0x8000 && address <= 0x9FFF))
+    {
+        outMemoryFile << std::uppercase << std::setfill('0') << gameboy::loop_counter << ": (0x" << hex << OPCODE
+                      << ") " << "mem[" << address << "] <- " << std::setw(2) << (int) val << dec << endl;
+
+    }
     outMemoryFile.close();
 }
 
@@ -252,7 +308,6 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
             }
         }
-
 
         //what this currently does is simply read from file, and drop into mem from cell 0x100 and onwards.
         // This is likely temporary and currently done for testing purposes. the reading from cartridge mechanism is more complicated, and we're not there yet
@@ -2169,7 +2224,7 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
             }
         }
-        void gameboy::main_loop()
+        void gameboy::main_loop(gameboy& gb)
         {
             //read_from_file("../test.bin");
 
@@ -2187,9 +2242,11 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             // 09-op r,r.gb
             // 10-bit ops.gb - VV
             // 11-op a,(hl).gb
-            read_from_file("../TESTS/boot_rom_world.gb");
+            //bootrom - boot_rom_world.gb
+            read_from_file("../TESTS/01-special.gb");
 
             sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
+//            window.setFramerateLimit(60);
             //bootstrap rom, 0x0 offset
             //read_from_file("../TESTS/DMG_ROM.bin");
             init();
@@ -2198,6 +2255,7 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 //                    init_register_file();
                 gameboy_testing::gbdoctor_init_register_file();
                 gameboy_testing::init_memory_file();
+
             }
 
             //for testing
@@ -2205,24 +2263,62 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             BYTE test_output_SC = mem[SC_reg];
 
 
-            while(true)
+            //2 running modes, PPU mode and regular
+
+            if(PPU_MODE)
             {
-                //TODO:: break it down further from cycle-cycle to tick-tick (machine clock resolution) so facilitate more accurate communication between cpu and ppu
-                // if we are to use a shared clock resource, it'd require refactoring the cpu into a separate class and link the gameboy->ppu->cpu
-                CPU_cycle();
-                pupy.PPU_cycle();
+                gameboy_testing::inject_VRAM(gb);
+                while(true) {
+                    while (window.isOpen()) {
+                        sf::Event event;
+                        while (window.pollEvent(event)) {
+                            if (event.type == sf::Event::Closed) {
+                                window.close();
+                            }
 
-                while (window.isOpen())
-                {
-                    window.clear();
-                    for (const auto& pixel : pupy.pixels)
-                    {
-                        window.draw(pixel);
+                        }
+                        pupy.PPU_cycle();
                     }
-                    window.display();
                 }
+            }
+            else {
 
+                while (true) {
+                    while (window.isOpen()) {
+                        sf::Event event;
+                        while (window.pollEvent(event)) {
+                            if (event.type == sf::Event::Closed) {
+                                window.close();
+                            }
 
+                        }
+                        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+                            gameboy_testing::init_VRAM_file();
+                            gameboy_testing::print_VRAM(gb);
+                            std::cout << "a";
+                        }
+                        //TODO:: break it down further from cycle-cycle to tick-tick (machine clock resolution) so facilitate more accurate communication between cpu and ppu
+                        // if we are to use a shared clock resource, it'd require refactoring the cpu into a separate class and link the gameboy->ppu->c0
+                        // pu
+                        CPU_cycle();
+//                pupy.PPU_cycle();
+
+//                    window.clear();
+//                    for (const auto& pixel : pupy.pixels)
+//                    {
+//                        window.draw(pixel);
+//                    }
+//                    window.display();
+                    }
+
+                    //check for keypress to print vram map
+//            if(sf::Keyboard::isKeyPressed(sf::Keyboard::V))
+//            if(GetAsyncKeyState('V') & 0x8000)
+//            {
+//                gameboy_testing::print_VRAM(gb);
+//                std::cout << "a";
+//            }
+                }
             }
 
         }
@@ -2419,7 +2515,7 @@ int main(int argc, char* argv[]) {
 
     //
     gameboy jibby = gameboy();
-    jibby.main_loop();
+    jibby.main_loop(jibby);
 
     return 1;
 }

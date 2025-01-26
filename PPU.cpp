@@ -98,10 +98,11 @@ PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : p
     VRAM = VRAM_start;
     //OAM = OAM_start;
     MEM = MEM_start;
-    background_palette[0] = Color(175,100,70);
+    background_palette[0] = Color(175,203,70);
     background_palette[1] = Color(121,170,109);
     background_palette[2] = Color(34,111,95);
     background_palette[3] = Color(8,41,85);
+    pixels.reserve(100000);
 }
 
 void PPU::clean_visible_OAM_buff()
@@ -156,6 +157,7 @@ void PPU::V_BLANK()
 {
     //placeholder - wait for 4560T cycles = 1140 machine cycles
     //ideally, let the cpu access vram at this point
+    MEM[LY_register] = 0;
 }
 
 
@@ -182,7 +184,8 @@ void PPU::pixel_fetcher()
     BYTE tilenum;
 
     //-----------------------------BACKGROUND/WINDOW FETCHER
-
+    while(pixel_fetcher_x_position_counter < 160)
+    {
 
     //window rendering
     if ((pixel_fetcher_x_position_counter >= MEM[WX_reg] && MEM[LY_register] >= MEM[WY_reg]) && get_LCDC_window_display_enable_status())
@@ -251,8 +254,7 @@ void PPU::pixel_fetcher()
 
 
     //-----------------------------SPRITE FETCHER
-
-
+   if(visible_OAM_buffer.size() > 0)
     for(Sprite* spr : visible_OAM_buffer)
     {
         if(spr->get_x_pos() <= pixel_fetcher_x_position_counter + 8)
@@ -282,18 +284,25 @@ void PPU::pixel_fetcher()
         Screen[MEM[LY_register]][pixel_fetcher_x_position_counter] = cur_pixel.get_color();
         Background_FIFO.pop();
         //push to screen
-        for(int i = 0 ; i < 140; i++)
-        {
-            pixels.push_back(addPixel({(float)i,(float)i},background_palette[0].get_red(),background_palette[0].get_green(),background_palette[0].get_blue()));
-        }
+//        for(int i = pixel_fetcher_x_position_counter ; i < pixel_fetcher_x_position_counter + 8; i++)
+//        {
+//            pixels.push_back(addPixel({(float)i,(float)MEM[LY_register]},background_palette[0].get_red(),background_palette[0].get_green(),background_palette[0].get_blue()));
+//        }
+//if(pixels.size() == 31)
+//{
+//    std::cout << "a";
+//}
         pixels.push_back(addPixel({ (float_t)pixel_fetcher_x_position_counter, (float_t)MEM[LY_register] }, background_palette[cur_pixel.get_color()].get_red(), background_palette[cur_pixel.get_color()].get_green(), background_palette[cur_pixel.get_color()].get_blue()));
-
+//        std::cout << pixels.size() << '\n';
 
         //pushim ve shit ---
 
     }
-
-
+        pixel_fetcher_x_position_counter += 8;
+        //std::cout << (int)MEM[0xFF47] << '\n';
+}
+    pixel_fetcher_x_position_counter = 0;
+    MEM[LY_register]++;
 
     //if 0, not window
 
