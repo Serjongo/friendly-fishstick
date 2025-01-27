@@ -3,7 +3,7 @@
 
 //temporary global variable to test vram
 int vram_test_mode = 1;
-int PPU_MODE = 0;
+int PPU_MODE = 1;
 
 //constants
 BYTE m_CartridgeMemory[0x200000];
@@ -175,11 +175,35 @@ void gameboy_testing::inject_VRAM(gameboy& gb)
         return;
     }
     VRAMFile.read(reinterpret_cast<char*>(gb.mem+VRAM_mem_start), VRAM_mem_end-VRAM_mem_start);
-
-//    for(int i = VRAM_mem_start;i< VRAM_mem_end;i++)
-//    {
-//        cout << (int)gb.mem[i] << ' ';
-//    }
+    cout << "Tile Block 0______________________________________________________________________________________________" <<'\n';
+    for(int i = VRAM_mem_start;i< 0x87ff;i++)
+    {
+        cout << (int)gb.mem[i] << ' ';
+    }
+    cout <<'\n';
+    cout << "Tile Block 1______________________________________________________________________________________________"<<'\n';
+    for(int i = 0x8800;i< 0x8fff;i++)
+    {
+        cout << (int)gb.mem[i] << ' ';
+    }
+    cout <<'\n';
+    cout << "Tile Block 2______________________________________________________________________________________________"<<'\n';
+    for(int i = 0x9000;i< 0x97ff;i++)
+    {
+        cout << (int)gb.mem[i] << ' ';
+    }
+    cout <<'\n';
+    cout << "Tile Map 0________________________________________________________________________________________________"<<'\n';
+    for(int i = 0x9800;i< 0x9bff;i++)
+    {
+        cout << (int)gb.mem[i] << ' ';
+    }
+    cout <<'\n';
+    cout << "Tile Map 1________________________________________________________________________________________________"<<'\n';
+    for(int i = 0x9c00;i< VRAM_mem_end;i++)
+    {
+        cout << (int)gb.mem[i] << ' ';
+    }
 
 }
 //check
@@ -2243,7 +2267,7 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             // 10-bit ops.gb - VV
             // 11-op a,(hl).gb
             //bootrom - boot_rom_world.gb
-            read_from_file("../TESTS/boot_rom_world.gb");
+            read_from_file("../TESTS/01-special.gb");
 
             sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
 //            window.setFramerateLimit(60);
