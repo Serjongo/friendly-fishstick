@@ -76,18 +76,18 @@ BYTE Pixel::get_background_priority()
 //setters
 void Pixel::set_color(BYTE color)
 {
-    data = data & 0xfc;
-    data = data | 0x03;
+    data = (data & 0xfc);
+    data = (data | 0x03);
 }
 void Pixel::set_palette(BYTE palette)
 {
-    data = data & 0xfb;
-    data = data | ((palette & 0x01) << 2);
+    data = (data & 0xfb);
+    data = (data | ((palette & 0x01) << 2));
 };
 void Pixel::set_background_priority(BYTE background_priority)
 {
-    data = data & 0xf7;
-    data = data | ((background_priority & 0x01) << 3);
+    data = (data & 0xf7);
+    data = (data | ((background_priority & 0x01) << 3));
 };
 
 
@@ -248,7 +248,14 @@ void PPU::pixel_fetcher()
     WORD pixel_row = tileData_to_pixel_row(tile_data_low,tile_data_high); //generate the pixel row from the tile data
     for(int i = 0 ; i < pixel_row_size && Background_FIFO.size() < 16 && 16 - Background_FIFO.size() >= 8;i++)
     {
-        BYTE temp_pixel_color = ((pixel_row & 0xC0) >> 6);
+//        BYTE temp_pixel_color = ((pixel_row & 0xC0) >> 6);
+//        Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0);
+//        Background_FIFO.push(pixel_temp);
+        //BYTE temp_pixel_color = ((pixel_row & 0xC0) >> 6);
+        BYTE temp_pixel_color = ((pixel_row & 0xC000) >> 14);
+        pixel_row = (pixel_row << 2);
+        BYTE palette = MEM[BG_palette_data_reg];
+        //std::cout << MEM[BG_palette_data_reg] << std::endl;
         Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0);
         Background_FIFO.push(pixel_temp);
     }
@@ -276,7 +283,7 @@ void PPU::pixel_fetcher()
 
 
     //------------------------------------- SPRITE FETCHER END -------------------
-
+    ///THIS IS WHERE I AM DEBUGGING CURRENTLY!!!!
     // pushing pixels from both fifos
     if(Background_FIFO.size() > pixel_row_size) // && Sprite_FIFO.size() > pixel_row_size)
     {
@@ -286,9 +293,9 @@ void PPU::pixel_fetcher()
         //push to screen
         for(int i = pixel_fetcher_x_position_counter ; i < pixel_fetcher_x_position_counter + 8; i++)
         {
-            pixels.push_back(addPixel({(float)i,(float)MEM[LY_register]},background_palette[0].get_red(),background_palette[0].get_green(),background_palette[0].get_blue()));
+            pixels.push_back(addPixel({(float)i,(float)MEM[LY_register]},background_palette[cur_pixel.get_color()].get_red(),background_palette[cur_pixel.get_color()].get_green(),background_palette[cur_pixel.get_color()].get_blue()));
         }
-
+    ///THIS IS WHERE I AM DEBUGGING CURRENTLY!!!!
 //if(pixels.size() == 31)
 //{
 //    std::cout << "a";
