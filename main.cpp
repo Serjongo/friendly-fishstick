@@ -3,7 +3,7 @@
 
 //temporary global variable to test vram
 int vram_test_mode = 1;
-int PPU_MODE = 1;
+int PPU_MODE = 0;
 
 //constants
 BYTE m_CartridgeMemory[0x200000];
@@ -285,7 +285,7 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             mem[0xFF40] = 0x91 ;
             mem[0xFF42] = 0x00 ;
             mem[0xFF43] = 0x00 ;
-            mem[0xFF44] = 0x90; //for testing, only for now since we don't have an LCD
+//            mem[0xFF44] = 0x90; //for testing, only for now since we don't have an LCD
             mem[0xFF45] = 0x00 ;
             mem[0xFF47] = 0xFC ;
             mem[0xFF48] = 0xFF ;
@@ -2243,7 +2243,7 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             // 10-bit ops.gb - VV
             // 11-op a,(hl).gb
             //bootrom - boot_rom_world.gb
-            read_from_file("../TESTS/01-special.gb");
+            read_from_file("../TESTS/boot_rom_world.gb");
 
             sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
 //            window.setFramerateLimit(60);
@@ -2278,6 +2278,13 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
 
                         }
                         pupy.PPU_cycle();
+                        cout << (int)mem[LY_register] << endl;
+//                        if(mem[LY_register] >= 143) {
+                            for (const auto &pixel: pupy.pixels) {
+                                window.draw(pixel);
+                            }
+                            window.display();
+//                        }
                     }
                 }
             }
@@ -2301,14 +2308,14 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
                         // if we are to use a shared clock resource, it'd require refactoring the cpu into a separate class and link the gameboy->ppu->c0
                         // pu
                         CPU_cycle();
-//                pupy.PPU_cycle();
+                        pupy.PPU_cycle();
 
-//                    window.clear();
-//                    for (const auto& pixel : pupy.pixels)
-//                    {
-//                        window.draw(pixel);
-//                    }
-//                    window.display();
+//                        window.clear();
+                        for (const auto& pixel : pupy.pixels)
+                        {
+                            window.draw(pixel);
+                        }
+                        window.display();
                     }
 
                     //check for keypress to print vram map
