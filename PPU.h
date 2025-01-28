@@ -77,10 +77,11 @@ class Pixel
             // 0-1 - color
             // 2 - palette
             // 3 - background priority - val0 for background
+            // 4 - type, "0" for background/window, "1" for sprite
             BYTE data;
 
         public:
-            Pixel(BYTE color, BYTE palette, BYTE background_priority);
+            Pixel(BYTE color, BYTE palette, BYTE background_priority,BYTE type);
             //getters
             BYTE get_color();
             BYTE get_palette();
@@ -89,6 +90,7 @@ class Pixel
             void set_color(BYTE color);
             void set_palette(BYTE palette);
             void set_background_priority(BYTE background_priority);
+            void set_type(BYTE type);
 
         };
 

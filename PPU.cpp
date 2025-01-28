@@ -52,12 +52,13 @@ void Color::set_blue(BYTE blue)
 
 //Pixel
 
-Pixel::Pixel(BYTE color, BYTE palette, BYTE background_priority)
+Pixel::Pixel(BYTE color, BYTE palette, BYTE background_priority,BYTE type)
 {
     data = 0;
     set_color(color);
     set_palette(palette);
     set_background_priority(background_priority);
+    set_type(type); // 0 - background/window, 1 - sprite
 }
 
 //getters
@@ -77,7 +78,7 @@ BYTE Pixel::get_background_priority()
 void Pixel::set_color(BYTE color)
 {
     data = (data & 0xfc);
-    data = (data | 0x03);
+    data = (data | color);
 }
 void Pixel::set_palette(BYTE palette)
 {
@@ -89,6 +90,11 @@ void Pixel::set_background_priority(BYTE background_priority)
     data = (data & 0xf7);
     data = (data | ((background_priority & 0x01) << 3));
 };
+void Pixel::set_type(BYTE type) // 0 - background/window, 1 - sprite
+{
+    data = (data & 0xef);
+    data = (data | ((type & 0x01) << 4));
+};
 
 
 
@@ -98,10 +104,14 @@ PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : p
     VRAM = VRAM_start;
     //OAM = OAM_start;
     MEM = MEM_start;
-    background_palette[0] = Color(175,203,70);
-    background_palette[1] = Color(121,170,109);
-    background_palette[2] = Color(34,111,95);
-    background_palette[3] = Color(8,41,85);
+//    background_palette[0] = Color(175,203,70);
+//    background_palette[1] = Color(121,170,109);
+//    background_palette[2] = Color(34,111,95);
+//    background_palette[3] = Color(8,41,85);
+    background_palette[0] = Color(255,0,70);
+    background_palette[1] = Color(0,255,0);
+    background_palette[2] = Color(0,0,255);
+    background_palette[3] = Color(124,124,124);
     pixels.reserve(100000);
     //OAM = std::make_unique<std::vector<Sprite*>>();
 }
@@ -213,7 +223,7 @@ void PPU::pixel_fetcher()
         if(!first_window_encounter)
             first_window_encounter = 1;
 
-        tile_x = (pixel_fetcher_x_position_counter + (MEM[SCX]/8) ) & 0x1F;
+        tile_x = ((pixel_fetcher_x_position_counter/8) + (MEM[SCX]/8) ) & 0x1F;
         tile_y = ((MEM[LY_register] + MEM[SCY]) & 0xff) / 8;
 
         tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];
@@ -246,7 +256,7 @@ void PPU::pixel_fetcher()
     tile_data_high = MEM[tile_address + 1];
 
     WORD pixel_row = tileData_to_pixel_row(tile_data_low,tile_data_high); //generate the pixel row from the tile data
-    for(int i = 0 ; i < pixel_row_size && Background_FIFO.size() < 16 && 16 - Background_FIFO.size() >= 8;i++)
+    for(int i = 0 ; i < pixel_row_size && Background_FIFO.size() < 16;i++)
     {
 //        BYTE temp_pixel_color = ((pixel_row & 0xC0) >> 6);
 //        Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0);
@@ -256,7 +266,7 @@ void PPU::pixel_fetcher()
         pixel_row = (pixel_row << 2);
         BYTE palette = MEM[BG_palette_data_reg];
         //std::cout << MEM[BG_palette_data_reg] << std::endl;
-        Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0);
+        Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0,0);
         Background_FIFO.push(pixel_temp);
     }
 
@@ -314,7 +324,7 @@ void PPU::pixel_fetcher()
         pixel_fetcher_x_position_counter += 8;
         //std::cout << (int)MEM[0xFF47] << '\n';
 }
-    std::cout << "Finished horizontal line" << std::endl;
+    //std::cout << "Finished horizontal line" << std::endl;
     pixel_fetcher_x_position_counter = 0;
     MEM[LY_register]++;
 

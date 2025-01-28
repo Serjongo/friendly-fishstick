@@ -307,9 +307,9 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             mem[0xFF25] = 0xF3 ;
             mem[0xFF26] = 0xF1 ;
             mem[0xFF40] = 0x91 ;
-            mem[0xFF42] = 0x00 ;
+            mem[0xFF42] = 0x00 ; //artificially set for a test, should be set to 0 by default
             mem[0xFF43] = 0x00 ;
-//            mem[0xFF44] = 0x90; //for testing, only for now since we don't have an LCD
+//            mem[0xFF44] = 0x90; //for testing, only for now since we don't have an LCD - re-enable it otherwise the cpu tests wont finish!!!
             mem[0xFF45] = 0x00 ;
             mem[0xFF47] = 0xFC ;
             mem[0xFF48] = 0xFF ;
@@ -2307,7 +2307,8 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
                             for (const auto &pixel: pupy.pixels) {
                                 window.draw(pixel);
                             }
-                            window.display();
+                        window.display();
+
 //                        }
                     }
                 }
@@ -2315,6 +2316,7 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             else {
 
                 while (true) {
+
                     while (window.isOpen()) {
                         sf::Event event;
                         while (window.pollEvent(event)) {
@@ -2331,7 +2333,15 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
                         //TODO:: break it down further from cycle-cycle to tick-tick (machine clock resolution) so facilitate more accurate communication between cpu and ppu
                         // if we are to use a shared clock resource, it'd require refactoring the cpu into a separate class and link the gameboy->ppu->c0
                         // pu
+
+                        int scroll_y_val = mem[0xFF42];
+
                         CPU_cycle();
+                        if(scroll_y_val != mem[0xFF42])
+                        {
+                            cout << "SCY CHANGED! : " << mem[0xFF42] << endl;
+                        }
+
                         pupy.PPU_cycle();
 
 //                        window.clear();
