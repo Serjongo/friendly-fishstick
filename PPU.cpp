@@ -296,6 +296,7 @@ void PPU::pixel_fetcher()
     ///THIS IS WHERE I AM DEBUGGING CURRENTLY!!!!
     // popping pixels from both fifos
 
+//    if(Background_FIFO.size() > pixel_row_size) // && Sprite_FIFO.size() > pixel_row_size)
     if(Background_FIFO.size() > pixel_row_size) // && Sprite_FIFO.size() > pixel_row_size)
     {
 
@@ -330,6 +331,10 @@ void PPU::pixel_fetcher()
     //std::cout << "Finished horizontal line" << std::endl;
     pixel_fetcher_x_position_counter = 0;
     MEM[LY_register]++;
+    while(!Background_FIFO.empty())
+    {
+        Background_FIFO.pop();
+    }
 
     screen_coordinate_x = 0;
 

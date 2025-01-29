@@ -307,7 +307,7 @@ void gameboy_testing::print_memory_writes(WORD OPCODE,WORD address, BYTE val)
             mem[0xFF25] = 0xF3 ;
             mem[0xFF26] = 0xF1 ;
             mem[0xFF40] = 0x91 ;
-            mem[0xFF42] = 0x00 ; //artificially set for a test, should be set to 0 by default
+            mem[0xFF42] = 0x98 ; //artificially set for a test, should be set to 0 by default
             mem[0xFF43] = 0x00 ;
 //            mem[0xFF44] = 0x90; //for testing, only for now since we don't have an LCD - re-enable it otherwise the cpu tests wont finish!!!
             mem[0xFF45] = 0x00 ;
