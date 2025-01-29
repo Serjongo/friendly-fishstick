@@ -208,6 +208,7 @@ class PPU{
 
         //pixel fetcher vars
         WORD pixel_fetcher_x_position_counter = 0;
+        int screen_coordinate_x = 0; //used to count pixels on screen as we pop them from the fifo
         WORD WINDOW_LINE_COUNTER = 0; // credit to: https://hacktix.github.io/GBEDG/ppu/
         BYTE first_window_encounter = 1; //
         void pixel_fetcher();

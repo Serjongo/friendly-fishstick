@@ -195,7 +195,7 @@ void PPU::pixel_fetcher()
     BYTE tilenum;
 
     //-----------------------------BACKGROUND/WINDOW FETCHER
-    while(pixel_fetcher_x_position_counter < 160)
+    while(pixel_fetcher_x_position_counter <= 160) //TEMP - should be less than
     {
 
     //window rendering
@@ -294,16 +294,19 @@ void PPU::pixel_fetcher()
 
     //------------------------------------- SPRITE FETCHER END -------------------
     ///THIS IS WHERE I AM DEBUGGING CURRENTLY!!!!
-    // pushing pixels from both fifos
+    // popping pixels from both fifos
+
     if(Background_FIFO.size() > pixel_row_size) // && Sprite_FIFO.size() > pixel_row_size)
     {
-        Pixel cur_pixel = Background_FIFO.front();
-        Screen[MEM[LY_register]][pixel_fetcher_x_position_counter] = cur_pixel.get_color();
-        Background_FIFO.pop();
+
         //push to screen
-        for(int i = pixel_fetcher_x_position_counter ; i < pixel_fetcher_x_position_counter + 8; i++)
+        while(screen_coordinate_x < pixel_fetcher_x_position_counter)
         {
-            pixels.push_back(addPixel({(float)i,(float)MEM[LY_register]},background_palette[cur_pixel.get_color()].get_red(),background_palette[cur_pixel.get_color()].get_green(),background_palette[cur_pixel.get_color()].get_blue()));
+            Pixel cur_pixel = Background_FIFO.front();
+            Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel.get_color();
+            Background_FIFO.pop();
+            pixels.push_back(addPixel({(float)screen_coordinate_x,(float)MEM[LY_register]},background_palette[cur_pixel.get_color()].get_red(),background_palette[cur_pixel.get_color()].get_green(),background_palette[cur_pixel.get_color()].get_blue()));
+            screen_coordinate_x++;
         }
     ///THIS IS WHERE I AM DEBUGGING CURRENTLY!!!!
 //if(pixels.size() == 31)
@@ -327,6 +330,9 @@ void PPU::pixel_fetcher()
     //std::cout << "Finished horizontal line" << std::endl;
     pixel_fetcher_x_position_counter = 0;
     MEM[LY_register]++;
+
+    screen_coordinate_x = 0;
+
 
     //if 0, not window
 
