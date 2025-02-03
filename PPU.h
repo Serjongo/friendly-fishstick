@@ -22,6 +22,14 @@
 #define VRAM_mem_start 0x8000 //mem loc
 #define VRAM_mem_end 0x9FFF //mem loc bound
 
+//modes
+#define UNINITIALIZED 0
+#define SEARCH_OAM_MODE 1
+#define DRAW_MODE 2
+#define H_BLANK_MODE 3
+#define V_BLANK_MODE 1
+
+
 #include <queue>
 //#include "main.h"
 
@@ -195,7 +203,8 @@ class PPU{
     public:
         //for debug purposes
         BYTE Screen[144][160]; //144 arrays of 160 each
-
+        float ppu_machine_cycles = 0; //this will count machine cycles with each action, attempting to be synced in with gb's clock
+        BYTE mode = 0; //mode/state, this should change when PPU is changing mode of operation
 
         BYTE* VRAM; // from the vram start point
         std::vector<Sprite*> OAM; //all sprites from the MEM as objects, will hold up to 40 sprites, 160 bytes of data in total
@@ -218,7 +227,11 @@ class PPU{
         void H_BLANK();
         void V_BLANK();
 
-        void SFML_draw_screen(int row);
+
+        //machine clock related
+        bool tick_over = false; //this will signal that we've ticked and should finish our current work
+        void num_of_machine_cycles(float num);
+
 
         //
 
@@ -248,6 +261,7 @@ class PPU{
     void clean_visible_OAM_buff();
     void clean_OAM_buff();
     void DRAW();
+
 
     void PPU_cycle();
 

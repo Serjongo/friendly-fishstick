@@ -51,6 +51,12 @@ class gameboy_testing;
 #define TMA_register 0xFF06 // TMA: Timer modulo
 #define TAC_register 0xFF07 // TAC: Timer control
 
+//modes
+#define UNINITIALIZED 0
+#define FETCH_MODE 1
+#define DECODE_MODE 2
+#define EXECUTE_MODE 3
+
 //registers class
 union Register
 {
@@ -84,12 +90,14 @@ public:
     gameboy();
 
 
+    BYTE mode = 0; //mode/state, this should change when CPU is changing mode of operation
+
     PPU pupy;
 
     BYTE mem[0x10000]; //2^16 bytes
     BYTE IME = 0; //IME FLAG, interrupts enabled/disabled
     BYTE is_halted = 0; //used for halt commands, will have values of 1 - to be halted, 2 - halted. credit : https://rylev.github.io/DMG-01/public/book/cpu/conclusion.html
-    unsigned int gb_machine_cycles = 0; //will count cost of operations, will reset every second
+    float gb_machine_cycles = 0; //will count cost of operations, will reset every second
     const unsigned int max_machine_cycles_val =  4194304/4; //max amount of cycles per sec. 1 machine cycle = 4 clock cycles
     const unsigned int div_timer_freq = 16384/4; //in hz, in machine cycles
 

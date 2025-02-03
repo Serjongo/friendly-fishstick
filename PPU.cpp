@@ -4,19 +4,6 @@
 #include "PPU.h"
 
 
-///SFML FUNCTIONS
-//taken from stackoverflow for pixel drawing
-sf::RectangleShape addPixel(sf::Vector2f position, sf::Uint8 red, sf::Uint8 green, sf::Uint8 blue)
-{
-    sf::RectangleShape pixel;
-    pixel.setSize({ 1.f, 1.f });
-    pixel.setFillColor({ red, green, blue });
-    pixel.setPosition(position);
-    return pixel;
-}
-///END
-
-
 
 //Color
 
@@ -98,7 +85,9 @@ void Pixel::set_type(BYTE type) // 0 - background/window, 1 - sprite
 
 
 
-//PPU
+
+
+
 PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : parent(gameboy)
 {
     VRAM = VRAM_start;
@@ -115,6 +104,16 @@ PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : p
     pixels.reserve(100000);
     //OAM = std::make_unique<std::vector<Sprite*>>();
 }
+
+//PPU
+
+//machine clock related
+void PPU::num_of_machine_cycles(float num)
+{
+    ppu_machine_cycles += num;
+}
+
+//
 
 void PPU::clean_visible_OAM_buff()
 {
@@ -162,6 +161,18 @@ void PPU::DRAW() //mode 3 of the ppu
 void PPU::H_BLANK()
 {
     //placeholder - count down remaining cycle from 456T cycles = 114 machine cycles
+    if (pixel_fetcher_x_position_counter > 160)
+    {
+        pixel_fetcher_x_position_counter = 0;
+        MEM[LY_register]++;
+        while(!Background_FIFO.empty())
+        {
+            Background_FIFO.pop();
+        }
+
+        screen_coordinate_x = 0;
+    }
+
 }
 
 void PPU::V_BLANK()
@@ -195,8 +206,8 @@ void PPU::pixel_fetcher()
     BYTE tilenum;
 
     //-----------------------------BACKGROUND/WINDOW FETCHER
-    while(pixel_fetcher_x_position_counter <= 160) //TEMP - should be less than
-    {
+//    while(pixel_fetcher_x_position_counter <= 160) //TEMP - should be less than
+//    {
 
     //window rendering
     if ((pixel_fetcher_x_position_counter >= MEM[WX_reg] && MEM[LY_register] >= MEM[WY_reg]) && get_LCDC_window_display_enable_status())
@@ -306,7 +317,6 @@ void PPU::pixel_fetcher()
             Pixel cur_pixel = Background_FIFO.front();
             Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel.get_color();
             Background_FIFO.pop();
-            pixels.push_back(addPixel({(float)screen_coordinate_x,(float)MEM[LY_register]},background_palette[cur_pixel.get_color()].get_red(),background_palette[cur_pixel.get_color()].get_green(),background_palette[cur_pixel.get_color()].get_blue()));
             screen_coordinate_x++;
         }
     ///THIS IS WHERE I AM DEBUGGING CURRENTLY!!!!
@@ -314,9 +324,6 @@ void PPU::pixel_fetcher()
 //{
 //    std::cout << "a";
 //}
-
-
-//        pixels.push_back(addPixel({ (float_t)pixel_fetcher_x_position_counter, (float_t)MEM[LY_register] }, background_palette[cur_pixel.get_color()].get_red(), background_palette[cur_pixel.get_color()].get_green(), background_palette[cur_pixel.get_color()].get_blue()));
 
 
 
@@ -327,26 +334,26 @@ void PPU::pixel_fetcher()
     }
         pixel_fetcher_x_position_counter += 8;
         //std::cout << (int)MEM[0xFF47] << '\n';
-}
+//}
     //std::cout << "Finished horizontal line" << std::endl;
-    pixel_fetcher_x_position_counter = 0;
-    MEM[LY_register]++;
-    while(!Background_FIFO.empty())
-    {
-        Background_FIFO.pop();
-    }
-
-    screen_coordinate_x = 0;
+//    pixel_fetcher_x_position_counter = 0;
+//    MEM[LY_register]++;
+//    while(!Background_FIFO.empty())
+//    {
+//        Background_FIFO.pop();
+//    }
+//
+//    screen_coordinate_x = 0;
 
 
     //if 0, not window
 
 }
 
-void PPU::SFML_draw_screen(int row)
-{
-
-}
+//void PPU::SFML_draw_screen(int row)
+//{
+//
+//}
 
 
 WORD PPU::tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high)
