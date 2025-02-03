@@ -7,6 +7,9 @@
 
 
 #define LY_register 0xFF44
+#define LYC_register 0xFF45
+#define LCD_Control_reg 0xFF40
+#define LCD_Status_reg 0xFF41
 #define SCX 0xFF43 //mem loc of x-screen coordinate for rendering
 #define SCY 0xFF42 //mem loc of y-scrren coordinate for rendering
 #define WX_reg 0xFF4A //mem loc of leftmost x_coord border of the window (continues till end of screen)
@@ -22,12 +25,12 @@
 #define VRAM_mem_start 0x8000 //mem loc
 #define VRAM_mem_end 0x9FFF //mem loc bound
 
+
 //modes
-#define UNINITIALIZED 0
-#define SEARCH_OAM_MODE 1
-#define DRAW_MODE 2
-#define H_BLANK_MODE 3
+#define H_BLANK_MODE 0
 #define V_BLANK_MODE 1
+#define OAM_SCAN_MODE 2
+#define DRAW_MODE 3
 
 
 #include <queue>
@@ -273,11 +276,23 @@ class PPU{
     BYTE get_LCDC_bg_tile_map_select_status() const;
     BYTE get_LCDC_window_tile_map_select() const;
     BYTE get_LCDC_tile_data_select() const;
-    //setters
 
+    //LCDS getters
+    BYTE get_LCDS_lycly_interrupt_enable_status() const;
+    BYTE get_LCDS_oam_scan_mode_interrupt_enable_status() const; //mode 2
+    BYTE get_LCDS_vblank_mode_interrupt_enable_status() const; //mode 1
+    BYTE get_LCDS_hblank_mode_interrupt_enable_status() const; //mode 0
+    BYTE get_LCDS_coincidence_flag_status() const; //if lyc==ly, changed by ppu
+    BYTE get_LCDS_PPU_MODE_status() const;
 
-    //SFML functions and fields (LCD)
-    std::vector<sf::RectangleShape> pixels;
+    //LCDS setters
+    void set_LCDS_lycly_interrupt_enable_status(BYTE status);
+    void set_LCDS_oam_scan_mode_interrupt_enable_status(BYTE status); //mode 2
+    void set_LCDS_vblank_mode_interrupt_enable_status(BYTE status); //mode 1
+    void set_LCDS_hblank_mode_interrupt_enable_status(BYTE status); //mode 0
+    void set_LCDS_coincidence_flag_status(BYTE status); //mode 0
+    void set_LCDS_PPU_MODE_status(BYTE status);
+
 
 };
 

@@ -2267,7 +2267,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_file("../TESTS/01-special.gb");
+    read_from_file("../TESTS/02-interrupts.gb");
 
     sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
 //    window.setFramerateLimit(60);
@@ -2314,8 +2314,13 @@ void gameboy::main_loop(gameboy& gb)
                 if(mem[LY_register] >= 143)
                 {
 
-                    for (const auto &pixel: pupy.pixels) {
-                        window.draw(pixel);
+                    for(int i = 0 ; i < 160;i++) //column
+                    {
+                        for(int j = 0 ; j < 144; j++) //row
+                        {
+                            image.setPixel(i,j, {pupy.background_palette[pupy.Screen[j][i]].get_red(),pupy.background_palette[pupy.Screen[j][i]].get_green(),pupy.background_palette[pupy.Screen[j][i]].get_blue()});
+                        }
+
                     }
                     window.display();
 

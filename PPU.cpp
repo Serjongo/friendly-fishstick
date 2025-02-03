@@ -62,6 +62,7 @@ BYTE Pixel::get_background_priority()
     return (data & 0x08);
 };
 //setters
+
 void Pixel::set_color(BYTE color)
 {
     data = (data & 0xfc);
@@ -88,6 +89,10 @@ void Pixel::set_type(BYTE type) // 0 - background/window, 1 - sprite
 
 
 
+
+
+
+
 PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : parent(gameboy)
 {
     VRAM = VRAM_start;
@@ -101,7 +106,6 @@ PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : p
     background_palette[1] = Color(0,255,0);
     background_palette[2] = Color(0,0,255);
     background_palette[3] = Color(124,124,124);
-    pixels.reserve(100000);
     //OAM = std::make_unique<std::vector<Sprite*>>();
 }
 
@@ -165,6 +169,13 @@ void PPU::H_BLANK()
     {
         pixel_fetcher_x_position_counter = 0;
         MEM[LY_register]++;
+
+        //setting coincidence flag according to LY==LYC -- may be used for interrupts later on
+        if(MEM[LYC_register] == MEM[LY_register])
+            set_LCDS_coincidence_flag_status(1);
+        else
+            set_LCDS_coincidence_flag_status(0);
+
         while(!Background_FIFO.empty())
         {
             Background_FIFO.pop();
@@ -374,28 +385,127 @@ WORD PPU::tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high)
 
 BYTE PPU::get_LCDC_sprite_size_status() const
 {
-    return (MEM[0xFF40] & (BYTE)(1 << 2)) == (BYTE)(1 << 2);
+    return (MEM[LCD_Control_reg] & (BYTE)(1 << 2)) == (BYTE)(1 << 2);
 };
 
 BYTE PPU::get_LCDC_tile_data_select() const
 {
-    return (MEM[0xFF40] & (BYTE)(1 << 4)) == (BYTE)(1 << 4);
+    return (MEM[LCD_Control_reg] & (BYTE)(1 << 4)) == (BYTE)(1 << 4);
 };
 
 BYTE PPU::get_LCDC_window_display_enable_status() const
 {
-    return (MEM[0xFF40] & (BYTE)(1 << 5)) == (BYTE)(1 << 5);
+    return (MEM[LCD_Control_reg] & (BYTE)(1 << 5)) == (BYTE)(1 << 5);
 };
 
 BYTE PPU::get_LCDC_bg_tile_map_select_status() const
 {
-    return (MEM[0xFF40] & (BYTE)(1 << 3)) == (BYTE)(1 << 3);
+    return (MEM[LCD_Control_reg] & (BYTE)(1 << 3)) == (BYTE)(1 << 3);
 };
 
 BYTE PPU::get_LCDC_window_tile_map_select() const
 {
-    return (MEM[0xFF40] & (BYTE)(1 << 6)) == (BYTE)(1 << 6);
+    return (MEM[LCD_Control_reg] & (BYTE)(1 << 6)) == (BYTE)(1 << 6);
 }
+
+//LCDS getters
+
+BYTE PPU::get_LCDS_lycly_interrupt_enable_status() const
+{
+    return (MEM[LCD_Status_reg] & (BYTE)(1 << 6)) == (BYTE)(1 << 6);
+}
+BYTE PPU::get_LCDS_oam_scan_mode_interrupt_enable_status() const //mode 2
+{
+    return (MEM[LCD_Status_reg] & (BYTE)(1 << 5)) == (BYTE)(1 << 5);
+}
+BYTE PPU::get_LCDS_vblank_mode_interrupt_enable_status() const //mode 1
+{
+    return (MEM[LCD_Status_reg] & (BYTE)(1 << 4)) == (BYTE)(1 << 4);
+}
+BYTE PPU::get_LCDS_hblank_mode_interrupt_enable_status() const //mode 0
+{
+    return (MEM[LCD_Status_reg] & (BYTE)(1 << 3)) == (BYTE)(1 << 3);
+}
+BYTE PPU::get_LCDS_coincidence_flag_status() const //if lyc==ly, changed by ppu
+{
+    return (MEM[LCD_Status_reg] & (BYTE)(1 << 2)) == (BYTE)(1 << 2);
+}
+BYTE PPU::get_LCDS_PPU_MODE_status() const //bits 1-0
+{
+    return (MEM[LCD_Status_reg] & (BYTE)(0x03));
+}
+
+
+//LCDS setters
+void PPU::set_LCDS_lycly_interrupt_enable_status(BYTE status)
+{
+    if(status == 0)
+    {
+        MEM[LCD_Status_reg] = (MEM[LCD_Status_reg] & (BYTE)(~(1 << 6))); //should turn off FLAG_ZERO
+    }
+    else
+    {
+        MEM[LCD_Status_reg] = (MEM[LCD_Status_reg] | (BYTE)(1 << 6)); //should turn on FLAG_ZERO
+    }
+}
+void PPU::set_LCDS_oam_scan_mode_interrupt_enable_status(BYTE status) //mode 2
+{
+    if(status == 0)
+    {
+        MEM[LCD_Status_reg] = (MEM[LCD_Status_reg] & (BYTE)(~(1 << 5))); //should turn off FLAG_ZERO
+    }
+    else
+    {
+        MEM[LCD_Status_reg] = (MEM[LCD_Status_reg] | (BYTE)(1 << 5)); //should turn on FLAG_ZERO
+    }
+}
+void PPU::set_LCDS_vblank_mode_interrupt_enable_status(BYTE status) //mode 1
+{
+    if(status == 0)
+    {
+        MEM[LCD_Status_reg] = (MEM[LCD_Status_reg] & (BYTE)(~(1 << 4))); //should turn off FLAG_ZERO
+    }
+    else
+    {
+        MEM[LCD_Status_reg] = (MEM[LCD_Status_reg] | (BYTE)(1 << 4)); //should turn on FLAG_ZERO
+    }
+}
+void PPU::set_LCDS_hblank_mode_interrupt_enable_status(BYTE status) //mode 0
+{
+    if(status == 0)
+    {
+        MEM[LCD_Status_reg] = (MEM[LCD_Status_reg] & (BYTE)(~(1 << 3))); //should turn off FLAG_ZERO
+    }
+    else
+    {
+        MEM[LCD_Status_reg] = (MEM[LCD_Status_reg] | (BYTE)(1 << 3)); //should turn on FLAG_ZERO
+    }
+}
+void PPU::set_LCDS_coincidence_flag_status(BYTE status)
+{
+    if(status == 0)
+    {
+        MEM[LCD_Status_reg] = (MEM[LCD_Status_reg] & (BYTE)(~(1 << 2))); //should turn off FLAG_ZERO
+    }
+    else
+    {
+        MEM[LCD_Status_reg] = (MEM[LCD_Status_reg] | (BYTE)(1 << 2)); //should turn on FLAG_ZERO
+    }
+}
+void PPU::set_LCDS_PPU_MODE_status(BYTE status)
+{
+    if(status >= 0 && status <= 3) //only modes between 0 and 3 are accepted
+    {
+        MEM[LCD_Status_reg] = (MEM[LCD_Status_reg] & 0xFC); //nullify first 2 bits
+        MEM[LCD_Status_reg] = (MEM[LCD_Status_reg] | status);
+    }
+    else
+    {
+        std::cout << "set_LCDS_PPU_MODE_status illegal input" << std::endl;
+    }
+}
+
+
 
 void PPU::PPU_cycle()
 {
@@ -412,27 +522,34 @@ void PPU::PPU_cycle()
 //        V_BLANK();
 //    }
 switch(this->mode) {
-    case 2:
+    case OAM_SCAN_MODE:
         OAM_SCAN();
-        this->mode = 3;
+        this->mode = DRAW_MODE;
+        set_LCDS_PPU_MODE_status(DRAW_MODE);
         return;
 
-    case 3:
+    case DRAW_MODE:
         DRAW();
-        this->mode = 0;
+        this->mode = H_BLANK_MODE;
+        set_LCDS_PPU_MODE_status(H_BLANK_MODE);
         return;
-    case 0:
+    case H_BLANK_MODE:
         H_BLANK();
         //draw row
         if (MEM[LY_register] >= 144) {
-            this->mode = 1;
-        } else {
-            this->mode = 2;
+            this->mode = V_BLANK_MODE;
+            set_LCDS_PPU_MODE_status(V_BLANK_MODE);
+        }
+        else
+        {
+            this->mode = OAM_SCAN_MODE;
+            set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
         }
         return;
-    case 1:
+    case V_BLANK_MODE:
         V_BLANK();
-        this->mode = 2;
+        this->mode = OAM_SCAN_MODE;
+        set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
         return;
     }
 
