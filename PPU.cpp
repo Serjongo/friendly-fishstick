@@ -399,19 +399,39 @@ BYTE PPU::get_LCDC_window_tile_map_select() const
 
 void PPU::PPU_cycle()
 {
-    OAM_SCAN();
-    DRAW();
-//    for(int i = 0 ; i < 160; i++)
+//    OAM_SCAN();
+//    DRAW();
+////    for(int i = 0 ; i < 160; i++)
+////    {
+////        pixels.push_back(addPixel({(float)i,(float)MEM[LY_register]},100,100,100));
+////    }
+//    H_BLANK();
+//    //draw row
+//    if(MEM[LY_register] >= 144)
 //    {
-//        pixels.push_back(addPixel({(float)i,(float)MEM[LY_register]},100,100,100));
+//        V_BLANK();
 //    }
-    H_BLANK();
-    //draw row
-    if(MEM[LY_register] >= 144)
-    {
+switch(this->mode) {
+    case 2:
+        OAM_SCAN();
+        this->mode = 3;
+        return;
+    case 3:
+        DRAW();
+        this->mode = 0;
+        return;
+    case 0:
+        H_BLANK();
+        //draw row
+        if (MEM[LY_register] >= 144) {
+            this->mode = 1;
+        } else {
+            this->mode = 2;
+        }
+    case 1:
         V_BLANK();
+        this->mode = 2;
     }
-
 };
 
 
