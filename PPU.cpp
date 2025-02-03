@@ -416,6 +416,7 @@ switch(this->mode) {
         OAM_SCAN();
         this->mode = 3;
         return;
+
     case 3:
         DRAW();
         this->mode = 0;
@@ -428,10 +429,13 @@ switch(this->mode) {
         } else {
             this->mode = 2;
         }
+        return;
     case 1:
         V_BLANK();
         this->mode = 2;
+        return;
     }
+
 };
 
 
