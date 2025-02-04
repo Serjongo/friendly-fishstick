@@ -279,7 +279,7 @@ void gameboy::init()
     memset(m_CartridgeMemory,0,sizeof(m_CartridgeMemory));
 
 
-    PC = 0x100 ;
+    PC = 0x00 ;
     AF_reg.reg = (WORD)0x01B0;
     BC_reg.reg = 0x0013;
     DE_reg.reg = 0x00D8;
@@ -2267,7 +2267,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_file("../TESTS/01-special.gb");
+    read_from_file("../TESTS/02-interrupts.gb");
 
     sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
 //    window.setFramerateLimit(60);
