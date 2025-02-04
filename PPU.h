@@ -208,6 +208,8 @@ class PPU{
         BYTE Screen[144][160]; //144 arrays of 160 each
         float ppu_machine_cycles = 0; //this will count machine cycles with each action, attempting to be synced in with gb's clock
         BYTE mode = 2; //mode/state, this should change when PPU is changing mode of operation
+        int OAM_counter = OAM_mem_start;
+        int vblank_counter = 0;
 
         BYTE* VRAM; // from the vram start point
         std::vector<Sprite*> OAM; //all sprites from the MEM as objects, will hold up to 40 sprites, 160 bytes of data in total

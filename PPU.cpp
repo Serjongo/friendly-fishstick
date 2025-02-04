@@ -139,9 +139,10 @@ void PPU::OAM_SCAN() //mode 2 of the ppu
     // xpos > 0, LY+16 > ypos, LY+16 < ypos+height (16 or 8), amount of spirtes < 10
     BYTE cur_row = MEM[LY_register]; //LY register
     BYTE tile_size = get_LCDC_sprite_size_status() ? 16 : 8;
-    for(int i = OAM_mem_start ; i < OAM_mem_end; i = i+4) // goes over 160 bytes, 40 sprites
+    int twice = 0;
+    while(OAM_counter < OAM_mem_end) // goes over 160 bytes, 40 sprites
     {
-        Sprite spr = Sprite(MEM[i],MEM[i+1],MEM[i+2],MEM[i+3]);
+        Sprite spr = Sprite(MEM[OAM_counter],MEM[OAM_counter+1],MEM[OAM_counter+2],MEM[OAM_counter+3]);
         OAM.push_back(&spr);
 //        BYTE y_pos = MEM[i];
 //        BYTE x_pos = MEM[i+1];
@@ -152,7 +153,16 @@ void PPU::OAM_SCAN() //mode 2 of the ppu
         {
             visible_OAM_buffer.push_back(&spr); //we point to the first byte of the OAM, currently it is not a distinct struct
         }
+        OAM_counter = OAM_counter + 4;
+        num_of_machine_cycles(0.5);
+        twice++;
+        if(twice == 2){//Limit to 2 object before return
+            twice = 0;
+            return;
+        }
     };
+    this->mode = DRAW_MODE;
+    set_LCDS_PPU_MODE_status(DRAW_MODE);
 }
 
 void PPU::DRAW() //mode 3 of the ppu
@@ -190,6 +200,15 @@ void PPU::V_BLANK()
 {
     //placeholder - wait for 4560T cycles = 1140 machine cycles
     //ideally, let the cpu access vram at this point
+    while(vblank_counter<10){
+        MEM[LY_register]++;
+        vblank_counter++;
+        num_of_machine_cycles(114);
+        return;
+    }
+    vblank_counter = 0;
+    this->mode = OAM_SCAN_MODE;
+    set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
     MEM[LY_register] = 0;
 }
 
@@ -524,11 +543,8 @@ void PPU::PPU_cycle()
 switch(this->mode) {
     case OAM_SCAN_MODE:
         OAM_SCAN();
-        this->mode = DRAW_MODE;
-        set_LCDS_PPU_MODE_status(DRAW_MODE);
         return;
-
-    case DRAW_MODE:
+    case 3:
         DRAW();
         this->mode = H_BLANK_MODE;
         set_LCDS_PPU_MODE_status(H_BLANK_MODE);
@@ -546,10 +562,11 @@ switch(this->mode) {
             set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
         }
         return;
-    case V_BLANK_MODE:
+    case 1:
         V_BLANK();
-        this->mode = OAM_SCAN_MODE;
-        set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
+        return;
+    default:
+        std::cout << "pupy's switch case problem";
         return;
     }
 
