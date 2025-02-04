@@ -279,7 +279,7 @@ void gameboy::init()
     memset(m_CartridgeMemory,0,sizeof(m_CartridgeMemory));
 
 
-    PC = 0x100 ;
+    PC = 0x0100 ;
     AF_reg.reg = (WORD)0x01B0;
     BC_reg.reg = 0x0013;
     DE_reg.reg = 0x00D8;
@@ -327,7 +327,7 @@ void gameboy::cartridge_to_mem(long long bytes)
 {
     for(long long i = 0 ; i < bytes ; i++)
     {
-        mem[i] = m_CartridgeMemory[0x100+i];
+        mem[i] = m_CartridgeMemory[0x0100+i];
 //                  mem[i+0x100] = m_CartridgeMemory[i];
 
     }
@@ -342,7 +342,7 @@ void gameboy::read_from_file(string path) //basic version, will change as the pr
     {
         cerr << "File error.\n";
     }
-    input_file.read((char *)m_CartridgeMemory + 0x100, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
+    input_file.read((char *)m_CartridgeMemory + 0x0100, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
 //                input_file.read((char *)m_CartridgeMemory, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
 
     m_CartridgeMemory[input_file.gcount()] = '\0';
@@ -2267,7 +2267,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_file("../TESTS/01-special.gb");
+    read_from_file("../TESTS/02-interrupts.gb");
 
     sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
 //    window.setFramerateLimit(60);

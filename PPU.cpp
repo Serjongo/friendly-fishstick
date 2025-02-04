@@ -215,25 +215,39 @@ void PPU::V_BLANK()
 
 void PPU::pixel_fetcher()
 {
-    //placeholder
-    WORD tile_data_base_loc;
-    WORD tile_address; //after calculating tile number and base_loc, final address
+    Fetch_Tile_Num_and_address();
+    Fetch_Tile_Data_low();
+    Fetch_Tile_Data_high();
+    Push_to_FIFO();
+}
 
-    BYTE tile_data_low; //first byte of pixels
-    BYTE tile_data_high; //second byte of pixels
+//void PPU::SFML_draw_screen(int row)
+//{
+//
+//}
 
-    int tile_dat_pixel_index = 0;
 
-    WORD tilemap_mem_loc = 0x9800; //window location
+WORD PPU::tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high)
+{
+    WORD row_8_pixels = 0;
+    for(int i = 0; i<8; i++){
+        row_8_pixels = row_8_pixels << 1;
+        row_8_pixels |= (tile_data_high & 0x80) >> 7;
+        tile_data_high =  tile_data_high << 1;
+        row_8_pixels = row_8_pixels << 1;
+        row_8_pixels |= (tile_data_low & 0x80) >> 7;
+        tile_data_low = tile_data_low << 1;
 
-    WORD tile_x; //where we are on the line
-    WORD tile_y; //what line we're on
+    }
+    return row_8_pixels;
+}
 
+// DRAW()'s inner functions
+
+void PPU::Fetch_Tile_Num_and_address(){
     //may add in the future a check for bit 5. if bit 5 is off, window is to be absolutely ignored regardless of other bits, and background will be drawn instead.
     if(get_LCDC_bg_tile_map_select_status() || get_LCDC_window_tile_map_select())
         tilemap_mem_loc = 0x9C00;
-
-    BYTE tilenum;
 
     //-----------------------------BACKGROUND/WINDOW FETCHER
 //    while(pixel_fetcher_x_position_counter <= 160) //TEMP - should be less than
@@ -257,7 +271,7 @@ void PPU::pixel_fetcher()
         tilenum = MEM[tilemap_mem_loc + (tile_x + (tilemap_row_length_bytes * tile_y) % tilemap_size)];
 
     }
-    //background rendering
+        //background rendering
     else
     {
         //reset first_window_encounter, since if we're here, we're past/before window
@@ -269,9 +283,6 @@ void PPU::pixel_fetcher()
 
         tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];
     }
-
-
-
     if (get_LCDC_tile_data_select())
     {
         //$8000 method
@@ -291,11 +302,17 @@ void PPU::pixel_fetcher()
 
         tile_address = tile_data_base_loc + (tile_size_bytes * char(tilenum) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8)));
     }
+};
 
-    //get tile data low and high
+
+
+void PPU::Fetch_Tile_Data_low(){//get tile data low
     tile_data_low = MEM[tile_address];
+};
+void PPU::Fetch_Tile_Data_high(){//get tile data high
     tile_data_high = MEM[tile_address + 1];
-
+};
+void PPU::Push_to_FIFO(){
     WORD pixel_row = tileData_to_pixel_row(tile_data_low,tile_data_high); //generate the pixel row from the tile data
     for(int i = 0 ; i < pixel_row_size && Background_FIFO.size() < 16;i++)
     {
@@ -334,13 +351,11 @@ void PPU::pixel_fetcher()
 
 
     //------------------------------------- SPRITE FETCHER END -------------------
-    ///THIS IS WHERE I AM DEBUGGING CURRENTLY!!!!
     // popping pixels from both fifos
 
 //    if(Background_FIFO.size() > pixel_row_size) // && Sprite_FIFO.size() > pixel_row_size)
     if(Background_FIFO.size() > pixel_row_size) // && Sprite_FIFO.size() > pixel_row_size)
     {
-
         //push to screen
         while(screen_coordinate_x < pixel_fetcher_x_position_counter)
         {
@@ -349,7 +364,6 @@ void PPU::pixel_fetcher()
             Background_FIFO.pop();
             screen_coordinate_x++;
         }
-    ///THIS IS WHERE I AM DEBUGGING CURRENTLY!!!!
 //if(pixels.size() == 31)
 //{
 //    std::cout << "a";
@@ -362,8 +376,8 @@ void PPU::pixel_fetcher()
         //pushim ve shit ---
 
     }
-        pixel_fetcher_x_position_counter += 8;
-        //std::cout << (int)MEM[0xFF47] << '\n';
+    pixel_fetcher_x_position_counter += 8;
+    //std::cout << (int)MEM[0xFF47] << '\n';
 //}
     //std::cout << "Finished horizontal line" << std::endl;
 //    pixel_fetcher_x_position_counter = 0;
@@ -378,29 +392,9 @@ void PPU::pixel_fetcher()
 
     //if 0, not window
 
-}
+};
 
-//void PPU::SFML_draw_screen(int row)
-//{
-//
-//}
-
-
-WORD PPU::tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high)
-{
-    WORD row_8_pixels = 0;
-    for(int i = 0; i<8; i++){
-        row_8_pixels = row_8_pixels << 1;
-        row_8_pixels |= (tile_data_high & 0x80) >> 7;
-        tile_data_high =  tile_data_high << 1;
-        row_8_pixels = row_8_pixels << 1;
-        row_8_pixels |= (tile_data_low & 0x80) >> 7;
-        tile_data_low = tile_data_low << 1;
-
-    }
-    return row_8_pixels;
-}
-
+////
 
 BYTE PPU::get_LCDC_sprite_size_status() const
 {

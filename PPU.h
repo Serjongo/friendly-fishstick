@@ -229,6 +229,18 @@ class PPU{
         //pixel fetcher related funcs
         WORD tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high);
 
+        //placeholder
+        WORD tile_data_base_loc;
+        WORD tile_address; //after calculating tile number and base_loc, final address
+        BYTE tile_data_low; //first byte of pixels
+        BYTE tile_data_high; //second byte of pixels
+        int tile_dat_pixel_index = 0;
+        WORD tilemap_mem_loc = 0x9800; //window location
+        WORD tile_x; //where we are on the line
+        WORD tile_y; //what line we're on
+        BYTE tilenum;
+
+
         void H_BLANK();
         void V_BLANK();
 
@@ -270,6 +282,13 @@ class PPU{
 
     void PPU_cycle();
 
+
+    // DRAW()'s inner functions
+
+    void Fetch_Tile_Num_and_address();
+    void Fetch_Tile_Data_low();
+    void Fetch_Tile_Data_high();
+    void Push_to_FIFO();
 
 
     //getters
