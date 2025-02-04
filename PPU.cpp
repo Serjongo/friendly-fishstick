@@ -518,6 +518,26 @@ void PPU::set_LCDS_PPU_MODE_status(BYTE status)
     }
 }
 
+bool PPU::sample_STAT_interrupt_line() //if any of the conditions are now met, we will trip the interrupt flag in the memory
+{
+    if(!STAT_interrupt_line)
+    {
+        STAT_interrupt_line = (
+                ( get_LCDS_coincidence_flag_status() & get_LCDS_lycly_interrupt_enable_status() ) |
+                ( (get_LCDS_PPU_MODE_status() == H_BLANK_MODE) & get_LCDS_hblank_mode_interrupt_enable_status() ) |
+                ( (get_LCDS_PPU_MODE_status() == V_BLANK_MODE) & get_LCDS_vblank_mode_interrupt_enable_status() ) |
+                ( (get_LCDS_PPU_MODE_status() == OAM_SCAN_MODE) & get_LCDS_oam_scan_mode_interrupt_enable_status() )
+                );
+        if(STAT_interrupt_line)
+            MEM[0xFF0F] = MEM[0xFF0F] | 0x02; //IF_reg - turn on LCD interrupt
+    }
+    return STAT_interrupt_line;
+}
+
+bool PPU::set_vblank_interrupt() //this will be called every single time the V_BLANK mode is activated, requesting for an interrupt from the CPU
+{
+    MEM[0xFF0F] = MEM[0xFF0F] | 0x01; //IF_reg - turn on VBLANK interrupt
+}
 
 
 void PPU::PPU_cycle()
@@ -538,7 +558,8 @@ switch(this->mode) {
     case OAM_SCAN_MODE:
         OAM_SCAN();
         return;
-    case 3:
+
+    case DRAW_MODE:
         DRAW();
         this->mode = H_BLANK_MODE;
         set_LCDS_PPU_MODE_status(H_BLANK_MODE);
@@ -556,7 +577,7 @@ switch(this->mode) {
             set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
         }
         return;
-    case 1:
+    case V_BLANK_MODE:
         V_BLANK();
         return;
     default:

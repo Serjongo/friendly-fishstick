@@ -2267,7 +2267,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_file("../TESTS/02-interrupts.gb");
+    read_from_file("../TESTS/01-special.gb");
 
     sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
 //    window.setFramerateLimit(60);

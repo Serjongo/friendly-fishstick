@@ -244,6 +244,11 @@ class PPU{
         void H_BLANK();
         void V_BLANK();
 
+        //interrupt related
+        bool STAT_interrupt_line = false;
+
+        bool sample_STAT_interrupt_line(); //if any of the conditions are now met, we will trip the interrupt flag in the memory
+        bool set_vblank_interrupt(); //this will be called every single time the V_BLANK mode is activated, requesting for an interrupt from the CPU
 
         //machine clock related
         bool tick_over = false; //this will signal that we've ticked and should finish our current work
