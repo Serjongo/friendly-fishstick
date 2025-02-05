@@ -263,7 +263,7 @@ void PPU::Fetch_Tile_Num_and_address(){
         //upon reaching this for the first time in the line, we reset pixel_fetcher_x counter and add WX - 7
         if(first_window_encounter)
         {
-            pixel_fetcher_x_position_counter = MEM[WX_reg]; //-7
+            pixel_fetcher_x_position_counter = MEM[WX_reg] - 7; //-7
             first_window_encounter = 0;
         }
         tile_x = pixel_fetcher_x_position_counter;

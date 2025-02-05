@@ -329,11 +329,14 @@ void gameboy::init()
 
 //deep copy function from cartridge to mem ~@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ///This is a temporary placeholder of a function. In reality, moving the cartridge mem to gb mem is more complicated, for now we just dump it
-void gameboy::cartridge_to_mem(long long bytes)
+void gameboy::cartridge_to_mem(long long bytes, bool bootrom)
 {
+    int space = 0x0100;
+    if (bootrom)
+        space = 0x00;
     for(long long i = 0 ; i < bytes ; i++)
     {
-        mem[i] = m_CartridgeMemory[0x0100+i];
+        mem[i] = m_CartridgeMemory[space+i];
 //                  mem[i+0x100] = m_CartridgeMemory[i];
 
     }
@@ -341,18 +344,24 @@ void gameboy::cartridge_to_mem(long long bytes)
 
 //what this currently does is simply read from file, and drop into mem from cell 0x100 and onwards.
 // This is likely temporary and currently done for testing purposes. the reading from cartridge mechanism is more complicated, and we're not there yet
-void gameboy::read_from_file(string path) //basic version, will change as the project develops
+void gameboy::read_from_file(const string& path,bool bootrom) //basic version, will change as the project develops
 {
+    int space = 0x0100;
+    if(bootrom)
+        space = 0x00;
+
     ifstream input_file(path,ios::binary);
     if(!input_file)
     {
         cerr << "File error.\n";
     }
-    input_file.read((char *)m_CartridgeMemory + 0x0100, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
+    input_file.read((char *)m_CartridgeMemory + space, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
 //                input_file.read((char *)m_CartridgeMemory, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
 
-    m_CartridgeMemory[input_file.gcount()] = '\0';
-    cartridge_to_mem(input_file.gcount());
+    if(!bootrom)
+        m_CartridgeMemory[input_file.gcount()] = '\0';
+    else
+        cartridge_to_mem(input_file.gcount(),bootrom);
 }
 
 //this will be the function that read the cartridge and organizes its data into the system
@@ -2256,9 +2265,19 @@ void gameboy::decode_execute()
 }
 void gameboy::main_loop(gameboy& gb)
 {
-    //read_from_file("../test.bin");
 
     memset(mem,0,sizeof(mem));
+
+    if(!enable_bootrom)
+        init(); //this function mimics the bootrom initialization
+    else
+    {
+        memset(m_CartridgeMemory,0,sizeof(m_CartridgeMemory));
+        PC = 0x0;
+        read_from_file("../TESTS/boot_rom_world.gb",true);
+    }
+
+
     //tester, gameboy cartridge, 0x100 offset and all
     //checklist of tests
     // 01-special.gb - VV
@@ -2273,7 +2292,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_file("../TESTS/Tetris.gb");
+    read_from_file("../TESTS/Tetris.gb",false);
 
     sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
 //    window.setFramerateLimit(60);
@@ -2285,15 +2304,11 @@ void gameboy::main_loop(gameboy& gb)
     image.create(160, 144, sf::Color::Black);
 
 
-    //bootstrap rom, 0x0 offset
-    //read_from_file("../TESTS/DMG_ROM.bin");
-    init();
+
     if(testing_mode)
     {
-//                    init_register_file();
         gameboy_testing::gbdoctor_init_register_file();
         gameboy_testing::init_memory_file();
-
     }
 
     //for testing
@@ -2359,6 +2374,8 @@ void gameboy::main_loop(gameboy& gb)
                 int scroll_y_val = mem[0xFF42];
 
                 CPU_cycle();
+
+
                 if (scroll_y_val != mem[0xFF42]) {
                     cout << "SCY CHANGED! : " << (int)mem[0xFF42] << endl;
                 }
