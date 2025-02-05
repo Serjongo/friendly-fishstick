@@ -179,11 +179,15 @@ void PPU::H_BLANK()
     pixel_fetcher_x_position_counter = 0;
     MEM[LY_register]++;
 
-    //setting coincidence flag according to LY==LYC -- may be used for interrupts later on
-    if(MEM[LYC_register] == MEM[LY_register])
-        set_LCDS_coincidence_flag_status(1);
-    else
-        set_LCDS_coincidence_flag_status(0);
+        //setting coincidence flag according to LY==LYC -- may be used for interrupts later on
+        if(MEM[LYC_register] == MEM[LY_register])
+        {
+            set_LCDS_coincidence_flag_status(1);
+            sample_STAT_interrupt_line();
+        }
+
+        else
+            set_LCDS_coincidence_flag_status(0);
 
     while(!Background_FIFO.empty())
     {
@@ -566,7 +570,7 @@ bool PPU::sample_STAT_interrupt_line() //if any of the conditions are now met, w
     return STAT_interrupt_line;
 }
 
-bool PPU::set_vblank_interrupt() //this will be called every single time the V_BLANK mode is activated, requesting for an interrupt from the CPU
+void PPU::set_vblank_interrupt() //this will be called every single time the V_BLANK mode is activated, requesting for an interrupt from the CPU
 {
     MEM[0xFF0F] = MEM[0xFF0F] | 0x01; //IF_reg - turn on VBLANK interrupt
 }
@@ -586,10 +590,14 @@ void PPU::PPU_cycle()
 //    {
 //        V_BLANK();
 //    }
-switch(this->mode) {
-    case OAM_SCAN_MODE:
-        OAM_SCAN();
-        return;
+
+
+    sample_STAT_interrupt_line();
+    switch(this->mode)
+    {
+        case OAM_SCAN_MODE:
+            OAM_SCAN();
+            return;
 
     case DRAW_MODE:
         DRAW();

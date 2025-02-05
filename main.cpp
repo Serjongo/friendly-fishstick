@@ -160,10 +160,16 @@ void gameboy_testing::print_VRAM(gameboy& gb)
 //
 //    }
     outVRAMFile.close();
-    for(int i = VRAM_mem_start;i< VRAM_mem_end;i++)
+
+    for(int i = VRAM_mem_start;i < 0x8200;i++) //VRAM_mem_end
     {
-        cout << (int)gb.mem[i] << ' ';
+        cout << hex << (int)gb.mem[i] << dec << ' ';
+        if((i % 16) == 0)
+        {
+            cout << endl;
+        }
     }
+    cout << endl    << "-----------------------------------" << endl;
 }
 
 void gameboy_testing::inject_VRAM(gameboy& gb)
@@ -2344,7 +2350,7 @@ void gameboy::main_loop(gameboy& gb)
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
                     gameboy_testing::init_VRAM_file();
                     gameboy_testing::print_VRAM(gb);
-                    std::cout << "a";
+//                    std::cout << "a";
                 }
                 //TODO:: break it down further from cycle-cycle to tick-tick (machine clock resolution) so facilitate more accurate communication between cpu and ppu
                 // if we are to use a shared clock resource, it'd require refactoring the cpu into a separate class and link the gameboy->ppu->c0
@@ -2360,7 +2366,8 @@ void gameboy::main_loop(gameboy& gb)
                 pupy.PPU_cycle();
 
 //                        window.clear();
-            if (mem[LY_register] == 144 && pupy.mode == 1) {
+            if (mem[LY_register] == 144 && pupy.mode == 1)
+            {
 //                for (const auto &pixel: pupy.pixels) {
 ////                    window.draw(pixel);
 //                    image.setPixel(pixel.getPosition().x,pixel.getPosition().y,pixel.getFillColor());
@@ -2407,7 +2414,7 @@ void gameboy::CPU_cycle()
 
     //interrupt_mode ? post_interrupt(): check_interrupts(); //if interrupt mode is on, we return to normal with post_interrupt(), otherwise we check for interrupts
 
-    if(gb_machine_cycles < max_machine_cycles_val) //1 million microseconds = 1 second
+    if((gb_machine_cycles < max_machine_cycles_val) || !real_cpu_speed_constraint) //1 million microseconds = 1 second
     {
         unsigned int gb_machine_cycles_prev = gb_machine_cycles;
         check_interrupts();
@@ -2455,6 +2462,7 @@ void gameboy::CPU_cycle()
         //cout << "hi!";
         this_thread::sleep_for((chrono::seconds(1)-time_span));
         gb_machine_cycles = 0; //may change to max(0,curr_val-max_val)
+
 
     }
 
