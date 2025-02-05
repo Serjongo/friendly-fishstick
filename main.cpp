@@ -279,7 +279,7 @@ void gameboy::init()
     memset(m_CartridgeMemory,0,sizeof(m_CartridgeMemory));
 
 
-    PC = 0x0100 ;
+    PC = 0x0000 ;
     AF_reg.reg = (WORD)0x01B0;
     BC_reg.reg = 0x0013;
     DE_reg.reg = 0x00D8;
@@ -2341,11 +2341,11 @@ void gameboy::main_loop(gameboy& gb)
                     }
 
                 }
-//                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
-//                    gameboy_testing::init_VRAM_file();
-//                    gameboy_testing::print_VRAM(gb);
-//                    std::cout << "a";
-//                }
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+                    gameboy_testing::init_VRAM_file();
+                    gameboy_testing::print_VRAM(gb);
+                    std::cout << "a";
+                }
                 //TODO:: break it down further from cycle-cycle to tick-tick (machine clock resolution) so facilitate more accurate communication between cpu and ppu
                 // if we are to use a shared clock resource, it'd require refactoring the cpu into a separate class and link the gameboy->ppu->c0
                 // pu
