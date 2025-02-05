@@ -175,10 +175,9 @@ void PPU::DRAW() //mode 3 of the ppu
 void PPU::H_BLANK()
 {
     //placeholder - count down remaining cycle from 456T cycles = 114 machine cycles
-    if (pixel_fetcher_x_position_counter > 160)
-    {
-        pixel_fetcher_x_position_counter = 0;
-        MEM[LY_register]++;
+
+    pixel_fetcher_x_position_counter = 0;
+    MEM[LY_register]++;
 
         //setting coincidence flag according to LY==LYC -- may be used for interrupts later on
         if(MEM[LYC_register] == MEM[LY_register])
@@ -190,14 +189,23 @@ void PPU::H_BLANK()
         else
             set_LCDS_coincidence_flag_status(0);
 
-        while(!Background_FIFO.empty())
-        {
-            Background_FIFO.pop();
-        }
-
-        screen_coordinate_x = 0;
+    while(!Background_FIFO.empty())
+    {
+        Background_FIFO.pop();
     }
 
+    screen_coordinate_x = 0;
+
+    if (MEM[LY_register] >= 144) {
+        this->mode = V_BLANK_MODE;
+        set_LCDS_PPU_MODE_status(V_BLANK_MODE);
+    }
+    else
+    {
+        this->mode = OAM_SCAN_MODE;
+        set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
+    }
+    num_of_machine_cycles(94-draw_step_ticks_counter);
 }
 
 void PPU::V_BLANK()
@@ -219,10 +227,34 @@ void PPU::V_BLANK()
 
 void PPU::pixel_fetcher()
 {
-    Fetch_Tile_Num_and_address();
-    Fetch_Tile_Data_low();
-    Fetch_Tile_Data_high();
-    Push_to_FIFO();
+    switch(draw_step) {
+        case(0):
+            Fetch_Tile_Num_and_address();
+            num_of_machine_cycles(0.5);
+            draw_step_ticks_counter = draw_step_ticks_counter + 0.5;
+            draw_step = 1;
+            return;
+        case(1):
+            Fetch_Tile_Data_low();
+            num_of_machine_cycles(0.5);
+            draw_step_ticks_counter = draw_step_ticks_counter + 0.5;
+            draw_step = 2;
+            return;
+        case(2):
+            Fetch_Tile_Data_high(); // nums of ticks may change
+            num_of_machine_cycles(0.5);
+            draw_step_ticks_counter = draw_step_ticks_counter + 0.5;
+            draw_step = 3;
+            return;
+        case(3):
+            Push_to_FIFO();
+            num_of_machine_cycles(0.5);// nums of ticks may change
+            draw_step_ticks_counter = draw_step_ticks_counter + 0.5;
+            this->mode = H_BLANK_MODE;
+            set_LCDS_PPU_MODE_status(H_BLANK_MODE);
+            draw_step = 0;
+            return;
+    }
 }
 
 //void PPU::SFML_draw_screen(int row)
@@ -567,32 +599,20 @@ void PPU::PPU_cycle()
             OAM_SCAN();
             return;
 
-        case DRAW_MODE:
-            DRAW();
-            this->mode = H_BLANK_MODE;
-            set_LCDS_PPU_MODE_status(H_BLANK_MODE);
-            return;
-        case H_BLANK_MODE:
-            H_BLANK();
-            //draw row
-            if (MEM[LY_register] >= 144) {
-                this->mode = V_BLANK_MODE;
-                set_vblank_interrupt();
-                set_LCDS_PPU_MODE_status(V_BLANK_MODE);
-            }
-            else
-            {
-                this->mode = OAM_SCAN_MODE;
-                set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
-            }
-            return;
-        case V_BLANK_MODE:
-            V_BLANK();
-            return;
-        default:
-            std::cout << "pupy's switch case problem";
-            return;
-        }
+    case DRAW_MODE:
+        DRAW();
+        return;
+    case H_BLANK_MODE:
+        H_BLANK();
+        //draw row
+        return;
+    case V_BLANK_MODE:
+        V_BLANK();
+        return;
+    default:
+        std::cout << "pupy's switch case problem";
+        return;
+    }
 
 };
 

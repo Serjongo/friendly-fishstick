@@ -239,6 +239,8 @@ class PPU{
         WORD tile_x; //where we are on the line
         WORD tile_y; //what line we're on
         BYTE tilenum;
+        BYTE draw_step = 0;
+        float draw_step_ticks_counter = 0;
 
 
         void H_BLANK();
