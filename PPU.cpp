@@ -182,7 +182,11 @@ void PPU::H_BLANK()
 
         //setting coincidence flag according to LY==LYC -- may be used for interrupts later on
         if(MEM[LYC_register] == MEM[LY_register])
+        {
             set_LCDS_coincidence_flag_status(1);
+            sample_STAT_interrupt_line();
+        }
+
         else
             set_LCDS_coincidence_flag_status(0);
 
@@ -534,7 +538,7 @@ bool PPU::sample_STAT_interrupt_line() //if any of the conditions are now met, w
     return STAT_interrupt_line;
 }
 
-bool PPU::set_vblank_interrupt() //this will be called every single time the V_BLANK mode is activated, requesting for an interrupt from the CPU
+void PPU::set_vblank_interrupt() //this will be called every single time the V_BLANK mode is activated, requesting for an interrupt from the CPU
 {
     MEM[0xFF0F] = MEM[0xFF0F] | 0x01; //IF_reg - turn on VBLANK interrupt
 }
@@ -554,36 +558,41 @@ void PPU::PPU_cycle()
 //    {
 //        V_BLANK();
 //    }
-switch(this->mode) {
-    case OAM_SCAN_MODE:
-        OAM_SCAN();
-        return;
 
-    case DRAW_MODE:
-        DRAW();
-        this->mode = H_BLANK_MODE;
-        set_LCDS_PPU_MODE_status(H_BLANK_MODE);
-        return;
-    case H_BLANK_MODE:
-        H_BLANK();
-        //draw row
-        if (MEM[LY_register] >= 144) {
-            this->mode = V_BLANK_MODE;
-            set_LCDS_PPU_MODE_status(V_BLANK_MODE);
+
+    sample_STAT_interrupt_line();
+    switch(this->mode)
+    {
+        case OAM_SCAN_MODE:
+            OAM_SCAN();
+            return;
+
+        case DRAW_MODE:
+            DRAW();
+            this->mode = H_BLANK_MODE;
+            set_LCDS_PPU_MODE_status(H_BLANK_MODE);
+            return;
+        case H_BLANK_MODE:
+            H_BLANK();
+            //draw row
+            if (MEM[LY_register] >= 144) {
+                this->mode = V_BLANK_MODE;
+                set_vblank_interrupt();
+                set_LCDS_PPU_MODE_status(V_BLANK_MODE);
+            }
+            else
+            {
+                this->mode = OAM_SCAN_MODE;
+                set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
+            }
+            return;
+        case V_BLANK_MODE:
+            V_BLANK();
+            return;
+        default:
+            std::cout << "pupy's switch case problem";
+            return;
         }
-        else
-        {
-            this->mode = OAM_SCAN_MODE;
-            set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
-        }
-        return;
-    case V_BLANK_MODE:
-        V_BLANK();
-        return;
-    default:
-        std::cout << "pupy's switch case problem";
-        return;
-    }
 
 };
 
