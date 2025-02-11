@@ -204,10 +204,19 @@ class PPU{
         gameboy& parent;
 
     public:
+        //for ppu machine_clock counting
+        float ppu_machine_cycles = 0; //this will count machine cycles with each action, attempting to be synced in with gb's clock
+        float CUR_TICK_ppu_machine_cycles = 0; //will be nullified every tick
+
         //for debug purposes
         BYTE Screen[144][160]; //144 arrays of 160 each
-        float ppu_machine_cycles = 0; //this will count machine cycles with each action, attempting to be synced in with gb's clock
+
         BYTE mode = 2; //mode/state, this should change when PPU is changing mode of operation
+        BYTE mode_DRAW = 0; //if we're inside draw mode, we'll be checking the specific stage
+        BYTE mode_H_BLANK = 0; //if we're inside H_blank, we'll be counting overall clocks with this
+        WORD mode_V_BLANK = 0; //if we're inside V_blank, we'll be counting overall clocks with this
+
+
         int OAM_counter = OAM_mem_start;
         int vblank_counter = 0;
 

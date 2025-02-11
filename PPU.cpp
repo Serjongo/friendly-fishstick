@@ -98,14 +98,20 @@ PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : p
     VRAM = VRAM_start;
     //OAM = OAM_start;
     MEM = MEM_start;
-//    background_palette[0] = Color(175,203,70);
-//    background_palette[1] = Color(121,170,109);
-//    background_palette[2] = Color(34,111,95);
-//    background_palette[3] = Color(8,41,85);
-    background_palette[0] = Color(255,0,70);
-    background_palette[1] = Color(0,255,0);
-    background_palette[2] = Color(0,0,255);
-    background_palette[3] = Color(124,124,124);
+    background_palette[0] = Color(175,203,70);
+    background_palette[1] = Color(121,170,109);
+    background_palette[2] = Color(34,111,95);
+    background_palette[3] = Color(8,41,85);
+//
+//    background_palette[3] = Color(8,24,32);
+//    background_palette[2] = Color(52,104,86);
+//    background_palette[1] = Color(136,192,112);
+//    background_palette[0] = Color(224,248,208);
+
+//    background_palette[0] = Color(255,0,70);
+//    background_palette[1] = Color(0,255,0);
+//    background_palette[2] = Color(0,0,255);
+//    background_palette[3] = Color(124,124,124);
     //OAM = std::make_unique<std::vector<Sprite*>>();
 }
 
@@ -115,6 +121,7 @@ PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : p
 void PPU::num_of_machine_cycles(float num)
 {
     ppu_machine_cycles += num;
+    CUR_TICK_ppu_machine_cycles += num;
 }
 
 //
@@ -139,7 +146,7 @@ void PPU::OAM_SCAN() //mode 2 of the ppu
     // xpos > 0, LY+16 > ypos, LY+16 < ypos+height (16 or 8), amount of spirtes < 10
     BYTE cur_row = MEM[LY_register]; //LY register
     BYTE tile_size = get_LCDC_sprite_size_status() ? 16 : 8;
-    int twice = 0;
+
     while(OAM_counter < OAM_mem_end) // goes over 160 bytes, 40 sprites
     {
         Sprite spr = Sprite(MEM[OAM_counter],MEM[OAM_counter+1],MEM[OAM_counter+2],MEM[OAM_counter+3]);
@@ -149,35 +156,81 @@ void PPU::OAM_SCAN() //mode 2 of the ppu
 //        BYTE tile_num = MEM[i+2];
 //        BYTE attributes = MEM[i+3];
 
+        //checking that the OAM tile fits the criteria to appear on screen
         if(spr.get_x_pos() > 0 && cur_row + 16 >= spr.get_y_pos() && cur_row + 16 < spr.get_y_pos() + tile_size && visible_OAM_buffer.size() < 10)
         {
             visible_OAM_buffer.push_back(&spr); //we point to the first byte of the OAM, currently it is not a distinct struct
         }
         OAM_counter = OAM_counter + 4;
         num_of_machine_cycles(0.5);
-        twice++;
-        if(twice == 2){//Limit to 2 object before return
-            twice = 0;
+
+        if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+        {
             return;
         }
     };
+
+    ///post mode
+    OAM_counter = OAM_mem_start; //reset OAM counter once over
     this->mode = DRAW_MODE;
     set_LCDS_PPU_MODE_status(DRAW_MODE);
 }
 
 void PPU::DRAW() //mode 3 of the ppu
 {
-    //calculate lcd_x_coord...
-    //add it to tile_dat_mem when calling pixel_fetcher
-    pixel_fetcher();
+    switch(this->mode_DRAW)
+    {
+        case(0):
+            Fetch_Tile_Num_and_address();
+            num_of_machine_cycles(0.5);
+            mode_DRAW++;
+            if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+                break;
+        case(1):
+            Fetch_Tile_Data_low();
+            num_of_machine_cycles(0.5);
+            mode_DRAW++;
+            if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+                break;
+        case(2):
+            Fetch_Tile_Data_high();
+            num_of_machine_cycles(0.5);
+            mode_DRAW++;
+            if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+                break;
+        case(3):
+            Push_to_FIFO();
+            num_of_machine_cycles(0.5);
+            mode_DRAW = 0; //restart DRAW cycle
+            if(pixel_fetcher_x_position_counter > 160) //if we finished with the line
+                mode = H_BLANK_MODE;
+            if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+                break;
+
+    }
+
+
+    Push_to_FIFO();
+    num_of_machine_cycles(0.5);
+
+    ///post mode
+    this->mode = H_BLANK_MODE;
+    set_LCDS_PPU_MODE_status(H_BLANK_MODE);
+    if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+    {
+        return;
+    }
+
 }
 
 void PPU::H_BLANK()
 {
-    //placeholder - count down remaining cycle from 456T cycles = 114 machine cycles
-
-    pixel_fetcher_x_position_counter = 0;
-    MEM[LY_register]++;
+    num_of_machine_cycles(1);
+    mode_H_BLANK++;
+    if(mode_H_BLANK >= 114) //count down remaining cycle from 456T cycles = 114 machine cycles
+    {
+        pixel_fetcher_x_position_counter = 0;
+        MEM[LY_register]++;
 
         //setting coincidence flag according to LY==LYC -- may be used for interrupts later on
         if(MEM[LYC_register] == MEM[LY_register])
@@ -189,73 +242,94 @@ void PPU::H_BLANK()
         else
             set_LCDS_coincidence_flag_status(0);
 
-    while(!Background_FIFO.empty())
-    {
-        Background_FIFO.pop();
-    }
+        ///temporary solution, should probably think of something else
+        while(!Background_FIFO.empty())
+        {
+            Background_FIFO.pop();
+        }
 
-    screen_coordinate_x = 0;
+        screen_coordinate_x = 0;
 
-    if (MEM[LY_register] >= 144) {
-        this->mode = V_BLANK_MODE;
-        set_LCDS_PPU_MODE_status(V_BLANK_MODE);
+
+
+
+
+
+        ///post mode
+        mode_H_BLANK = 0;
+
+        if (MEM[LY_register] >= 144) { //POST H_BLANK
+            this->mode = V_BLANK_MODE;
+            set_vblank_interrupt();
+            set_LCDS_PPU_MODE_status(V_BLANK_MODE);
+        }
+        else
+        {
+            this->mode = OAM_SCAN_MODE;
+            set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
+        }
+
+
     }
     else
-    {
-        this->mode = OAM_SCAN_MODE;
-        set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
-    }
-    num_of_machine_cycles(94-draw_step_ticks_counter);
+        return;
+
+
+
+
+
 }
+
 
 void PPU::V_BLANK()
 {
     //placeholder - wait for 4560T cycles = 1140 machine cycles
     //ideally, let the cpu access vram at this point
-    while(vblank_counter<10){
+    num_of_machine_cycles(1);
+    mode_V_BLANK++;
+    if((mode_V_BLANK > 0) && ((mode_V_BLANK % 114) == 0)) ///1-M CYCLE TICK LIMITATION
+    {
         MEM[LY_register]++;
-        vblank_counter++;
-        num_of_machine_cycles(114);
-        return;
+        //setting coincidence flag according to LY==LYC -- may be used for interrupts later on
+        if(MEM[LYC_register] == MEM[LY_register])
+        {
+            set_LCDS_coincidence_flag_status(1);
+            sample_STAT_interrupt_line();
+        }
+
+        else
+            set_LCDS_coincidence_flag_status(0);
     }
-    vblank_counter = 0;
-    this->mode = OAM_SCAN_MODE;
-    set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
-    MEM[LY_register] = 0;
-}
 
 
-void PPU::pixel_fetcher()
-{
-    switch(draw_step) {
-        case(0):
-            Fetch_Tile_Num_and_address();
-            num_of_machine_cycles(0.5);
-            draw_step_ticks_counter = draw_step_ticks_counter + 0.5;
-            draw_step = 1;
-            return;
-        case(1):
-            Fetch_Tile_Data_low();
-            num_of_machine_cycles(0.5);
-            draw_step_ticks_counter = draw_step_ticks_counter + 0.5;
-            draw_step = 2;
-            return;
-        case(2):
-            Fetch_Tile_Data_high(); // nums of ticks may change
-            num_of_machine_cycles(0.5);
-            draw_step_ticks_counter = draw_step_ticks_counter + 0.5;
-            draw_step = 3;
-            return;
-        case(3):
-            Push_to_FIFO();
-            num_of_machine_cycles(0.5);// nums of ticks may change
-            draw_step_ticks_counter = draw_step_ticks_counter + 0.5;
-            this->mode = H_BLANK_MODE;
-            set_LCDS_PPU_MODE_status(H_BLANK_MODE);
-            draw_step = 0;
-            return;
+    if(mode_V_BLANK >= 1140) //happens when we pass through 10 lines
+    {
+        mode_V_BLANK = 0;
+        this->mode = OAM_SCAN_MODE;
+        set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
+        MEM[LY_register] = 0;
     }
+    return;
+
 }
+
+//void PPU::V_BLANK()
+//{
+//    //placeholder - wait for 4560T cycles = 1140 machine cycles
+//    //ideally, let the cpu access vram at this point
+//
+//    while(vblank_counter<10){
+//        MEM[LY_register]++;
+//        vblank_counter++;
+//        num_of_machine_cycles(114);
+//        return;
+//    }
+//    vblank_counter = 0;
+//    this->mode = OAM_SCAN_MODE;
+//    set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
+//    MEM[LY_register] = 0;
+//}
+
 
 //void PPU::SFML_draw_screen(int row)
 //{
@@ -280,7 +354,8 @@ WORD PPU::tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high)
 
 // DRAW()'s inner functions
 
-void PPU::Fetch_Tile_Num_and_address(){
+void PPU::Fetch_Tile_Num_and_address()
+{
     //may add in the future a check for bit 5. if bit 5 is off, window is to be absolutely ignored regardless of other bits, and background will be drawn instead.
     if(get_LCDC_bg_tile_map_select_status() || get_LCDC_window_tile_map_select())
         tilemap_mem_loc = 0x9C00;
@@ -413,6 +488,7 @@ void PPU::Push_to_FIFO(){
 
     }
     pixel_fetcher_x_position_counter += 8;
+
     //std::cout << (int)MEM[0xFF47] << '\n';
 //}
     //std::cout << "Finished horizontal line" << std::endl;
@@ -576,7 +652,7 @@ void PPU::set_vblank_interrupt() //this will be called every single time the V_B
 }
 
 
-void PPU::PPU_cycle()
+void PPU::PPU_cycle() //always 1 machine cycle long
 {
 //    OAM_SCAN();
 //    DRAW();
@@ -591,28 +667,28 @@ void PPU::PPU_cycle()
 //        V_BLANK();
 //    }
 
-
+    CUR_TICK_ppu_machine_cycles = 0; //always start with 0, since we count this tick's cost
     sample_STAT_interrupt_line();
     switch(this->mode)
     {
         case OAM_SCAN_MODE:
             OAM_SCAN();
-            return;
+            break;
+        case DRAW_MODE:
+            DRAW();
+            break;
+        case H_BLANK_MODE:
+            H_BLANK();
+            break;
+        case V_BLANK_MODE:
+            V_BLANK();
+            break;
+        default:
+            std::cout << "pupy's switch case problem";
+            break;
 
-    case DRAW_MODE:
-        DRAW();
-        return;
-    case H_BLANK_MODE:
-        H_BLANK();
-        //draw row
-        return;
-    case V_BLANK_MODE:
-        V_BLANK();
-        return;
-    default:
-        std::cout << "pupy's switch case problem";
-        return;
     }
+    return;
 
 };
 

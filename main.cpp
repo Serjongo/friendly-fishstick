@@ -3,7 +3,7 @@
 
 //temporary global variable to test vram
 int vram_test_mode = 1;
-int PPU_MODE = 0;
+int HEADLESS_MODE = 0; //when enabled, no screen & no SFML will be used
 
 //constants
 BYTE m_CartridgeMemory[0x200000];
@@ -172,6 +172,12 @@ void gameboy_testing::print_VRAM(gameboy& gb)
     cout << endl    << "-----------------------------------" << endl;
 }
 
+/// TESTING FUNC, NOTHING TO DO EXPLICITLY WITH THE GAMEBOY, JUST FOR GENERAL PERFORMANCE TESTING
+
+///
+
+
+
 void gameboy_testing::inject_VRAM(gameboy& gb)
 {
     string file_content;
@@ -285,7 +291,7 @@ void gameboy::init()
     memset(m_CartridgeMemory,0,sizeof(m_CartridgeMemory));
 
 
-    PC = 0x0000 ;
+    PC = 0x0100 ;
     AF_reg.reg = (WORD)0x01B0;
     BC_reg.reg = 0x0013;
     DE_reg.reg = 0x00D8;
@@ -334,7 +340,7 @@ void gameboy::cartridge_to_mem(long long bytes, bool bootrom)
     int space = 0x0100;
     if (bootrom)
         space = 0x00;
-    for(long long i = 0 ; i < bytes ; i++)
+    for(long long i = space ; i < bytes ; i++)
     {
         mem[i] = m_CartridgeMemory[space+i];
 //                  mem[i+0x100] = m_CartridgeMemory[i];
@@ -357,11 +363,13 @@ void gameboy::read_from_file(const string& path,bool bootrom) //basic version, w
     }
     input_file.read((char *)m_CartridgeMemory + space, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
 //                input_file.read((char *)m_CartridgeMemory, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
-
+    long long len = input_file.gcount();
+    cartridge_to_mem(len,bootrom);
     if(!bootrom)
         m_CartridgeMemory[input_file.gcount()] = '\0';
-    else
-        cartridge_to_mem(input_file.gcount(),bootrom);
+
+    input_file.close();
+
 }
 
 //this will be the function that read the cartridge and organizes its data into the system
@@ -451,7 +459,7 @@ void gameboy::check_interrupts()
     }
 }
 
-void gameboy::post_interrupt()
+void gameboy::post_interrupt() //TODO:: lmao i made this little puzzle piece and absolutely forgot where to put it now
 {
     interrupt_mode = 0;
     IME = 1;
@@ -2292,21 +2300,13 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_file("../TESTS/01-special.gb");
+    read_from_file("../TESTS/01-special.gb",false);
 
-    sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
-//    window.setFramerateLimit(60);
-
-
-    sf::Image image; //stored in ram, this will be filled with the pixels to-be-drawn on screen
-    sf::Texture texture; //stored in vram for GPU to access
-    sf::Sprite sprite; //converted from texture for GPU to be able to draw
-    image.create(160, 144, sf::Color::Black);
 
 
     //bootstrap rom, 0x0 offset
     //read_from_file("../TESTS/DMG_ROM.bin");
-    init();
+//
     if(testing_mode)
     {
         gameboy_testing::gbdoctor_init_register_file();
@@ -2318,40 +2318,16 @@ void gameboy::main_loop(gameboy& gb)
     BYTE test_output_SC = mem[SC_reg];
 
 
-    //2 running modes, PPU mode and regular
+    if(HEADLESS_MODE == 0) {
+        sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
 
-    if(PPU_MODE)
-    {
-        gameboy_testing::inject_VRAM(gb);
-        while(true) {
-            while (window.isOpen()) {
-                sf::Event event;
-                while (window.pollEvent(event)) {
-                    if (event.type == sf::Event::Closed) {
-                        window.close();
-                    }
+        sf::Image image; //stored in ram, this will be filled with the pixels to-be-drawn on screen
+        sf::Texture texture; //stored in vram for GPU to access
+        sf::Sprite sprite; //converted from texture for GPU to be able to draw
+        image.create(160, 144, sf::Color::Black);
 
-                }
-                pupy.PPU_cycle();
-                cout << (int)mem[LY_register] << endl;
-                if(mem[LY_register] >= 143)
-                {
-
-                    for(int i = 0 ; i < 160;i++) //column
-                    {
-                        for(int j = 0 ; j < 144; j++) //row
-                        {
-                            image.setPixel(i,j, {pupy.background_palette[pupy.Screen[j][i]].get_red(),pupy.background_palette[pupy.Screen[j][i]].get_green(),pupy.background_palette[pupy.Screen[j][i]].get_blue()});
-                        }
-
-                    }
-                    window.display();
-
-                }
-            }
-        }
-    }
-    else {
+        //temporary var so we draw the screen once per frame
+        bool drew_screen_this_frame = false;
 
         while (true) {
 
@@ -2375,41 +2351,40 @@ void gameboy::main_loop(gameboy& gb)
 
                 int scroll_y_val = mem[0xFF42];
 
-                CPU_cycle();
+                CPU_cycle(); ///
 
 
                 if (scroll_y_val != mem[0xFF42]) {
                     cout << "SCY CHANGED! : " << (int)mem[0xFF42] << endl;
                 }
 
-                pupy.PPU_cycle();
+                pupy.PPU_cycle(); ///
+                if(mem[LY_register] == 0)
+                    drew_screen_this_frame = false;
 
 //                        window.clear();
-            if (mem[LY_register] == 144 && pupy.mode == 1)
-            {
-//                for (const auto &pixel: pupy.pixels) {
-////                    window.draw(pixel);
-//                    image.setPixel(pixel.getPosition().x,pixel.getPosition().y,pixel.getFillColor());
-//                }
-                for(int i = 0 ; i < 160;i++) //column
+                if (mem[LY_register] == 144 && pupy.mode == V_BLANK_MODE && !drew_screen_this_frame)
                 {
-                    for(int j = 0 ; j < 144; j++) //row
+                    drew_screen_this_frame = true;
+                    for(int i = 0 ; i < 160;i++) //column
                     {
-                        image.setPixel(i,j, {pupy.background_palette[pupy.Screen[j][i]].get_red(),pupy.background_palette[pupy.Screen[j][i]].get_green(),pupy.background_palette[pupy.Screen[j][i]].get_blue()});
+                        for(int j = 0 ; j < 144; j++) //row
+                        {
+                            image.setPixel(i,j, {pupy.background_palette[pupy.Screen[j][i]].get_red(),pupy.background_palette[pupy.Screen[j][i]].get_green(),pupy.background_palette[pupy.Screen[j][i]].get_blue()});
+                        }
+
                     }
 
+                    texture.loadFromImage(image);
+                    sf::Sprite sprite(texture);
+                    window.draw(sprite);
+
+
+                    window.display();
+
+    //                window.clear();
+                    }
                 }
-
-                sf::Texture texture;
-                texture.loadFromImage(image);
-                sf::Sprite sprite(texture);
-                window.draw(sprite);
-
-
-                window.display();
-//                window.clear();
-                }
-            }
 
             //check for keypress to print vram map
 //            if(sf::Keyboard::isKeyPressed(sf::Keyboard::V))
@@ -2418,6 +2393,22 @@ void gameboy::main_loop(gameboy& gb)
 //                gameboy_testing::print_VRAM(gb);
 //                std::cout << "a";
 //            }
+        }
+    }
+    else
+    {
+        while(true)
+        {
+
+//            int scroll_y_val = mem[0xFF42];
+            CPU_cycle();
+//            pupy.PPU_cycle();
+//            if (scroll_y_val != mem[0xFF42]) {
+//                cout << "SCY CHANGED! : " << (int)mem[0xFF42] << endl;
+//            }
+            loop_counter++;
+//            cout << loop_counter << endl;
+
         }
     }
 
@@ -2451,6 +2442,7 @@ void gameboy::CPU_cycle()
         }
         fetch();
         decode_execute();
+
         //ought to fix the value so it doesnt become negative at any point
         unsigned int machine_cycle_cost_iter = gb_machine_cycles - gb_machine_cycles_prev;
 
@@ -2589,11 +2581,7 @@ int main(int argc, char* argv[]) {
 //    SDL_Init(SDL_INIT_EVERYTHING);
 //    SDL_Quit();
 //
-    std::cout << "Hello, !!!!!!!!" << std::endl;
-
     //
-
-
 
 //    pixels.push_back(addPixel({ 100, 100 }, 255, 0, 0));
 //    pixels.push_back(addPixel({ 101, 100 }, 255, 255, 0));
@@ -2616,6 +2604,8 @@ int main(int argc, char* argv[]) {
 
     //
     gameboy jibby = gameboy();
+    if(jibby.testing_mode)
+        std::cout << "Hello, !!!!!!!!" << std::endl;
     jibby.main_loop(jibby);
 
     return 1;
