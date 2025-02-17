@@ -54,8 +54,7 @@ class gameboy_testing;
 //modes
 #define UNINITIALIZED 0
 #define FETCH_MODE 1
-#define DECODE_MODE 2
-#define EXECUTE_MODE 3
+#define EXECUTE_MODE 2
 
 //registers class
 union Register
@@ -91,6 +90,7 @@ public:
 
 
     BYTE mode = 0; //mode/state, this should change when CPU is changing mode of operation
+    BYTE sub_mode = 0; // will go from 0 - TBD, and used as sub phase in command. 0 will always be fetch+atomic, so start of opcode/all of opcode if atomic.
 
     PPU pupy;
 
@@ -256,6 +256,10 @@ public:
     void read_from_file(const string& path, bool bootrom); //basic version, will change as the project develops
 
     void fetch();
+
+    //memory operations
+    BYTE read_memory(WORD loc_src);
+    void write_memory(WORD loc_write_to,BYTE data_to_write);
 
     //move PC to interrupt handler, backup PC in stack
     void PC_to_interrupt(int interrupt_routine_type);

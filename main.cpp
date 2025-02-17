@@ -420,7 +420,26 @@ void gameboy::PC_to_interrupt(int interrupt_routine_type)
     PC = interrupt_routine_addresses[interrupt_routine_type];
 }
 
+//memory operations
+BYTE gameboy::read_memory(WORD loc_src)
+{
+    //if trying to read from VRAM during non v/hblank ops, return 0xFF
 
+    //VRAM PROTECTION
+//    if( (loc_src >= VRAM_mem_start && loc_src <= VRAM_mem_end) && ( (pupy.mode != V_BLANK_MODE) || (pupy.mode != H_BLANK_MODE) ) )
+//        return 0xFF;
+
+    return mem[loc_src];
+}
+void gameboy::write_memory(WORD loc_write_to,BYTE data_to_write)
+{
+    //if we try to write to VRAM during non v/hblank ops, do nothing
+    //VRAM PROTECTION
+//    if( ((loc_write_to >= VRAM_mem_start) && (loc_write_to <= VRAM_mem_end))  && ( (pupy.mode != V_BLANK_MODE) || (pupy.mode != H_BLANK_MODE)) )
+//        return;
+
+    mem[loc_write_to] = data_to_write;
+}
 
 void gameboy::check_interrupts()
 {
@@ -555,9 +574,9 @@ void gameboy::decode_execute()
             //r16[4th&5th_bits] = memory[PC] which is 2 bytes
             //increment PC twice
             tmp = (OPCODE & 0x30)>>4;
-            r16[tmp]->lo = mem[PC];
+            r16[tmp]->lo = read_memory(PC);
             PC = PC + 1;
-            r16[tmp]->hi = mem[PC];
+            r16[tmp]->hi = read_memory(PC);
             PC = PC + 1;
             num_of_machine_cycles(3);
             break;
@@ -594,7 +613,7 @@ void gameboy::decode_execute()
 
 
             tmp = (OPCODE & 0x30)>>4;
-            mem[r16[tmp]->reg] = *r8[A];
+            write_memory(r16[tmp]->reg, *r8[A]);
 
             if(testing_mode)
                 gameboy_testing::print_memory_writes(OPCODE, r16[tmp]->reg,*r8[A]);
@@ -607,12 +626,12 @@ void gameboy::decode_execute()
 
         case(0x08): //LD (a16), SP
             tmp = 0;
-            tmp = mem[PC];
+            tmp = read_memory(PC);
             PC++;
-            tmp = ((mem[PC]<<8) | tmp);
+            tmp = (( (read_memory(PC) )<<8) | tmp);
             PC++;
-            mem[tmp] = r16[SP]->lo;
-            mem[tmp+1] = r16[SP]->hi;
+            write_memory(tmp,r16[SP]->lo);
+            write_memory(tmp+1,r16[SP]->hi);
 
             if(testing_mode)
             {
@@ -770,7 +789,8 @@ void gameboy::decode_execute()
             //tested
         case(0x22): //LD (HL), A
             //tmp = (OPCODE & 0x30)>>4;
-            mem[r16[HL_16]->reg] = *r8[A];
+            write_memory(r16[HL_16]->reg,*r8[A]);
+            //mem[r16[HL_16]->reg] = *r8[A];
             r16[HL_16]->reg++; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
 
             if(testing_mode)
@@ -2382,9 +2402,9 @@ void gameboy::main_loop(gameboy& gb)
 
                     window.display();
 
-    //                window.clear();
-                    }
+                    //                window.clear();
                 }
+            }
 
             //check for keypress to print vram map
 //            if(sf::Keyboard::isKeyPressed(sf::Keyboard::V))

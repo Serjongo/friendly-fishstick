@@ -98,20 +98,20 @@ PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : p
     VRAM = VRAM_start;
     //OAM = OAM_start;
     MEM = MEM_start;
-    background_palette[0] = Color(175,203,70);
-    background_palette[1] = Color(121,170,109);
-    background_palette[2] = Color(34,111,95);
-    background_palette[3] = Color(8,41,85);
+//    background_palette[0] = Color(175,203,70);
+//    background_palette[1] = Color(121,170,109);
+//    background_palette[2] = Color(34,111,95);
+//    background_palette[3] = Color(8,41,85);
 //
 //    background_palette[3] = Color(8,24,32);
 //    background_palette[2] = Color(52,104,86);
 //    background_palette[1] = Color(136,192,112);
 //    background_palette[0] = Color(224,248,208);
 
-//    background_palette[0] = Color(255,0,70);
-//    background_palette[1] = Color(0,255,0);
-//    background_palette[2] = Color(0,0,255);
-//    background_palette[3] = Color(124,124,124);
+    background_palette[0] = Color(255,0,70);
+    background_palette[1] = Color(0,255,0);
+    background_palette[2] = Color(0,0,255);
+    background_palette[3] = Color(124,124,124);
     //OAM = std::make_unique<std::vector<Sprite*>>();
 }
 
@@ -140,8 +140,10 @@ void PPU::clean_OAM_buff()
 
 void PPU::OAM_SCAN() //mode 2 of the ppu
 {
-    clean_visible_OAM_buff(); //should set oam size to 0
-    clean_OAM_buff();
+    if(OAM_counter == OAM_mem_start){
+        clean_visible_OAM_buff(); //should set oam size to 0
+        clean_OAM_buff();
+    }
     // start of every scanline, find sprites to be rendered, add them to buffer given the following conditions per sprites:
     // xpos > 0, LY+16 > ypos, LY+16 < ypos+height (16 or 8), amount of spirtes < 10
     BYTE cur_row = MEM[LY_register]; //LY register
@@ -176,52 +178,62 @@ void PPU::OAM_SCAN() //mode 2 of the ppu
     set_LCDS_PPU_MODE_status(DRAW_MODE);
 }
 
+
 void PPU::DRAW() //mode 3 of the ppu
 {
-    switch(this->mode_DRAW)
-    {
-        case(0):
+    switch(this->mode_DRAW) {
+        case (0):
             Fetch_Tile_Num_and_address();
             num_of_machine_cycles(0.5);
             mode_DRAW++;
-            if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+            if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                 break;
-        case(1):
+        case (1):
             Fetch_Tile_Data_low();
             num_of_machine_cycles(0.5);
             mode_DRAW++;
-            if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+            if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                 break;
-        case(2):
+        case (2):
             Fetch_Tile_Data_high();
             num_of_machine_cycles(0.5);
             mode_DRAW++;
-            if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+            if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                 break;
-        case(3):
+        case (3):
             Push_to_FIFO();
             num_of_machine_cycles(0.5);
             mode_DRAW = 0; //restart DRAW cycle
-            if(pixel_fetcher_x_position_counter > 160) //if we finished with the line
+            if (pixel_fetcher_x_position_counter > 160) //if we finished with the line
+            {
                 mode = H_BLANK_MODE;
+                set_LCDS_PPU_MODE_status(H_BLANK_MODE);
+            }
             if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                 break;
 
     }
 
+//    ///post mode
+//    this->mode = H_BLANK_MODE;
+//    set_LCDS_PPU_MODE_status(H_BLANK_MODE);
+//    if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+//    {
+//        return;
+//    }
 
-    Push_to_FIFO();
-    num_of_machine_cycles(0.5);
 
-    ///post mode
-    this->mode = H_BLANK_MODE;
-    set_LCDS_PPU_MODE_status(H_BLANK_MODE);
-    if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
-    {
-        return;
-    }
 
 }
+///OLD
+//void PPU::DRAW() //mode 3 of the ppu
+//{
+//    Fetch_Tile_Num_and_address();
+//    Fetch_Tile_Data_low();
+//    Fetch_Tile_Data_high();
+//    Push_to_FIFO();
+//}
+
 
 void PPU::H_BLANK()
 {
@@ -238,7 +250,6 @@ void PPU::H_BLANK()
             set_LCDS_coincidence_flag_status(1);
             sample_STAT_interrupt_line();
         }
-
         else
             set_LCDS_coincidence_flag_status(0);
 
@@ -249,11 +260,6 @@ void PPU::H_BLANK()
         }
 
         screen_coordinate_x = 0;
-
-
-
-
-
 
         ///post mode
         mode_H_BLANK = 0;
@@ -273,13 +279,36 @@ void PPU::H_BLANK()
     }
     else
         return;
-
-
-
-
-
 }
 
+///OLD
+//void PPU::H_BLANK()
+//{
+//    //placeholder - count down remaining cycle from 456T cycles = 114 machine cycles
+//    if (pixel_fetcher_x_position_counter > 160)
+//    {
+//        pixel_fetcher_x_position_counter = 0;
+//        MEM[LY_register]++;
+//
+//        //setting coincidence flag according to LY==LYC -- may be used for interrupts later on
+//        if(MEM[LYC_register] == MEM[LY_register])
+//        {
+//            set_LCDS_coincidence_flag_status(1);
+//            sample_STAT_interrupt_line();
+//        }
+//
+//        else
+//            set_LCDS_coincidence_flag_status(0);
+//
+//        while(!Background_FIFO.empty())
+//        {
+//            Background_FIFO.pop();
+//        }
+//
+//        screen_coordinate_x = 0;
+//    }
+//
+//}
 
 void PPU::V_BLANK()
 {
@@ -312,6 +341,9 @@ void PPU::V_BLANK()
     return;
 
 }
+
+
+
 
 //void PPU::V_BLANK()
 //{
@@ -652,7 +684,7 @@ void PPU::set_vblank_interrupt() //this will be called every single time the V_B
 }
 
 
-void PPU::PPU_cycle() //always 1 machine cycle long
+void PPU::PPU_cycle()
 {
 //    OAM_SCAN();
 //    DRAW();
@@ -667,28 +699,37 @@ void PPU::PPU_cycle() //always 1 machine cycle long
 //        V_BLANK();
 //    }
 
-    CUR_TICK_ppu_machine_cycles = 0; //always start with 0, since we count this tick's cost
+    CUR_TICK_ppu_machine_cycles = 0;
     sample_STAT_interrupt_line();
     switch(this->mode)
     {
         case OAM_SCAN_MODE:
             OAM_SCAN();
-            break;
+            return;
         case DRAW_MODE:
             DRAW();
-            break;
+            return;
         case H_BLANK_MODE:
             H_BLANK();
-            break;
+            //draw row
+//            if (MEM[LY_register] >= 144) {
+//                this->mode = V_BLANK_MODE;
+//                set_vblank_interrupt();
+//                set_LCDS_PPU_MODE_status(V_BLANK_MODE);
+//            }
+//            else
+//            {
+//                this->mode = OAM_SCAN_MODE;
+//                set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
+//            }
+            return;
         case V_BLANK_MODE:
             V_BLANK();
-            break;
+            return;
         default:
             std::cout << "pupy's switch case problem";
-            break;
-
+            return;
     }
-    return;
 
 };
 
