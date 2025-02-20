@@ -2,11 +2,12 @@
 #include "main.h"
 
 //temporary global variable to test vram
-int vram_test_mode = 1;
-int HEADLESS_MODE = 0; //when enabled, no screen & no SFML will be used
+int vram_test_mode = 0;
+int HEADLESS_MODE = 0; //when enabled, no screen, no PPU & no SFML will be used
 
 //constants
 BYTE m_CartridgeMemory[0x200000];
+BYTE m_BootromMemory[0x20000]; //abnormally large, for some reason the file doesn't get read otherwise, might have to do with minimal block size, unsure.
 
 //flag getters
 BYTE gameboy::get_Z_flag_status() const //returns 1 or 0
@@ -160,10 +161,10 @@ void gameboy_testing::print_VRAM(gameboy& gb)
 //
 //    }
     outVRAMFile.close();
-
-    for(int i = VRAM_mem_start;i < 0x8200;i++) //VRAM_mem_end
+    for(int i = 0xFF00;i < 0xFFFF;i++) //VRAM_mem_end
+//    for(int i = VRAM_mem_start;i < 0x8200;i++) //VRAM_mem_end
     {
-        cout << hex << (int)gb.mem[i] << dec << ' ';
+        cout << hex << std::setw(2) << std::setfill('0') << (int)gb.mem[i] << dec << ' ';
         if((i % 16) == 0)
         {
             cout << endl;
@@ -287,10 +288,6 @@ gameboy::gameboy() : pupy(PPU(&mem[OAM_mem_start],&mem[VRAM_mem_start],&mem[0],*
 
 void gameboy::init()
 {
-    //fill memory with zeroes
-    memset(m_CartridgeMemory,0,sizeof(m_CartridgeMemory));
-
-
     PC = 0x0100 ;
     AF_reg.reg = (WORD)0x01B0;
     BC_reg.reg = 0x0013;
@@ -319,7 +316,7 @@ void gameboy::init()
     mem[0xFF25] = 0xF3 ;
     mem[0xFF26] = 0xF1 ;
     mem[0xFF40] = 0x91 ;
-    mem[0xFF42] = 0x98 ; //artificially set for a test, should be set to 0 by default
+    mem[0xFF42] = 0x00 ; //artificially set for a test, should be set to 0 by default
     mem[0xFF43] = 0x00 ;
 //            mem[0xFF44] = 0x90; //for testing, only for now since we don't have an LCD - re-enable it otherwise the cpu tests wont finish!!!
     mem[0xFF45] = 0x00 ;
@@ -329,7 +326,6 @@ void gameboy::init()
     mem[0xFF4A] = 0x00 ;
     mem[0xFF4B] = 0x00 ;
     mem[0xFFFF] = 0x00 ; //Interrupt Enabler
-
 }
 
 
@@ -338,8 +334,9 @@ void gameboy::init()
 void gameboy::cartridge_to_mem(long long bytes, bool bootrom)
 {
     int space = 0x0100;
-    if (bootrom)
+    if(bootrom)
         space = 0x00;
+
     for(long long i = space ; i < bytes ; i++)
     {
         mem[i] = m_CartridgeMemory[space+i];
@@ -350,24 +347,40 @@ void gameboy::cartridge_to_mem(long long bytes, bool bootrom)
 
 //what this currently does is simply read from file, and drop into mem from cell 0x100 and onwards.
 // This is likely temporary and currently done for testing purposes. the reading from cartridge mechanism is more complicated, and we're not there yet
-void gameboy::read_from_file(const string& path,bool bootrom) //basic version, will change as the project develops
+void gameboy::read_from_cartridge(const string& path) //basic version, will change as the project develops
 {
-    int space = 0x0100;
-    if(bootrom)
-        space = 0x00;
-
     ifstream input_file(path,ios::binary);
     if(!input_file)
     {
         cerr << "File error.\n";
     }
-    input_file.read((char *)m_CartridgeMemory + space, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
-//                input_file.read((char *)m_CartridgeMemory, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
+    input_file.read((char *)m_CartridgeMemory, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
     long long len = input_file.gcount();
-    cartridge_to_mem(len,bootrom);
-    if(!bootrom)
-        m_CartridgeMemory[input_file.gcount()] = '\0';
+    for(long long i = 0 ; i < len ; i++)
+    {
+        mem[i] = m_CartridgeMemory[i];
+    }
+//        m_CartridgeMemory[input_file.gcount()] = '\0';
 
+    input_file.close();
+
+}
+
+void gameboy::load_bootrom(const string& path) //basic version, will change as the project develops
+{
+    ifstream input_file(path,ios::binary);
+    if(!input_file)
+    {
+        cerr << "File error.\n";
+    }
+    input_file.read((char *)m_BootromMemory, sizeof(mem) - 1); ///this char cast may cause problems in the long run, may change.
+    long long len = input_file.gcount();
+    for(long long i = 0 ; i < len ; i++)
+    {
+        mem[i] = m_BootromMemory[i];
+    }
+
+//        m_CartridgeMemory[input_file.gcount()] = '\0';
     input_file.close();
 
 }
@@ -387,10 +400,20 @@ void gameboy::read_from_file(const string& path,bool bootrom) //basic version, w
 //                gb_cartridge.seekg(0x100,ios::beg);
 //            }
 
+
 void gameboy::fetch()
 {
     OPCODE = mem[PC];
+    if(PC >= 0x100 && enable_bootrom && !bootrom_finished)
+    {
+        for(int i = 0 ; i < 0x100 ; i++)
+        {
+            mem[i] = m_CartridgeMemory[i];
+        }
+        bootrom_finished = true;
+    }
     PC++;
+
     num_of_machine_cycles(1);
     if(OPCODE == 0xCB)
     {
@@ -478,18 +501,18 @@ void gameboy::check_interrupts()
     }
 }
 
-void gameboy::post_interrupt() //TODO:: lmao i made this little puzzle piece and absolutely forgot where to put it now
-{
-    interrupt_mode = 0;
-    IME = 1;
-    tmp = 0;
-    tmp = mem[r16[SP]->reg];
-    r16[SP]->reg = (r16[SP]->reg) + 1;
-    tmp = ((r16[SP]->reg) << 8) | tmp; // PC[HI] | PC[LO]
-    r16[SP]->reg = (r16[SP]->reg) + 1;
-    PC = tmp;
-
-}
+//void gameboy::post_interrupt() //TODO:: lmao i made this little puzzle piece and absolutely forgot where to put it now - should just be RETI command ( which it is, so likely irrelevant)
+//{
+//    interrupt_mode = 0;
+//    IME = 1;
+//    tmp = 0;
+//    tmp = mem[r16[SP]->reg];
+//    r16[SP]->reg = (r16[SP]->reg) + 1;
+//    tmp = ((r16[SP]->reg) << 8) | tmp; // PC[HI] | PC[LO]
+//    r16[SP]->reg = (r16[SP]->reg) + 1;
+//    PC = tmp;
+//
+//}
 
 //timer related funcs
 void gameboy::update_timers(unsigned int machine_cycles_added,int running_mode) //running modes - 0: reguler, 1: pause: 2:stop
@@ -502,12 +525,11 @@ void gameboy::update_timers(unsigned int machine_cycles_added,int running_mode) 
 
     DIV_timer = DIV_timer + 4*machine_cycles_added;
     mem[DIV_register] = (DIV_timer >> 8); //this means that every 256 clock cycles, this will increment by one
-    tmp = (mem[TAC_register] >> 2) & ((DIV_timer >> TAC_speeds[mem[TAC_register] & 0x03]) & 0x01);
 
 //                    if(running_mode < 1) //meaning un-paused
 //                    {
     //result of current cycle
-    if(tmp_uChar & !(tmp))
+    if(tmp_uChar & !((mem[TAC_register] >> 2) & ((DIV_timer >> TAC_speeds[mem[TAC_register] & 0x03]) & 0x01)))
     {
         if(mem[TIMA_register] + 1 > UCHAR_MAX)
         {
@@ -521,23 +543,25 @@ void gameboy::update_timers(unsigned int machine_cycles_added,int running_mode) 
 
 
     }
-//                        if(mem[TAC_register] >> 2) //check if the "enable" bit is on, 3rd bit from lsb
-//                        {
-//                            TIMA_timer = TIMA_timer + machine_cycles_added*4;
-//                            BYTE shift_amount = TAC_speeds[mem[TAC_register] & 0x03];
-//                            WORD result = (WORD)(TIMA_timer >> shift_amount);
-//                            if( result  > UCHAR_MAX)
-//                            {
-//                                TIMA_timer = mem[TMA_register];
-//                                mem[TIMA_register] = TIMA_timer;
-//                                //set interrupt bit
-//                                set_interrupt_bit(timer,1);
-//                            }
-//                            else
-//                            {
-//                                mem[TIMA_register] = result; //only 2 first bits relevant
-//                            }
-//                        }
+    //I honestly don't remember what this is right now since im not working on interrupts now.
+    // currently enabling it since it doesn't break things but once something breaks, check this first
+//        if(mem[TAC_register] >> 2) //check if the "enable" bit is on, 3rd bit from lsb
+//        {
+//            TIMA_timer = TIMA_timer + machine_cycles_added*4;
+//            BYTE shift_amount = TAC_speeds[mem[TAC_register] & 0x03];
+//            WORD result = (WORD)(TIMA_timer >> shift_amount);
+//            if( result  > UCHAR_MAX)
+//            {
+//                TIMA_timer = mem[TMA_register];
+//                mem[TIMA_register] = TIMA_timer;
+//                //set interrupt bit
+//                set_interrupt_bit(timer,1);
+//            }
+//            else
+//            {
+//                mem[TIMA_register] = result; //only 2 first bits relevant
+//            }
+//        }
 
 
 }
@@ -580,6 +604,37 @@ void gameboy::decode_execute()
             PC = PC + 1;
             num_of_machine_cycles(3);
             break;
+            //emulating "fetch & decode" here, since some opcodes do the whole opcode in 1 cycle, so it makes sense to switch to ppu AFTER the command, otherwise we'd be out after fetch in atomic commands
+//            if(sub_mode == 0)
+//            {
+//                num_of_machine_cycles(1);
+//                sub_mode++;
+//                break;
+//            }
+//
+//            if(sub_mode == 1)
+//            {
+//                tmp = (OPCODE & 0x30)>>4;
+//                r16[tmp]->lo = read_memory(PC);
+//                PC = PC + 1;
+//
+//                sub_mode++;
+//                num_of_machine_cycles(1);
+//                break;
+//            }
+//
+//            if(sub_mode == 2)
+//            {
+//                r16[tmp]->hi = read_memory(PC);
+//                PC = PC + 1;
+//
+//                //end of command, we reset the sub_mode to 0, indicating we're not in middle of opcode
+//
+//                sub_mode = 0;
+//                num_of_machine_cycles(1);
+//                break;
+//            }
+
 
         case(0x10): ///TODO: STOP
             cout << "STOP COMMAND REACHED\n";
@@ -2296,14 +2351,9 @@ void gameboy::main_loop(gameboy& gb)
 
     memset(mem,0,sizeof(mem));
 
-    if(!enable_bootrom)
-        init(); //this function mimics the bootrom initialization
-    else
-    {
-        memset(m_CartridgeMemory,0,sizeof(m_CartridgeMemory));
-        PC = 0x0;
-        read_from_file("../TESTS/boot_rom_world.gb",true);
-    }
+    memset(m_CartridgeMemory,0,sizeof(m_CartridgeMemory));
+    memset(m_BootromMemory,0,sizeof(m_BootromMemory));
+
 
 
     //tester, gameboy cartridge, 0x100 offset and all
@@ -2320,12 +2370,40 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_file("../TESTS/01-special.gb",false);
+    read_from_cartridge("../TESTS/Tetris.gb");
 
-
+    if(!enable_bootrom)
+    {
+        init(); //this function mimics the bootrom initialization
+        bootrom_finished = false;
+    }
+    else
+    {
+        PC = 0x00;
+        //audio related memory, we currently don't have a sound card, so we do it manually
+        mem[0xFF10] = 0x80 ;
+        mem[0xFF11] = 0xBF ;
+        mem[0xFF12] = 0xF3 ;
+        mem[0xFF14] = 0xBF ;
+        mem[0xFF16] = 0x3F ;
+        mem[0xFF17] = 0x00 ;
+        mem[0xFF19] = 0xBF ;
+        mem[0xFF1A] = 0x7F ;
+        mem[0xFF1B] = 0xFF ;
+        mem[0xFF1C] = 0x9F ;
+        mem[0xFF1E] = 0xBF ;
+        mem[0xFF20] = 0xFF ;
+        mem[0xFF21] = 0x00 ;
+        mem[0xFF22] = 0x00 ;
+        mem[0xFF23] = 0xBF ;
+        mem[0xFF24] = 0x77 ;
+        mem[0xFF25] = 0xF3 ;
+        mem[0xFF26] = 0xF1 ;
+        load_bootrom("../TESTS/boot_rom_world.gb");
+    }
 
     //bootstrap rom, 0x0 offset
-    //read_from_file("../TESTS/DMG_ROM.bin");
+    //read_from_cartridge("../TESTS/DMG_ROM.bin");
 //
     if(testing_mode)
     {
@@ -2447,8 +2525,9 @@ void gameboy::CPU_cycle()
     if((gb_machine_cycles < max_machine_cycles_val) || !real_cpu_speed_constraint) //1 million microseconds = 1 second
     {
         unsigned int gb_machine_cycles_prev = gb_machine_cycles;
-        check_interrupts();
-        if(is_halted > 0) //if HALT command was executed, first cycle we are in intermittent mode, and the cycle after that halts execution fully
+        if(sub_mode == 0)
+            check_interrupts();
+        if(is_halted > 0 && sub_mode == 0) //if HALT command was executed, first cycle we are in intermittent mode, and the cycle after that halts execution fully
         {
             if(is_halted == 2) //is halt in full effect yet
             {
@@ -2460,7 +2539,12 @@ void gameboy::CPU_cycle()
 
 
         }
-        fetch();
+        if(sub_mode == 0) //we only fetch when we are post-opcode
+        {
+            mode = FETCH_MODE;
+            fetch();
+        }
+        mode = EXECUTE_MODE;
         decode_execute();
 
         //ought to fix the value so it doesnt become negative at any point

@@ -96,6 +96,7 @@ public:
 
     BYTE mem[0x10000]; //2^16 bytes
     bool enable_bootrom = true; //by default false, otherwise instead of init function it will run the bootrom file
+    bool bootrom_finished = false; //will switch to true if bootrom is enabled && we've finished it once
     BYTE IME = 0; //IME FLAG, interrupts enabled/disabled
     BYTE is_halted = 0; //used for halt commands, will have values of 1 - to be halted, 2 - halted. credit : https://rylev.github.io/DMG-01/public/book/cpu/conclusion.html
     float gb_machine_cycles = 0; //will count cost of operations, will reset every second
@@ -253,7 +254,10 @@ public:
     ///This is a temporary placeholder of a function. In reality, moving the cartridge mem to gb mem is more complicated, for now we just dump it
     void cartridge_to_mem(long long bytes,bool bootrom);
 
-    void read_from_file(const string& path, bool bootrom); //basic version, will change as the project develops
+    void read_from_cartridge(const string& path); //basic version, will change as the project develops
+    void load_bootrom(const string& path);
+
+    void backupCartridge();
 
     void fetch();
 

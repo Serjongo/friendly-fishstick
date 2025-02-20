@@ -98,20 +98,20 @@ PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : p
     VRAM = VRAM_start;
     //OAM = OAM_start;
     MEM = MEM_start;
-//    background_palette[0] = Color(175,203,70);
-//    background_palette[1] = Color(121,170,109);
-//    background_palette[2] = Color(34,111,95);
-//    background_palette[3] = Color(8,41,85);
+    background_palette[0] = Color(175,203,70);
+    background_palette[1] = Color(121,170,109);
+    background_palette[2] = Color(34,111,95);
+    background_palette[3] = Color(8,41,85);
 //
 //    background_palette[3] = Color(8,24,32);
 //    background_palette[2] = Color(52,104,86);
 //    background_palette[1] = Color(136,192,112);
 //    background_palette[0] = Color(224,248,208);
 
-    background_palette[0] = Color(255,0,70);
-    background_palette[1] = Color(0,255,0);
-    background_palette[2] = Color(0,0,255);
-    background_palette[3] = Color(124,124,124);
+//    background_palette[0] = Color(255,0,70);
+//    background_palette[1] = Color(0,255,0);
+//    background_palette[2] = Color(0,0,255);
+//    background_palette[3] = Color(124,124,124);
     //OAM = std::make_unique<std::vector<Sprite*>>();
 }
 
@@ -183,25 +183,30 @@ void PPU::DRAW() //mode 3 of the ppu
 {
     switch(this->mode_DRAW) {
         case (0):
-            Fetch_Tile_Num_and_address();
+            Fetch_BG_Tile_Num_and_address();
             num_of_machine_cycles(0.5);
             mode_DRAW++;
             if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                 break;
         case (1):
-            Fetch_Tile_Data_low();
+            Fetch_BG_Tile_Data_low();
             num_of_machine_cycles(0.5);
             mode_DRAW++;
             if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                 break;
         case (2):
-            Fetch_Tile_Data_high();
+//            if(first_iteration_in_line)
+//                mode_DRAW = 0;
+//            else
+//            {
+            Fetch_BG_Tile_Data_high();
+                mode_DRAW++;
+//            }
             num_of_machine_cycles(0.5);
-            mode_DRAW++;
             if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                 break;
         case (3):
-            Push_to_FIFO();
+            Push_to_BG_FIFO();
             num_of_machine_cycles(0.5);
             mode_DRAW = 0; //restart DRAW cycle
             if (pixel_fetcher_x_position_counter > 160) //if we finished with the line
@@ -228,10 +233,10 @@ void PPU::DRAW() //mode 3 of the ppu
 ///OLD
 //void PPU::DRAW() //mode 3 of the ppu
 //{
-//    Fetch_Tile_Num_and_address();
-//    Fetch_Tile_Data_low();
-//    Fetch_Tile_Data_high();
-//    Push_to_FIFO();
+//    Fetch_BG_Tile_Num_and_address();
+//    Fetch_BG_Tile_Data_low();
+//    Fetch_BG_Tile_Data_high();
+//    Push_to_BG_FIFO();
 //}
 
 
@@ -254,10 +259,10 @@ void PPU::H_BLANK()
             set_LCDS_coincidence_flag_status(0);
 
         ///temporary solution, should probably think of something else
-        while(!Background_FIFO.empty())
-        {
-            Background_FIFO.pop();
-        }
+//        while(!Background_FIFO.empty())
+//        {
+//            Background_FIFO.pop();
+//        }
 
         screen_coordinate_x = 0;
 
@@ -386,8 +391,10 @@ WORD PPU::tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high)
 
 // DRAW()'s inner functions
 
-void PPU::Fetch_Tile_Num_and_address()
+void PPU::Fetch_BG_Tile_Num_and_address()
 {
+    first_iteration_in_line = (pixel_fetcher_x_position_counter == 0);
+
     //may add in the future a check for bit 5. if bit 5 is off, window is to be absolutely ignored regardless of other bits, and background will be drawn instead.
     if(get_LCDC_bg_tile_map_select_status() || get_LCDC_window_tile_map_select())
         tilemap_mem_loc = 0x9C00;
@@ -449,27 +456,35 @@ void PPU::Fetch_Tile_Num_and_address()
 
 
 
-void PPU::Fetch_Tile_Data_low(){//get tile data low
+void PPU::Fetch_BG_Tile_Data_low(){//get tile data low
     tile_data_low = MEM[tile_address];
 };
-void PPU::Fetch_Tile_Data_high(){//get tile data high
-    tile_data_high = MEM[tile_address + 1];
-};
-void PPU::Push_to_FIFO(){
-    WORD pixel_row = tileData_to_pixel_row(tile_data_low,tile_data_high); //generate the pixel row from the tile data
-    for(int i = 0 ; i < pixel_row_size && Background_FIFO.size() < 16;i++)
+void PPU::Fetch_BG_Tile_Data_high(){//get tile data high
     {
+        tile_data_high = MEM[tile_address + 1];
+    }
+
+};
+void PPU::Push_to_BG_FIFO()
+{
+    WORD pixel_row = tileData_to_pixel_row(tile_data_low,tile_data_high); //generate the pixel row from the tile data
+    if(Background_FIFO.empty())
+    {
+        for(int i = 0 ; i < pixel_row_size;i++)
+        {
 //        BYTE temp_pixel_color = ((pixel_row & 0xC0) >> 6);
 //        Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0);
 //        Background_FIFO.push(pixel_temp);
-        //BYTE temp_pixel_color = ((pixel_row & 0xC0) >> 6);
-        BYTE temp_pixel_color = ((pixel_row & 0xC000) >> 14);
-        pixel_row = (pixel_row << 2);
-        BYTE palette = MEM[BG_palette_data_reg];
-        //std::cout << MEM[BG_palette_data_reg] << std::endl;
-        Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0,0);
-        Background_FIFO.push(pixel_temp);
+            //BYTE temp_pixel_color = ((pixel_row & 0xC0) >> 6);
+            BYTE temp_pixel_color = ((pixel_row & 0xC000) >> 14);
+            pixel_row = (pixel_row << 2);
+            BYTE palette = MEM[BG_palette_data_reg];
+            //std::cout << MEM[BG_palette_data_reg] << std::endl;
+            Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0,0);
+            Background_FIFO.push(pixel_temp);
+        }
     }
+
 
 
     //-----------------------------SPRITE FETCHER
@@ -477,7 +492,7 @@ void PPU::Push_to_FIFO(){
     {
         if(spr->get_x_pos() <= pixel_fetcher_x_position_counter + 8)
         {
-            //reset background fetch position, pause it
+            //reset background fetch position, pause it            ///TODO: implement conditions of fifo push, since fifo can only store 16 pixels.
 
             //step 1 - fetch tile number
             BYTE spr_tile_num = spr->get_tile_num();
@@ -487,7 +502,6 @@ void PPU::Push_to_FIFO(){
             BYTE sprite_tile_data_low = MEM[sprite_tile_address];
             BYTE sprite_tile_data_high = MEM[sprite_tile_address + 1];
 
-            ///TODO: implement conditions of fifo push, since fifo can only store 16 pixels.
             /// valid sprite with lowest x-pos takes precedence, other sprites can draw only on free fifo slots (with initial n-taken slots dropped)
         }
     }
@@ -497,16 +511,20 @@ void PPU::Push_to_FIFO(){
     // popping pixels from both fifos
 
 //    if(Background_FIFO.size() > pixel_row_size) // && Sprite_FIFO.size() > pixel_row_size)
-    if(Background_FIFO.size() > pixel_row_size) // && Sprite_FIFO.size() > pixel_row_size)
-    {
+
         //push to screen
-        while(screen_coordinate_x < pixel_fetcher_x_position_counter)
+        while(!Background_FIFO.empty())
         {
             Pixel cur_pixel = Background_FIFO.front();
             Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel.get_color();
             Background_FIFO.pop();
-            screen_coordinate_x++;
+
+            screen_coordinate_x++; //dont need it for now, might delete later
         }
+
+
+
+        pixel_fetcher_x_position_counter += 8;
 //if(pixels.size() == 31)
 //{
 //    std::cout << "a";
@@ -518,8 +536,8 @@ void PPU::Push_to_FIFO(){
 
         //pushim ve shit ---
 
-    }
-    pixel_fetcher_x_position_counter += 8;
+
+
 
     //std::cout << (int)MEM[0xFF47] << '\n';
 //}

@@ -225,6 +225,7 @@ class PPU{
         BYTE* MEM; //1 to 1 memory mapping from the start
         std::queue<Pixel> Background_FIFO;
         std::queue<Pixel> Sprite_FIFO;
+        bool first_iteration_in_line; //used for DRAW mode quirk
 
         std::vector<Sprite*> visible_OAM_buffer; //up to 10 pointers to OAMs/sprites which are potentially visible in the line
         Color background_palette[4];
@@ -301,10 +302,10 @@ class PPU{
 
     // DRAW()'s inner functions
 
-    void Fetch_Tile_Num_and_address();
-    void Fetch_Tile_Data_low();
-    void Fetch_Tile_Data_high();
-    void Push_to_FIFO();
+    void Fetch_BG_Tile_Num_and_address();
+    void Fetch_BG_Tile_Data_low();
+    void Fetch_BG_Tile_Data_high();
+    void Push_to_BG_FIFO();
 
 
     //getters
