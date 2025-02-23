@@ -95,7 +95,7 @@ public:
     PPU pupy;
 
     BYTE mem[0x10000]; //2^16 bytes
-    bool enable_bootrom = false; //by default false, otherwise instead of init function it will run the bootrom file
+    bool enable_bootrom = true; //by default false, otherwise instead of init function it will run the bootrom file
     bool bootrom_finished = false; //will switch to true if bootrom is enabled && we've finished it once
     BYTE IME = 0; //IME FLAG, interrupts enabled/disabled
     BYTE is_halted = 0; //used for halt commands, will have values of 1 - to be halted, 2 - halted. credit : https://rylev.github.io/DMG-01/public/book/cpu/conclusion.html

@@ -675,39 +675,39 @@ void gameboy::decode_execute()
 
             //tested
         case(0x02): case(0x12): //LD (BC) OR (DE), A
-//            if(sub_mode == 0)
-//            {
-//                sub_mode++;
-//                num_of_machine_cycles(1);
-//            }
-//            else if(sub_mode == 1)
-//            {
-//                tmp = (OPCODE & 0x30)>>4;
-//                write_memory(r16[tmp]->reg, *r8[A]);
-//
-//                check_div_reg_change(r16[tmp]->reg);
-//
-//                sub_mode = 0;
-//                num_of_machine_cycles(1);
-//
-//                if(testing_mode)
-//                    gameboy_testing::print_memory_writes(OPCODE, r16[tmp]->reg,*r8[A]);
-////                        outMemoryFile << loop_counter << ": " << hex << "Store the contents of register A: " << (int)*r8[A] << " in the memory location: mem[" << r16[tmp]->reg << "] specified by register pair " << r16[tmp] << dec << endl;
-//            }
-//            break;
+            if(sub_mode == 0)
+            {
+                sub_mode++;
+                num_of_machine_cycles(1);
+            }
+            else if(sub_mode == 1)
+            {
+                tmp = (OPCODE & 0x30)>>4;
+                write_memory(r16[tmp]->reg, *r8[A]);
+
+                check_div_reg_change(r16[tmp]->reg);
+
+                sub_mode = 0;
+                num_of_machine_cycles(1);
+
+                if(testing_mode)
+                    gameboy_testing::print_memory_writes(OPCODE, r16[tmp]->reg,*r8[A]);
+//                        outMemoryFile << loop_counter << ": " << hex << "Store the contents of register A: " << (int)*r8[A] << " in the memory location: mem[" << r16[tmp]->reg << "] specified by register pair " << r16[tmp] << dec << endl;
+            }
+            break;
 
 ///OLD IMPLEMENTATION - 02 - interrupts tests hinges on this for some reason, with bootrom enabled only
-            tmp = (OPCODE & 0x30)>>4;
-            write_memory(r16[tmp]->reg, *r8[A]);
-
-            check_div_reg_change(r16[tmp]->reg);
-
-            sub_mode = 0;
-            num_of_machine_cycles(2);
-
-            if(testing_mode)
-                gameboy_testing::print_memory_writes(OPCODE, r16[tmp]->reg,*r8[A]);
-            break;
+//            tmp = (OPCODE & 0x30)>>4;
+//            write_memory(r16[tmp]->reg, *r8[A]);
+//
+//            check_div_reg_change(r16[tmp]->reg);
+//
+//            sub_mode = 0;
+//            num_of_machine_cycles(2);
+//
+//            if(testing_mode)
+//                gameboy_testing::print_memory_writes(OPCODE, r16[tmp]->reg,*r8[A]);
+//            break;
 
         case(0x08): //LD (a16), SP
             if(sub_mode == 0)
@@ -2519,7 +2519,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_cartridge("../TESTS/01-special.gb");
+    read_from_cartridge("../TESTS/02-interrupts.gb");
 
     if(!enable_bootrom)
     {
