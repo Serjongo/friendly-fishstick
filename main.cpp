@@ -7,7 +7,7 @@ int HEADLESS_MODE = 0; //when enabled, no screen, no PPU & no SFML will be used
 
 //constants
 BYTE m_CartridgeMemory[0x200000];
-BYTE m_BootromMemory[0x20000]; //abnormally large, for some reason the file doesn't get read otherwise, might have to do with minimal block size, unsure.
+BYTE m_BootromMemory[0x200000]; //abnormally large, for some reason the file doesn't get read otherwise, might have to do with minimal block size, unsure.
 
 //flag getters
 BYTE gameboy::get_Z_flag_status() const //returns 1 or 0
@@ -597,43 +597,43 @@ void gameboy::decode_execute()
         case(0x01):case(0x11):case(0x21):case(0x31): //LD r16, d16
             //r16[4th&5th_bits] = memory[PC] which is 2 bytes
             //increment PC twice
-            tmp = (OPCODE & 0x30)>>4;
-            r16[tmp]->lo = read_memory(PC);
-            PC = PC + 1;
-            r16[tmp]->hi = read_memory(PC);
-            PC = PC + 1;
-            num_of_machine_cycles(3);
-            break;
+
             //emulating "fetch & decode" here, since some opcodes do the whole opcode in 1 cycle, so it makes sense to switch to ppu AFTER the command, otherwise we'd be out after fetch in atomic commands
-//            if(sub_mode == 0)
-//            {
-//                num_of_machine_cycles(1);
-//                sub_mode++;
-//                break;
-//            }
-//
-//            if(sub_mode == 1)
-//            {
-//                tmp = (OPCODE & 0x30)>>4;
-//                r16[tmp]->lo = read_memory(PC);
-//                PC = PC + 1;
-//
-//                sub_mode++;
-//                num_of_machine_cycles(1);
-//                break;
-//            }
-//
-//            if(sub_mode == 2)
-//            {
-//                r16[tmp]->hi = read_memory(PC);
-//                PC = PC + 1;
-//
-//                //end of command, we reset the sub_mode to 0, indicating we're not in middle of opcode
-//
-//                sub_mode = 0;
-//                num_of_machine_cycles(1);
-//                break;
-//            }
+            if(sub_mode == 0)
+            {
+                sub_mode++;
+                num_of_machine_cycles(1);
+            }
+            else if(sub_mode == 1)
+            {
+                tmp = (OPCODE & 0x30)>>4;
+                r16[tmp]->lo = read_memory(PC);
+                PC = PC + 1;
+
+                sub_mode++;
+                num_of_machine_cycles(1);
+
+            }
+            else if(sub_mode == 2)
+            {
+                r16[tmp]->hi = read_memory(PC);
+                PC = PC + 1;
+
+                //end of command, we reset the sub_mode to 0, indicating we're not in middle of opcode
+                sub_mode = 0;
+                num_of_machine_cycles(1);
+            }
+            break;
+
+            ///OLD IMPLEMENTATION
+//            tmp = (OPCODE & 0x30)>>4;
+//            r16[tmp]->lo = read_memory(PC);
+//            PC = PC + 1;
+//            r16[tmp]->hi = read_memory(PC);
+//            PC = PC + 1;
+//            num_of_machine_cycles(3);
+//            break;
+            ///
 
 
         case(0x10): ///TODO: STOP
@@ -649,9 +649,19 @@ void gameboy::decode_execute()
 
 
         case(0xF9): //LD SP, HL
-            r16[SP]->reg = r16[HL_16]->reg;
-            num_of_machine_cycles(2);
-            break;
+            if(sub_mode == 0)
+            {
+                sub_mode++;
+                num_of_machine_cycles(1);
+            }
+            else if(sub_mode == 1)
+            {
+                r16[SP]->reg = r16[HL_16]->reg;
+                sub_mode = 0;
+                num_of_machine_cycles(1);
+            }
+//            r16[SP]->reg = r16[HL_16]->reg;
+//            break;
 
         case(0xF3): //DI (disable interrupts)
             IME = 0;
@@ -665,40 +675,103 @@ void gameboy::decode_execute()
 
             //tested
         case(0x02): case(0x12): //LD (BC) OR (DE), A
+//            if(sub_mode == 0)
+//            {
+//                sub_mode++;
+//                num_of_machine_cycles(1);
+//            }
+//            else if(sub_mode == 1)
+//            {
+//                tmp = (OPCODE & 0x30)>>4;
+//                write_memory(r16[tmp]->reg, *r8[A]);
+//
+//                check_div_reg_change(r16[tmp]->reg);
+//
+//                sub_mode = 0;
+//                num_of_machine_cycles(1);
+//
+//                if(testing_mode)
+//                    gameboy_testing::print_memory_writes(OPCODE, r16[tmp]->reg,*r8[A]);
+////                        outMemoryFile << loop_counter << ": " << hex << "Store the contents of register A: " << (int)*r8[A] << " in the memory location: mem[" << r16[tmp]->reg << "] specified by register pair " << r16[tmp] << dec << endl;
+//            }
+//            break;
 
-
+///OLD IMPLEMENTATION - 02 - interrupts tests hinges on this for some reason, with bootrom enabled only
             tmp = (OPCODE & 0x30)>>4;
             write_memory(r16[tmp]->reg, *r8[A]);
 
-            if(testing_mode)
-                gameboy_testing::print_memory_writes(OPCODE, r16[tmp]->reg,*r8[A]);
-//                        outMemoryFile << loop_counter << ": " << hex << "Store the contents of register A: " << (int)*r8[A] << " in the memory location: mem[" << r16[tmp]->reg << "] specified by register pair " << r16[tmp] << dec << endl;
-
             check_div_reg_change(r16[tmp]->reg);
 
+            sub_mode = 0;
             num_of_machine_cycles(2);
+
+            if(testing_mode)
+                gameboy_testing::print_memory_writes(OPCODE, r16[tmp]->reg,*r8[A]);
             break;
 
         case(0x08): //LD (a16), SP
-            tmp = 0;
-            tmp = read_memory(PC);
-            PC++;
-            tmp = (( (read_memory(PC) )<<8) | tmp);
-            PC++;
-            write_memory(tmp,r16[SP]->lo);
-            write_memory(tmp+1,r16[SP]->hi);
-
-            if(testing_mode)
+            if(sub_mode == 0)
             {
-                gameboy_testing::print_memory_writes(OPCODE, tmp, r16[SP]->lo);
-                gameboy_testing::print_memory_writes(OPCODE, tmp+1, r16[SP]->hi);
+                sub_mode++;
+                num_of_machine_cycles(1);
             }
+            else if(sub_mode == 1)
+            {
+                tmp = 0;
+                tmp = read_memory(PC);
+                PC++;
 
-            check_div_reg_change(tmp);
-            check_div_reg_change(tmp+1);
+                sub_mode++;
+                num_of_machine_cycles(1);
+            }
+            else if(sub_mode == 2)
+            {
+                tmp = (( (read_memory(PC) )<<8) | tmp);
+                PC++;
 
-            num_of_machine_cycles(5);
+                sub_mode++;
+                num_of_machine_cycles(1);
+            }
+            else if(sub_mode == 3)
+            {
+                write_memory(tmp,r16[SP]->lo);
+                check_div_reg_change(tmp);
+                tmp++;
+
+                sub_mode++;
+                num_of_machine_cycles(1);
+            }
+            else if(sub_mode == 4)
+            {
+                write_memory(tmp,r16[SP]->hi);
+                check_div_reg_change(tmp);
+
+                sub_mode = 0;
+                num_of_machine_cycles(1);
+            }
             break;
+
+
+///OLD IMPLEMENTATION
+//            tmp = 0;
+//            tmp = read_memory(PC);
+//            PC++;
+//            tmp = (( (read_memory(PC) )<<8) | tmp);
+//            PC++;
+//            write_memory(tmp,r16[SP]->lo);
+//            write_memory(tmp+1,r16[SP]->hi);
+//
+//            if(testing_mode)
+//            {
+//                gameboy_testing::print_memory_writes(OPCODE, tmp, r16[SP]->lo);
+//                gameboy_testing::print_memory_writes(OPCODE, tmp+1, r16[SP]->hi);
+//            }
+//
+//            check_div_reg_change(tmp);
+//            check_div_reg_change(tmp+1);
+//
+//            num_of_machine_cycles(5);
+//            break;
 
         case(0x07): // RLCA
             set_C_flag_status(((*r8[A]) & (0x80)) >> 7);
@@ -843,47 +916,123 @@ void gameboy::decode_execute()
             ///TO CHECK FIRST THING - IS A "TMP" still relevant in this opcode?! I DONT THINK SO, DELETING TMP FOR NOW
             //tested
         case(0x22): //LD (HL), A
-            //tmp = (OPCODE & 0x30)>>4;
-            write_memory(r16[HL_16]->reg,*r8[A]);
-            //mem[r16[HL_16]->reg] = *r8[A];
-            r16[HL_16]->reg++; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
+            if(sub_mode == 0)
+            {
+                sub_mode++;
+                num_of_machine_cycles(1);
+            }
+            else if(sub_mode == 1)
+            {
+                write_memory(r16[HL_16]->reg,*r8[A]);
+                r16[HL_16]->reg++; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
+                check_div_reg_change(r16[HL_16]->reg);
 
-            if(testing_mode)
-                gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
+                sub_mode = 0;
+                num_of_machine_cycles(1);
 
-            check_div_reg_change(r16[HL_16]->reg);
-
-            num_of_machine_cycles(2);
+                if(testing_mode)
+                    gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
+            }
             break;
+
+
+
+        ///OLD IMPLEMENTATION
+//            //tmp = (OPCODE & 0x30)>>4;
+//            write_memory(r16[HL_16]->reg,*r8[A]);
+//            //mem[r16[HL_16]->reg] = *r8[A];
+//            r16[HL_16]->reg++; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
+//
+//            if(testing_mode)
+//                gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
+//
+//            check_div_reg_change(r16[HL_16]->reg);
+//
+//            num_of_machine_cycles(2);
+//            break;
 
             //tested
+
+
         case(0x32):
-            mem[r16[HL_16]->reg] = *r8[A];
-            r16[HL_16]->reg--; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
+            if(sub_mode == 0)
+            {
+                sub_mode++;
+                num_of_machine_cycles(1);
+            }
+            else if(sub_mode == 1)
+            {
+                mem[r16[HL_16]->reg] = *r8[A];
+                r16[HL_16]->reg--; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
 
-            if(testing_mode)
-                gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
+                check_div_reg_change(r16[HL_16]->reg);
+                if(testing_mode)
+                    gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
 
-            check_div_reg_change(r16[HL_16]->reg);
-            num_of_machine_cycles(2);
+                sub_mode = 0;
+                num_of_machine_cycles(1);
+            }
             break;
+
+            ///OLD IMPLEMENTATION
+//            mem[r16[HL_16]->reg] = *r8[A];
+//            r16[HL_16]->reg--; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
+//
+//            if(testing_mode)
+//                gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg,*r8[A]);
+//
+//            check_div_reg_change(r16[HL_16]->reg);
+//            num_of_machine_cycles(2);
+//            break;
 
 
             //tested
         case(0x03):case(0x13):case(0x23):case(0x33): //INC r16[reg]
-            tmp = (OPCODE & 0x30)>>4; //relevant opcode bits in r16 are 4th & 5th
-            r16[tmp]->reg++;
+            if(sub_mode == 0)
+            {
+                sub_mode++;
+                num_of_machine_cycles(1);
+            }
+            else if(sub_mode == 1)
+            {
+                tmp = (OPCODE & 0x30)>>4; //relevant opcode bits in r16 are 4th & 5th
+                r16[tmp]->reg++;
 
-            num_of_machine_cycles(2);
+                sub_mode = 0;
+                num_of_machine_cycles(1);
+            }
             break;
+
+            ///OLD IMPLEMENTATION
+//            tmp = (OPCODE & 0x30)>>4; //relevant opcode bits in r16 are 4th & 5th
+//            r16[tmp]->reg++;
+//
+//            num_of_machine_cycles(2);
+//            break;
 
             //tested
         case(0x0B):case(0x1B):case(0x2B):case(0x3B): //DEC r16[reg]
-            tmp = (OPCODE & 0x30)>>4; //relevant opcode bits in r16 are 4th & 5th
-            r16[tmp]->reg--;
+            if(sub_mode == 0)
+            {
+                sub_mode++;
+                num_of_machine_cycles(1);
+            }
+            else if(sub_mode == 1)
+            {
+                tmp = (OPCODE & 0x30)>>4; //relevant opcode bits in r16 are 4th & 5th
+                r16[tmp]->reg--;
 
-            num_of_machine_cycles(2);
+                sub_mode = 0;
+                num_of_machine_cycles(1);
+            }
             break;
+
+            ///OLD IMPLEMENTATION
+//            tmp = (OPCODE & 0x30)>>4; //relevant opcode bits in r16 are 4th & 5th
+//            r16[tmp]->reg--;
+//
+//            num_of_machine_cycles(2);
+//            break;
 
             //to-test
         case(0x04):case(0x14):case(0x24):case(0x34): //INC r8[reg]
@@ -2370,7 +2519,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_cartridge("../TESTS/Tetris.gb");
+    read_from_cartridge("../TESTS/01-special.gb");
 
     if(!enable_bootrom)
     {
