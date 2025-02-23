@@ -1068,7 +1068,7 @@ void gameboy::decode_execute()
             break;
 
             //tested
-        case(0x05):case(0x15):case(0x25):case(0x35): //DEC r8[reg]
+        case(0x05):case(0x15):case(0x25): //DEC r8[reg]
         case(0x0D):case(0x1D):case(0x2D):case(0x3D): //DEC r8[reg]
             tmp_uChar = *r8[(OPCODE & 0x38)>>3];
             (*r8[(OPCODE & 0x38)>>3])--; ///may cause error when incrementing B
@@ -1098,6 +1098,74 @@ void gameboy::decode_execute()
             {
                 num_of_machine_cycles(1);
             }
+
+            break;
+
+        case(0x35): //DEC r8[reg]
+//            if(sub_mode == 0)
+//            {
+//                sub_mode++;
+//                num_of_machine_cycles(1);
+//            }
+//            else if(sub_mode == 1)
+//            {
+//                tmp_uChar = read_memory(*r8[(OPCODE & 0x38)>>3]);
+//
+//                sub_mode++;
+//                num_of_machine_cycles(1);
+//            }
+//            else if(sub_mode == 2)
+//            {
+//                write_memory(*r8[(OPCODE & 0x38)>>3],*r8[(OPCODE & 0x38)>>3]-1); //DEC
+////                (*r8[(OPCODE & 0x38)>>3])--; ///may cause error when incrementing B
+//
+//                check_div_reg_change(r16[HL_16]->reg);
+//
+//                //flags
+//                //FLAG_H
+//                if ((((tmp_uChar & 0x0F)-1) & half_carry_8bit) == half_carry_8bit) //https://www.reddit.com/r/EmuDev/comments/knm196/gameboy_half_carry_flag_during_subtract_operation/
+//                    set_H_flag_status(1); //should turn on
+//                else
+//                    set_H_flag_status(0); //should turn OFF FLAG_ZERO
+//
+//                set_Z_flag_status((*r8[(OPCODE & 0x38)>>3]));
+//                set_N_flag_status(1);
+//
+//
+//                sub_mode = 0;
+//                num_of_machine_cycles(1);
+//
+//
+//                if(testing_mode)
+//                {
+//                    gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg, mem[r16[HL_16]->reg]-1);
+//                }
+//            }
+//            break;
+
+///OLD IMPLEMENTATION
+//
+            tmp_uChar = *r8[(OPCODE & 0x38)>>3];
+            (*r8[(OPCODE & 0x38)>>3])--; ///may cause error when incrementing B
+
+
+            //flags
+            //FLAG_H
+            if ((((tmp_uChar & 0x0F)-1) & half_carry_8bit) == half_carry_8bit) //https://www.reddit.com/r/EmuDev/comments/knm196/gameboy_half_carry_flag_during_subtract_operation/
+                set_H_flag_status(1); //should turn on
+            else
+                set_H_flag_status(0); //should turn OFF FLAG_ZERO
+
+            set_Z_flag_status((*r8[(OPCODE & 0x38)>>3]));
+            set_N_flag_status(1);
+
+            if(testing_mode && (OPCODE == 0x35))
+            {
+                gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg, mem[r16[HL_16]->reg]-1);
+            }
+
+            num_of_machine_cycles(3);
+            check_div_reg_change(r16[HL_16]->reg);
 
             break;
 

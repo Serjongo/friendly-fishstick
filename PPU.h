@@ -241,9 +241,13 @@ class PPU{
 
         //placeholder
         WORD tile_data_base_loc;
-        WORD tile_address; //after calculating tile number and base_loc, final address
-        BYTE tile_data_low; //first byte of pixels
-        BYTE tile_data_high; //second byte of pixels
+        WORD tile_address_background; //after calculating tile number and base_loc, final address
+        BYTE tile_data_low_background; //first byte of pixels
+        BYTE tile_data_high_background; //second byte of pixels
+
+        WORD tile_address_sprite;
+        BYTE tile_data_low_sprite; //first byte of sprite pixels
+        BYTE tile_data_high_sprite; //second byte of sprite pixels
         int tile_dat_pixel_index = 0;
         WORD tilemap_mem_loc = 0x9800; //window location
         WORD tile_x; //where we are on the line
@@ -302,10 +306,15 @@ class PPU{
 
     // DRAW()'s inner functions
 
-    void Fetch_BG_Tile_Num_and_address();
-    void Fetch_BG_Tile_Data_low();
-    void Fetch_BG_Tile_Data_high();
+    void Fetch_BG_tile_num_and_address();
+    void Fetch_Background_Tile_Data_low();
+    void Fetch_Background_Tile_Data_high();
+
+    void Fetch_SPRITE_tile_address(BYTE sprite_tile_num);
+    void Fetch_Sprite_Tile_Data_low();
+    void Fetch_Sprite_Tile_Data_high();
     void Push_to_BG_FIFO();
+    void Push_to_SPRITE_FIFO();
 
 
     //getters

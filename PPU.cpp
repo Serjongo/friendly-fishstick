@@ -183,13 +183,13 @@ void PPU::DRAW() //mode 3 of the ppu
 {
     switch(this->mode_DRAW) {
         case (0):
-            Fetch_BG_Tile_Num_and_address();
+            Fetch_BG_tile_num_and_address();
             num_of_machine_cycles(0.5);
             mode_DRAW++;
             if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                 break;
         case (1):
-            Fetch_BG_Tile_Data_low();
+            Fetch_Background_Tile_Data_low();
             num_of_machine_cycles(0.5);
             mode_DRAW++;
             if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
@@ -199,7 +199,7 @@ void PPU::DRAW() //mode 3 of the ppu
 //                mode_DRAW = 0;
 //            else
 //            {
-            Fetch_BG_Tile_Data_high();
+            Fetch_Background_Tile_Data_high();
                 mode_DRAW++;
 //            }
             num_of_machine_cycles(0.5);
@@ -233,9 +233,9 @@ void PPU::DRAW() //mode 3 of the ppu
 ///OLD
 //void PPU::DRAW() //mode 3 of the ppu
 //{
-//    Fetch_BG_Tile_Num_and_address();
-//    Fetch_BG_Tile_Data_low();
-//    Fetch_BG_Tile_Data_high();
+//    Fetch_BG_tile_num_and_address();
+//    Fetch_Background_Tile_Data_low();
+//    Fetch_Background_Tile_Data_high();
 //    Push_to_BG_FIFO();
 //}
 
@@ -391,7 +391,7 @@ WORD PPU::tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high)
 
 // DRAW()'s inner functions
 
-void PPU::Fetch_BG_Tile_Num_and_address()
+void PPU::Fetch_BG_tile_num_and_address()
 {
     first_iteration_in_line = (pixel_fetcher_x_position_counter == 0);
 
@@ -440,7 +440,7 @@ void PPU::Fetch_BG_Tile_Num_and_address()
         tile_data_base_loc = 0x8000;
 
         //base address of tile data + jump to tile + jump to line in tile
-        tile_address = tile_data_base_loc + (tile_size_bytes * tilenum) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8));
+        tile_address_background = tile_data_base_loc + (tile_size_bytes * tilenum) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8));
     }
     else
     {
@@ -450,24 +450,61 @@ void PPU::Fetch_BG_Tile_Num_and_address()
         // and tiles 128-255 from block 1.
         tile_data_base_loc = 0x9000;
 
-        tile_address = tile_data_base_loc + (tile_size_bytes * char(tilenum) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8)));
+        tile_address_background = tile_data_base_loc + (tile_size_bytes * char(tilenum) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8)));
     }
 };
 
+void PPU::Fetch_SPRITE_tile_address(BYTE sprite_tile_num)
+{
+    tile_address_sprite = 0x8000 + (tile_size_bytes * sprite_tile_num) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8));
+}
 
 
-void PPU::Fetch_BG_Tile_Data_low(){//get tile data low
-    tile_data_low = MEM[tile_address];
+
+void PPU::Fetch_Background_Tile_Data_low(){//get tile data low
+    tile_data_low_background = MEM[tile_address_background];
 };
-void PPU::Fetch_BG_Tile_Data_high(){//get tile data high
+void PPU::Fetch_Background_Tile_Data_high()
+{
+    tile_data_high_background = MEM[tile_address_background + 1];
+};
+
+void PPU::Fetch_Sprite_Tile_Data_low()
+{
+    tile_data_low_sprite = MEM[tile_address_sprite];
+};
+void PPU::Fetch_Sprite_Tile_Data_high()
+{
+    tile_data_high_sprite = MEM[tile_address_sprite + 1];
+};
+
+
+
+void PPU::Push_to_SPRITE_FIFO()
+{
+    BYTE fifo_index = pixel_fetcher_x_position_counter;
+    //scan the sprite buffer to find relevant objects
+    for(Sprite* spr : visible_OAM_buffer)
     {
-        tile_data_high = MEM[tile_address + 1];
+        if (spr->get_x_pos() <= pixel_fetcher_x_position_counter + 8)
+        {
+            //step 1 - fetch tile number
+            //step 2 - fetch tile data - base tile_data_mem loc is always 0x8000
+            Fetch_SPRITE_tile_address(spr->get_tile_num());
+            Fetch_Sprite_Tile_Data_low();
+            Fetch_Sprite_Tile_Data_high();
+            WORD sprite_pixel_row = tileData_to_pixel_row(tile_data_low_sprite,tile_data_high_sprite);
+            for(int i = pixel_fetcher_x_position_counter; i < spr->get_x_pos() ; i++)
+            {
+//                sprite_pixel_row();
+            }
+        }
     }
+}
 
-};
 void PPU::Push_to_BG_FIFO()
 {
-    WORD pixel_row = tileData_to_pixel_row(tile_data_low,tile_data_high); //generate the pixel row from the tile data
+    WORD pixel_row = tileData_to_pixel_row(tile_data_low_background, tile_data_high_background); //generate the pixel row from the tile data
     if(Background_FIFO.empty())
     {
         for(int i = 0 ; i < pixel_row_size;i++)
@@ -486,28 +523,6 @@ void PPU::Push_to_BG_FIFO()
     }
 
 
-
-    //-----------------------------SPRITE FETCHER
-    for(Sprite* spr : visible_OAM_buffer)
-    {
-        if(spr->get_x_pos() <= pixel_fetcher_x_position_counter + 8)
-        {
-            //reset background fetch position, pause it            ///TODO: implement conditions of fifo push, since fifo can only store 16 pixels.
-
-            //step 1 - fetch tile number
-            BYTE spr_tile_num = spr->get_tile_num();
-
-            //step 2 - fetch tile data - base tile_data_mem loc is always 0x8000
-            WORD sprite_tile_address = 0x8000 + (tile_size_bytes * spr_tile_num) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8));
-            BYTE sprite_tile_data_low = MEM[sprite_tile_address];
-            BYTE sprite_tile_data_high = MEM[sprite_tile_address + 1];
-
-            /// valid sprite with lowest x-pos takes precedence, other sprites can draw only on free fifo slots (with initial n-taken slots dropped)
-        }
-    }
-
-
-    //------------------------------------- SPRITE FETCHER END -------------------
     // popping pixels from both fifos
 
 //    if(Background_FIFO.size() > pixel_row_size) // && Sprite_FIFO.size() > pixel_row_size)
