@@ -138,6 +138,12 @@ void PPU::clean_OAM_buff()
         OAM.pop_back();
 }
 
+/// NOTE: the original order should remain if the values are equal, since it is first sorted by OAM_memory chronology.
+bool sprite_comparator(const Sprite *a,const Sprite *b)
+{
+    return a->get_x_pos() < b->get_x_pos();
+}
+
 void PPU::OAM_SCAN() //mode 2 of the ppu
 {
     if(OAM_counter == OAM_mem_start){
@@ -170,7 +176,10 @@ void PPU::OAM_SCAN() //mode 2 of the ppu
         {
             return;
         }
-    };
+    }
+
+    //we do not assign cycles to this because the gameboy does not sort the buffer, this is our optimization.
+    sort(visible_OAM_buffer.begin(),visible_OAM_buffer.end(),sprite_comparator);
 
     ///post mode
     OAM_counter = OAM_mem_start; //reset OAM counter once over
@@ -181,44 +190,56 @@ void PPU::OAM_SCAN() //mode 2 of the ppu
 
 void PPU::DRAW() //mode 3 of the ppu
 {
-    switch(this->mode_DRAW) {
-        case (0):
-            Fetch_BG_tile_num_and_address();
-            num_of_machine_cycles(0.5);
-            mode_DRAW++;
-            if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
-                break;
-        case (1):
-            Fetch_Background_Tile_Data_low();
-            num_of_machine_cycles(0.5);
-            mode_DRAW++;
-            if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
-                break;
-        case (2):
+    while(CUR_TICK_ppu_machine_cycles < 1)
+    {
+        switch(this->mode_DRAW) {
+            case (0):
+                Fetch_BG_tile_num_and_address();
+                num_of_machine_cycles(0.5);
+                mode_DRAW++;
+                Pop_to_screen();
+                Pop_to_screen();
+                if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+                    break;
+            case (1):
+                Fetch_Background_Tile_Data_low();
+                num_of_machine_cycles(0.5);
+                mode_DRAW++;
+                Pop_to_screen();
+                Pop_to_screen();
+                if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+                    break;
+            case (2):
 //            if(first_iteration_in_line)
 //                mode_DRAW = 0;
 //            else
 //            {
-            Fetch_Background_Tile_Data_high();
+                Fetch_Background_Tile_Data_high();
                 mode_DRAW++;
+                Pop_to_screen();
+                Pop_to_screen();
 //            }
-            num_of_machine_cycles(0.5);
-            if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
-                break;
-        case (3):
-            Push_to_BG_FIFO();
-            num_of_machine_cycles(0.5);
-            mode_DRAW = 0; //restart DRAW cycle
-            if (pixel_fetcher_x_position_counter > 160) //if we finished with the line
-            {
-                mode = H_BLANK_MODE;
-                set_LCDS_PPU_MODE_status(H_BLANK_MODE);
-            }
-            if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
-                break;
+                num_of_machine_cycles(0.5);
+                if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+                    break;
+            case (3):
+                Push_to_BG_FIFO();
+                num_of_machine_cycles(0.5);
 
+                Pop_to_screen();
+                Pop_to_screen();
+
+                if (screen_coordinate_x > 160) //if we finished with the line
+                {
+                    mode = H_BLANK_MODE;
+                    set_LCDS_PPU_MODE_status(H_BLANK_MODE);
+                    break;
+                }
+                if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
+                    break;
+
+        }
     }
-
 //    ///post mode
 //    this->mode = H_BLANK_MODE;
 //    set_LCDS_PPU_MODE_status(H_BLANK_MODE);
@@ -259,10 +280,12 @@ void PPU::H_BLANK()
             set_LCDS_coincidence_flag_status(0);
 
         ///temporary solution, should probably think of something else
-//        while(!Background_FIFO.empty())
-//        {
-//            Background_FIFO.pop();
-//        }
+        while(!Background_FIFO.empty())
+        {
+            Background_FIFO.pop();
+        }
+        mode_DRAW = 0; //restart DRAW cycle
+
 
         screen_coordinate_x = 0;
 
@@ -432,6 +455,10 @@ void PPU::Fetch_BG_tile_num_and_address()
         tile_y = ((MEM[LY_register] + MEM[SCY]) & 0xff) / 8;
 
         tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];
+        if(tilenum==0x3F)
+        {
+            std::cout << (int)tilenum << std::endl;
+        }
     }
     if (get_LCDC_tile_data_select())
     {
@@ -494,13 +521,65 @@ void PPU::Push_to_SPRITE_FIFO()
             Fetch_Sprite_Tile_Data_low();
             Fetch_Sprite_Tile_Data_high();
             WORD sprite_pixel_row = tileData_to_pixel_row(tile_data_low_sprite,tile_data_high_sprite);
-            for(int i = pixel_fetcher_x_position_counter; i < spr->get_x_pos() ; i++)
+
+
+            //we turn the pixel row into an array of 8 pixels - THIS CAN BE OPTIMIZED FURTHER IF NEEDED
+            std::vector<Pixel> sprite_pixels;
+            for(int i = 0 ; i < 8; i++)
             {
-//                sprite_pixel_row();
+                BYTE temp_pixel_color = ((sprite_pixel_row & 0xC000) >> 14);
+                sprite_pixel_row = (sprite_pixel_row << 2);
+                BYTE palette = MEM[BG_palette_data_reg]; ///will be changed to sprite palette later on
+                Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0,0); //will need to edit the constructor according to sprite reqs
+                sprite_pixels.push_back(pixel_temp);
             }
+
+            //now we push pixels
+            for(int i = Sprite_FIFO.size(); i < 8 && fifo_index <= spr->get_x_pos() ; i++,fifo_index++)
+            {
+                Sprite_FIFO.push(sprite_pixels[i]);
+            }
+            visible_OAM_buffer.erase(visible_OAM_buffer.begin());
         }
+//        else
+//        {
+//            break;
+//        }
+
     }
 }
+
+//we assume that the fifos are in sync, worst case we'll add it later
+//we pop a single pixel for now
+void PPU::Pop_to_screen()
+{
+    if(!Background_FIFO.empty()) //means we'll be popping from the background
+    {
+        if(!Sprite_FIFO.empty()) //means we'll also be popping from the sprite
+        {
+            Pixel cur_bg_pixel = Background_FIFO.front();
+            Pixel cur_visible_pixel = Sprite_FIFO.front();
+            if(cur_visible_pixel.get_color() == 0) //0 means transparent
+            {
+                cur_visible_pixel = cur_bg_pixel;
+            }
+            Screen[MEM[LY_register]][screen_coordinate_x] = cur_visible_pixel.get_color();
+            Background_FIFO.pop();
+            Sprite_FIFO.pop();
+        }
+        else //only from background
+        {
+            Pixel cur_pixel = Background_FIFO.front();
+            Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel.get_color();
+            Background_FIFO.pop();
+        }
+
+        screen_coordinate_x++; //dont need it for now, might delete later
+//        pixel_fetcher_x_position_counter += 1;
+    }
+
+}
+
 
 void PPU::Push_to_BG_FIFO()
 {
@@ -520,6 +599,8 @@ void PPU::Push_to_BG_FIFO()
             Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0,0);
             Background_FIFO.push(pixel_temp);
         }
+        pixel_fetcher_x_position_counter += 8;
+        mode_DRAW = 0; //restart DRAW cycle
     }
 
 
@@ -528,18 +609,19 @@ void PPU::Push_to_BG_FIFO()
 //    if(Background_FIFO.size() > pixel_row_size) // && Sprite_FIFO.size() > pixel_row_size)
 
         //push to screen
-        while(!Background_FIFO.empty())
-        {
-            Pixel cur_pixel = Background_FIFO.front();
-            Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel.get_color();
-            Background_FIFO.pop();
 
-            screen_coordinate_x++; //dont need it for now, might delete later
-        }
+//        while(!Background_FIFO.empty())
+//        {
+//            Pixel cur_pixel = Background_FIFO.front();
+//            Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel.get_color();
+//            Background_FIFO.pop();
+//
+//            screen_coordinate_x++; //dont need it for now, might delete later
+//        }
+//        pixel_fetcher_x_position_counter += 8;
 
 
 
-        pixel_fetcher_x_position_counter += 8;
 //if(pixels.size() == 31)
 //{
 //    std::cout << "a";

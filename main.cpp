@@ -937,7 +937,7 @@ void gameboy::decode_execute()
 
 
 
-        ///OLD IMPLEMENTATION
+            ///OLD IMPLEMENTATION
 //            //tmp = (OPCODE & 0x30)>>4;
 //            write_memory(r16[HL_16]->reg,*r8[A]);
 //            //mem[r16[HL_16]->reg] = *r8[A];
@@ -2587,7 +2587,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_cartridge("../TESTS/02-interrupts.gb");
+    read_from_cartridge("../TESTS/01-special.gb");
 
     if(!enable_bootrom)
     {
@@ -2717,7 +2717,7 @@ void gameboy::main_loop(gameboy& gb)
 
 //            int scroll_y_val = mem[0xFF42];
             CPU_cycle();
-//            pupy.PPU_cycle();
+            pupy.PPU_cycle();
 //            if (scroll_y_val != mem[0xFF42]) {
 //                cout << "SCY CHANGED! : " << (int)mem[0xFF42] << endl;
 //            }

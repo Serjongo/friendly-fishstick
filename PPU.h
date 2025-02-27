@@ -122,18 +122,19 @@ class Sprite
             }
 
             //getters
-            BYTE get_y_pos(){
+            BYTE const get_y_pos() const
+            {
                 return y_pos;
             };
-            BYTE get_x_pos()
+            BYTE get_x_pos() const
             {
                 return x_pos;
             };
-            BYTE get_tile_num()
+            BYTE get_tile_num() const
             {
                 return tile_num;
             };
-            BYTE get_flags()
+            BYTE get_flags() const
             {
                 return flags;
             };
@@ -239,6 +240,7 @@ class PPU{
         //pixel fetcher related funcs
         WORD tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high);
 
+
         //placeholder
         WORD tile_data_base_loc;
         WORD tile_address_background; //after calculating tile number and base_loc, final address
@@ -315,6 +317,7 @@ class PPU{
     void Fetch_Sprite_Tile_Data_high();
     void Push_to_BG_FIFO();
     void Push_to_SPRITE_FIFO();
+    void Pop_to_screen(); // pop from eligible fifos to screen
 
 
     //getters
