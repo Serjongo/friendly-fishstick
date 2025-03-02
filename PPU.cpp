@@ -146,6 +146,10 @@ bool sprite_comparator(const Sprite *a,const Sprite *b)
 
 void PPU::OAM_SCAN() //mode 2 of the ppu
 {
+//    if(MEM[LY_register] == 70)
+//    {
+//        std::cout << "harta";
+//    }
     if(OAM_counter == OAM_mem_start){
         clean_visible_OAM_buff(); //should set oam size to 0
         clean_OAM_buff();
@@ -198,7 +202,9 @@ void PPU::DRAW() //mode 3 of the ppu
                 num_of_machine_cycles(0.5);
                 mode_DRAW++;
                 Pop_to_screen();
+                Push_to_SPRITE_FIFO();
                 Pop_to_screen();
+                Push_to_SPRITE_FIFO();
                 if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                     break;
             case (1):
@@ -206,7 +212,9 @@ void PPU::DRAW() //mode 3 of the ppu
                 num_of_machine_cycles(0.5);
                 mode_DRAW++;
                 Pop_to_screen();
+                Push_to_SPRITE_FIFO();
                 Pop_to_screen();
+                Push_to_SPRITE_FIFO();
                 if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                     break;
             case (2):
@@ -217,7 +225,9 @@ void PPU::DRAW() //mode 3 of the ppu
                 Fetch_Background_Tile_Data_high();
                 mode_DRAW++;
                 Pop_to_screen();
+                Push_to_SPRITE_FIFO();
                 Pop_to_screen();
+                Push_to_SPRITE_FIFO();
 //            }
                 num_of_machine_cycles(0.5);
                 if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
@@ -227,7 +237,9 @@ void PPU::DRAW() //mode 3 of the ppu
                 num_of_machine_cycles(0.5);
 
                 Pop_to_screen();
+                Push_to_SPRITE_FIFO();
                 Pop_to_screen();
+                Push_to_SPRITE_FIFO();
 
                 if (screen_coordinate_x > 160) //if we finished with the line
                 {
@@ -553,10 +565,11 @@ void PPU::Push_to_SPRITE_FIFO()
 //we pop a single pixel for now
 void PPU::Pop_to_screen()
 {
-    if(!Background_FIFO.empty()) //means we'll be popping from the background
+    if(!Background_FIFO.empty() && !waiting_for_visible_sprite_fetch) //means we'll be popping from the background
     {
         if(!Sprite_FIFO.empty()) //means we'll also be popping from the sprite
         {
+            std::cout << "sprite detected";
             Pixel cur_bg_pixel = Background_FIFO.front();
             Pixel cur_visible_pixel = Sprite_FIFO.front();
             if(cur_visible_pixel.get_color() == 0) //0 means transparent

@@ -155,13 +155,13 @@ void gameboy_testing::print_VRAM(gameboy& gb)
         std::cerr << "Error: Could not open 'VRAM_MAP'" << std::endl;
         return;
     }
-    outVRAMFile.write(reinterpret_cast<const char*>(gb.mem + VRAM_mem_start),VRAM_mem_end-VRAM_mem_start);
+    outVRAMFile.write(reinterpret_cast<const char*>(gb.mem + OAM_mem_start),OAM_mem_end-OAM_mem_start);
 //    for(int i = VRAM_mem_start ; i < VRAM_mem_end; i++){
 //        outVRAMFile << std::hex << (int)gb.mem[i] << " " << dec;
 //
 //    }
     outVRAMFile.close();
-    for(int i = 0xFF00;i < 0xFFFF;i++) //VRAM_mem_end
+    for(int i = OAM_mem_start;i < OAM_mem_end;i++) //VRAM_mem_end
 //    for(int i = VRAM_mem_start;i < 0x8200;i++) //VRAM_mem_end
     {
         cout << hex << std::setw(2) << std::setfill('0') << (int)gb.mem[i] << dec << ' ';
@@ -456,6 +456,14 @@ BYTE gameboy::read_memory(WORD loc_src)
 }
 void gameboy::write_memory(WORD loc_write_to,BYTE data_to_write)
 {
+    WORD DMA_src_loc = (data_to_write << 8);
+    if(loc_write_to == 0xFF46) //Initiate DMA-OAM memory transfer
+    {
+        for(int i = OAM_mem_start ; i <= OAM_mem_end; i++, DMA_src_loc++)
+        {
+            mem[i] = mem[DMA_src_loc];
+        }
+    }
     //if we try to write to VRAM during non v/hblank ops, do nothing
     //VRAM PROTECTION
 //    if( ((loc_write_to >= VRAM_mem_start) && (loc_write_to <= VRAM_mem_end))  && ( (pupy.mode != V_BLANK_MODE) || (pupy.mode != H_BLANK_MODE)) )
@@ -1224,8 +1232,6 @@ void gameboy::decode_execute()
             }
             break;
 
-            ///
-
         case(0x09):case(0x19):case(0x29):case(0x39): //ADD HL, rr: Add 16bit reg to HL
             operand_1 = (r16[HL_16]->reg); // for flags
             operand_2 = (r16[((OPCODE & 0x30)>>4)]->reg);
@@ -1258,10 +1264,15 @@ void gameboy::decode_execute()
 
 
         case(0xE0): //LD (a8), A
+
+        ///TODO: we are currently implementing a DMA-OAM command through this OPCODE. This is BAD PRACTICE.
+        /// The test NEEDS to go through write_memory func, but it is currently not implemented throughout all of the opcodes, so TODO!
+
             tmp_uChar = mem[PC]; //FIX!
             PC++;
             tmp = (WORD)0xFF00|tmp_uChar;
-            mem[tmp] = *r8[A]; //MSB is FF, LSB is the PC byte
+//            mem[tmp] = *r8[A];
+            write_memory(tmp,*r8[A]); //MSB is FF, LSB is the PC byte
 
             //this is for blaarg's test suite, can be moved to testing_mode if causes problems
             if(tmp == SC_reg && *r8[A] == 0x81)

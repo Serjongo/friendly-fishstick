@@ -250,7 +250,7 @@ class PPU{
         WORD tile_address_sprite;
         BYTE tile_data_low_sprite; //first byte of sprite pixels
         BYTE tile_data_high_sprite; //second byte of sprite pixels
-        bool waiting_for_visible_sprite = false; //used to pause background fetcher while we pull sprite data to FIFO
+        bool waiting_for_visible_sprite_fetch = false; //used to pause background fetcher while we pull sprite data to FIFO
         int tile_dat_pixel_index = 0;
         WORD tilemap_mem_loc = 0x9800; //window location
         WORD tile_x; //where we are on the line
