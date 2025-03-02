@@ -455,10 +455,10 @@ void PPU::Fetch_BG_tile_num_and_address()
         tile_y = ((MEM[LY_register] + MEM[SCY]) & 0xff) / 8;
 
         tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];
-        if(tilenum==0x3F)
-        {
-            std::cout << (int)tilenum << std::endl;
-        }
+//        if(tilenum==0x3F)
+//        {
+//            std::cout << (int)tilenum << std::endl;
+//        }
     }
     if (get_LCDC_tile_data_select())
     {
