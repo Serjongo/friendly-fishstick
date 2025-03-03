@@ -2583,7 +2583,6 @@ void gameboy::main_loop(gameboy& gb)
     memset(m_BootromMemory,0,sizeof(m_BootromMemory));
 
 
-
     //tester, gameboy cartridge, 0x100 offset and all
     //checklist of tests
     // 01-special.gb - VV

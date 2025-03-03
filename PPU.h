@@ -222,13 +222,13 @@ class PPU{
         int vblank_counter = 0;
 
         BYTE* VRAM; // from the vram start point
-        std::vector<Sprite*> OAM; //all sprites from the MEM as objects, will hold up to 40 sprites, 160 bytes of data in total
+        std::vector<Sprite> OAM; //all sprites from the MEM as objects, will hold up to 40 sprites, 160 bytes of data in total
         BYTE* MEM; //1 to 1 memory mapping from the start
         std::queue<Pixel> Background_FIFO;
         std::queue<Pixel> Sprite_FIFO;
         bool first_iteration_in_line; //used for DRAW mode quirk
 
-        std::vector<Sprite*> visible_OAM_buffer; //up to 10 pointers to OAMs/sprites which are potentially visible in the line
+        std::vector<Sprite> visible_OAM_buffer; //up to 10 pointers to OAMs/sprites which are potentially visible in the line
         Color background_palette[4];
 
         //pixel fetcher vars

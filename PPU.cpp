@@ -128,28 +128,28 @@ void PPU::num_of_machine_cycles(float num)
 
 void PPU::clean_visible_OAM_buff()
 {
-    for(Sprite* spr : visible_OAM_buffer)
+    for(Sprite spr : visible_OAM_buffer)
         visible_OAM_buffer.pop_back();
 }
 
 void PPU::clean_OAM_buff()
 {
-    for(Sprite* spr : OAM)
+    for(Sprite spr : OAM)
         OAM.pop_back();
 }
 
 /// NOTE: the original order should remain if the values are equal, since it is first sorted by OAM_memory chronology.
-bool sprite_comparator(const Sprite *a,const Sprite *b)
+bool sprite_comparator(const Sprite a,const Sprite b)
 {
-    return a->get_x_pos() < b->get_x_pos();
+    return a.get_x_pos() < b.get_x_pos();
 }
 
 void PPU::OAM_SCAN() //mode 2 of the ppu
 {
-//    if(MEM[LY_register] == 70)
-//    {
-//        std::cout << "harta";
-//    }
+    if(MEM[LY_register] == 70)
+    {
+        std::cout << "harta";
+    }
     if(OAM_counter == OAM_mem_start){
         clean_visible_OAM_buff(); //should set oam size to 0
         clean_OAM_buff();
@@ -162,7 +162,7 @@ void PPU::OAM_SCAN() //mode 2 of the ppu
     while(OAM_counter < OAM_mem_end) // goes over 160 bytes, 40 sprites
     {
         Sprite spr = Sprite(MEM[OAM_counter],MEM[OAM_counter+1],MEM[OAM_counter+2],MEM[OAM_counter+3]);
-        OAM.push_back(&spr);
+//        OAM.push_back(spr);
 //        BYTE y_pos = MEM[i];
 //        BYTE x_pos = MEM[i+1];
 //        BYTE tile_num = MEM[i+2];
@@ -171,7 +171,7 @@ void PPU::OAM_SCAN() //mode 2 of the ppu
         //checking that the OAM tile fits the criteria to appear on screen
         if(spr.get_x_pos() > 0 && cur_row + 16 >= spr.get_y_pos() && cur_row + 16 < spr.get_y_pos() + tile_size && visible_OAM_buffer.size() < 10)
         {
-            visible_OAM_buffer.push_back(&spr); //we point to the first byte of the OAM, currently it is not a distinct struct
+            visible_OAM_buffer.push_back(spr); //we point to the first byte of the OAM, currently it is not a distinct struct
         }
         OAM_counter = OAM_counter + 4;
         num_of_machine_cycles(0.5);
@@ -523,13 +523,13 @@ void PPU::Push_to_SPRITE_FIFO()
 {
     BYTE fifo_index = pixel_fetcher_x_position_counter;
     //scan the sprite buffer to find relevant objects
-    for(Sprite* spr : visible_OAM_buffer)
+    for(Sprite spr : visible_OAM_buffer)
     {
-        if (spr->get_x_pos() <= pixel_fetcher_x_position_counter + 8)
+        if (spr.get_x_pos() <= pixel_fetcher_x_position_counter + 8)
         {
             //step 1 - fetch tile number
             //step 2 - fetch tile data - base tile_data_mem loc is always 0x8000
-            Fetch_SPRITE_tile_address(spr->get_tile_num());
+            Fetch_SPRITE_tile_address(spr.get_tile_num());
             Fetch_Sprite_Tile_Data_low();
             Fetch_Sprite_Tile_Data_high();
             WORD sprite_pixel_row = tileData_to_pixel_row(tile_data_low_sprite,tile_data_high_sprite);
@@ -547,7 +547,7 @@ void PPU::Push_to_SPRITE_FIFO()
             }
 
             //now we push pixels
-            for(int i = Sprite_FIFO.size(); i < 8 && fifo_index <= spr->get_x_pos() ; i++,fifo_index++)
+            for(int i = Sprite_FIFO.size(); i < 8 && fifo_index <= spr.get_x_pos() ; i++,fifo_index++)
             {
                 Sprite_FIFO.push(sprite_pixels[i]);
             }
