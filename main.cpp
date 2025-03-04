@@ -2695,7 +2695,25 @@ void gameboy::main_loop(gameboy& gb)
                     {
                         for(int j = 0 ; j < 144; j++) //row
                         {
-                            image.setPixel(i,j, {pupy.background_palette[pupy.Screen[j][i]].get_red(),pupy.background_palette[pupy.Screen[j][i]].get_green(),pupy.background_palette[pupy.Screen[j][i]].get_blue()});
+//                            image.setPixel(i,j, {pupy.background_palette[pupy.Screen[j][i].get_color()].get_red(),pupy.background_palette[pupy.Screen[j][i].get_color()].get_green(),pupy.background_palette[pupy.Screen[j][i].get_color()].get_blue()});
+
+                            if(!pupy.Screen[i][j].get_type()) //then background palette
+                            {
+                                image.setPixel(i,j, {pupy.background_palette[pupy.Screen[j][i].get_color()].get_red(),pupy.background_palette[pupy.Screen[j][i].get_color()].get_green(),pupy.background_palette[pupy.Screen[j][i].get_color()].get_blue()});
+                            }
+                            else
+                            {
+                                if(pupy.Screen[i][j].get_palette()) //sprite palette 1
+                                {
+                                    image.setPixel(i,j, {pupy.sprite_palette_1[pupy.Screen[j][i].get_color()].get_red(),pupy.sprite_palette_1[pupy.Screen[j][i].get_color()].get_green(),pupy.sprite_palette_1[pupy.Screen[j][i].get_color()].get_blue()});
+                                }
+                                else //sprite palette 0
+                                {
+                                    image.setPixel(i,j, {pupy.sprite_palette_0[pupy.Screen[j][i].get_color()].get_red(),pupy.sprite_palette_0[pupy.Screen[j][i].get_color()].get_green(),pupy.sprite_palette_0[pupy.Screen[j][i].get_color()].get_blue()});
+
+                                }
+                            }
+
                         }
 
                     }

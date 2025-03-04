@@ -19,6 +19,8 @@
 #define tilemap_size 0x3ff
 #define tile_size_bytes 16
 #define BG_palette_data_reg 0xFF47
+#define SPRITE_0_palette 0xFF48
+#define SPRITE_1_palette 0xFF49
 #define pixel_row_size 8
 #define OAM_mem_start 0xFE00
 #define OAM_mem_end 0xFE9F
@@ -34,6 +36,7 @@
 
 
 #include <queue>
+#include <stack>
 //#include "main.h"
 
 
@@ -93,10 +96,12 @@ class Pixel
 
         public:
             Pixel(BYTE color, BYTE palette, BYTE background_priority,BYTE type);
+            Pixel(); //default constructor
             //getters
             BYTE get_color();
             BYTE get_palette();
             BYTE get_background_priority();
+            BYTE get_type();
             //setters
             void set_color(BYTE color);
             void set_palette(BYTE palette);
@@ -210,7 +215,7 @@ class PPU{
         float CUR_TICK_ppu_machine_cycles = 0; //will be nullified every tick
 
         //for debug purposes
-        BYTE Screen[144][160]; //144 arrays of 160 each
+        Pixel Screen[144][160]; //144 arrays of 160 each
 
         BYTE mode = 2; //mode/state, this should change when PPU is changing mode of operation
         BYTE mode_DRAW = 0; //if we're inside draw mode, we'll be checking the specific stage
@@ -230,6 +235,8 @@ class PPU{
 
         std::vector<Sprite> visible_OAM_buffer; //up to 10 pointers to OAMs/sprites which are potentially visible in the line
         Color background_palette[4];
+        Color sprite_palette_0[4];
+        Color sprite_palette_1[4];
 
         //pixel fetcher vars
         WORD pixel_fetcher_x_position_counter = 0;

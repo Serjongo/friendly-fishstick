@@ -47,6 +47,14 @@ Pixel::Pixel(BYTE color, BYTE palette, BYTE background_priority,BYTE type)
     set_background_priority(background_priority);
     set_type(type); // 0 - background/window, 1 - sprite
 }
+Pixel::Pixel() //trash values, will be edited as we get data from the PPU
+{
+    data = 0;
+    set_color(0);
+    set_palette(0);
+    set_background_priority(0);
+    set_type(0);
+}
 
 //getters
 BYTE Pixel::get_color()
@@ -59,8 +67,14 @@ BYTE Pixel::get_palette()
 };
 BYTE Pixel::get_background_priority()
 {
-    return (data & 0x08);
+    return ((data & 0x08) >> 3);
 };
+
+BYTE Pixel::get_type()
+{
+    return ((data & 0x10) >> 4);
+}
+
 //setters
 
 void Pixel::set_color(BYTE color)
@@ -98,10 +112,21 @@ PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : p
     VRAM = VRAM_start;
     //OAM = OAM_start;
     MEM = MEM_start;
-    background_palette[0] = Color(175,203,70);
-    background_palette[1] = Color(121,170,109);
-    background_palette[2] = Color(34,111,95);
-    background_palette[3] = Color(8,41,85);
+//    background_palette[0] = Color(175,203,70);
+//    background_palette[1] = Color(121,170,109);
+//    background_palette[2] = Color(34,111,95);
+//    background_palette[3] = Color(8,41,85);
+
+//    background_palette[0] = Color(171,211,143);
+//    background_palette[1] = Color(231,251,203);
+//    background_palette[2] = Color(84,139,112);
+//    background_palette[3] = Color(20,44,56);
+
+    background_palette[0] = Color(232,252,204);
+    background_palette[1] = Color(172,212,144);
+    background_palette[2] = Color(84,140,112);
+    background_palette[3] = Color(20,44,56);
+
 //
 //    background_palette[3] = Color(8,24,32);
 //    background_palette[2] = Color(52,104,86);
@@ -112,6 +137,17 @@ PPU::PPU(BYTE* OAM_start,BYTE* VRAM_start, BYTE* MEM_start,gameboy& gameboy) : p
 //    background_palette[1] = Color(0,255,0);
 //    background_palette[2] = Color(0,0,255);
 //    background_palette[3] = Color(124,124,124);
+
+    sprite_palette_0[0] = Color(192,192,255);
+    sprite_palette_0[1] = Color(96,96,255);
+    sprite_palette_0[2] = Color(0,0,192);
+    sprite_palette_0[3] = Color(0,0,96);
+
+    sprite_palette_1[0] = Color(255,192,192);
+    sprite_palette_1[1] = Color(255,96,96);
+    sprite_palette_1[2] = Color(192,0,0);
+    sprite_palette_1[3] = Color(96,0,0);
+
     //OAM = std::make_unique<std::vector<Sprite*>>();
 }
 
@@ -521,11 +557,11 @@ void PPU::Fetch_Sprite_Tile_Data_high()
 
 void PPU::Push_to_SPRITE_FIFO()
 {
-    BYTE fifo_index = pixel_fetcher_x_position_counter;
+    BYTE fifo_index = screen_coordinate_x;
     //scan the sprite buffer to find relevant objects
     for(Sprite spr : visible_OAM_buffer)
     {
-        if (spr.get_x_pos() <= pixel_fetcher_x_position_counter + 8)
+        if (spr.get_x_pos() <= screen_coordinate_x + 8)
         {
             //step 1 - fetch tile number
             //step 2 - fetch tile data - base tile_data_mem loc is always 0x8000
@@ -535,6 +571,8 @@ void PPU::Push_to_SPRITE_FIFO()
             WORD sprite_pixel_row = tileData_to_pixel_row(tile_data_low_sprite,tile_data_high_sprite);
 
 
+            BYTE color_palette = spr.get_palette_number_flag() ? MEM[SPRITE_1_palette] : MEM[SPRITE_0_palette];
+
             //we turn the pixel row into an array of 8 pixels - THIS CAN BE OPTIMIZED FURTHER IF NEEDED
             std::vector<Pixel> sprite_pixels;
             for(int i = 0 ; i < 8; i++)
@@ -542,15 +580,32 @@ void PPU::Push_to_SPRITE_FIFO()
                 BYTE temp_pixel_color = ((sprite_pixel_row & 0xC000) >> 14);
                 sprite_pixel_row = (sprite_pixel_row << 2);
                 BYTE palette = MEM[BG_palette_data_reg]; ///will be changed to sprite palette later on
-                Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0,0); //will need to edit the constructor according to sprite reqs
+                Pixel pixel_temp = Pixel(temp_pixel_color,color_palette,0,1); //will need to edit the constructor according to sprite reqs
                 sprite_pixels.push_back(pixel_temp);
             }
 
             //now we push pixels
-            for(int i = Sprite_FIFO.size(); i < 8 && fifo_index <= spr.get_x_pos() ; i++,fifo_index++)
+            if(spr.get_x_flip_flag()) //push them back-to-front
             {
-                Sprite_FIFO.push(sprite_pixels[i]);
+                std::stack<Pixel> temporary_flipper;
+                for(int i = 0 ; i < 8 ; i++)
+                {
+                    temporary_flipper.push(sprite_pixels[i]);
+                }
+                for(int i = Sprite_FIFO.size(); i < 8 && fifo_index <= spr.get_x_pos() ; i++,fifo_index++)
+                {
+                    Sprite_FIFO.push(temporary_flipper.top());
+                    temporary_flipper.pop();
+                }
             }
+            else //regular
+            {
+                for(int i = Sprite_FIFO.size(); i < 8 && fifo_index <= spr.get_x_pos() ; i++,fifo_index++)
+                {
+                    Sprite_FIFO.push(sprite_pixels[i]);
+                }
+            }
+
             visible_OAM_buffer.erase(visible_OAM_buffer.begin());
         }
 //        else
@@ -576,14 +631,14 @@ void PPU::Pop_to_screen()
             {
                 cur_visible_pixel = cur_bg_pixel;
             }
-            Screen[MEM[LY_register]][screen_coordinate_x] = cur_visible_pixel.get_color();
+            Screen[MEM[LY_register]][screen_coordinate_x] = cur_visible_pixel;
             Background_FIFO.pop();
             Sprite_FIFO.pop();
         }
         else //only from background
         {
             Pixel cur_pixel = Background_FIFO.front();
-            Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel.get_color();
+            Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel;
             Background_FIFO.pop();
         }
 
