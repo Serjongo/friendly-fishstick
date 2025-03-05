@@ -571,7 +571,7 @@ void PPU::Push_to_SPRITE_FIFO()
             WORD sprite_pixel_row = tileData_to_pixel_row(tile_data_low_sprite,tile_data_high_sprite);
 
 
-            BYTE color_palette = spr.get_palette_number_flag() ? MEM[SPRITE_1_palette] : MEM[SPRITE_0_palette];
+            BYTE color_palette = spr.get_palette_number_flag();
 
             //we turn the pixel row into an array of 8 pixels - THIS CAN BE OPTIMIZED FURTHER IF NEEDED
             std::vector<Pixel> sprite_pixels;
