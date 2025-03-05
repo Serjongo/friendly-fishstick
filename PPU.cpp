@@ -182,7 +182,7 @@ bool sprite_comparator(const Sprite a,const Sprite b)
 
 void PPU::OAM_SCAN() //mode 2 of the ppu
 {
-    if(MEM[LY_register] == 70)
+    if(MEM[LY_register] == 0x45)
     {
         std::cout << "harta";
     }
@@ -419,6 +419,24 @@ void PPU::V_BLANK()
 }
 
 
+BYTE PPU::get_pixel_color_from_mem(BYTE color,bool background,bool sprite_1)
+{
+    WORD loc = background ? BG_palette_data_reg: (sprite_1 ? SPRITE_1_palette : SPRITE_0_palette);
+    BYTE palette_mapping = MEM[loc];
+
+    BYTE comparator = 0x03;
+
+    for(int i = 0 ; i < color; i++)
+    {
+        comparator = (comparator << 2);
+    }
+    comparator = comparator & palette_mapping;
+    for(int i = 0 ; i < color; i++)
+    {
+        comparator = (comparator >> 2);
+    }
+    return comparator;
+}
 
 
 //void PPU::V_BLANK()

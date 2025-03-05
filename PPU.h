@@ -310,6 +310,10 @@ class PPU{
     void clean_OAM_buff();
     void DRAW();
 
+    //get color of pixels
+
+    BYTE get_pixel_color_from_mem(BYTE color,bool background,bool sprite_1 = false); //the pixel's color is actually an index for the mem[color_palette], meaning color 1 is bit 2-3 in mem[palette] which would give us the actual color from 0-3.
+
 
     void PPU_cycle();
 
