@@ -329,6 +329,8 @@ class PPU{
     void Fetch_Sprite_Tile_Data_high();
     void Push_to_BG_FIFO();
     void Push_to_SPRITE_FIFO();
+    Pixel fill_transparent_sprite_pixel(BYTE fifo_index,BYTE sprite_index,Pixel default_pixel,Sprite original_sprite);
+
     void Pop_to_screen(); // pop from eligible fifos to screen
 
 

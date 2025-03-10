@@ -182,10 +182,7 @@ bool sprite_comparator(const Sprite a,const Sprite b)
 
 void PPU::OAM_SCAN() //mode 2 of the ppu
 {
-    if(MEM[LY_register] == 0x45)
-    {
-        std::cout << "harta";
-    }
+
     if(OAM_counter == OAM_mem_start){
         clean_visible_OAM_buff(); //should set oam size to 0
         clean_OAM_buff();
@@ -207,6 +204,10 @@ void PPU::OAM_SCAN() //mode 2 of the ppu
         //checking that the OAM tile fits the criteria to appear on screen
         if(spr.get_x_pos() > 0 && cur_row + 16 >= spr.get_y_pos() && cur_row + 16 < spr.get_y_pos() + tile_size && visible_OAM_buffer.size() < 10)
         {
+            if(spr.get_y_pos() == 0x3D)
+            {
+                std::cout << "harta";
+            }
             visible_OAM_buffer.push_back(spr); //we point to the first byte of the OAM, currently it is not a distinct struct
         }
         OAM_counter = OAM_counter + 4;
@@ -575,15 +576,23 @@ void PPU::Fetch_Sprite_Tile_Data_high()
 
 void PPU::Push_to_SPRITE_FIFO()
 {
-    BYTE fifo_index = screen_coordinate_x;
+//    if(screen_coordinate_x + 8 >= 0x7C && MEM[LY_register] == 0x45)
+//    {
+//        std::cout << "oi";
+//    }
+    BYTE current_screen_pixel_x = screen_coordinate_x; //this gets updated with each pixel push, as opposed to screen_coordinate which gets updated which each pop
     //scan the sprite buffer to find relevant objects
-    for(Sprite spr : visible_OAM_buffer)
+    for(int i = 0 ; i < visible_OAM_buffer.size();i++)
     {
+        Sprite spr = visible_OAM_buffer[i];
         if (spr.get_x_pos() <= screen_coordinate_x + 8)
         {
+
             //step 1 - fetch tile number
             //step 2 - fetch tile data - base tile_data_mem loc is always 0x8000
-            Fetch_SPRITE_tile_address(spr.get_tile_num());
+//            Fetch_SPRITE_tile_address(spr.get_tile_num());
+            tile_address_sprite = 0x8000 + (tile_size_bytes * spr.get_tile_num()) + (2 * (7-(((spr.get_y_pos()-1) - (MEM[LY_register]) + MEM[SCY]) % 8)));
+
             Fetch_Sprite_Tile_Data_low();
             Fetch_Sprite_Tile_Data_high();
             WORD sprite_pixel_row = tileData_to_pixel_row(tile_data_low_sprite,tile_data_high_sprite);
@@ -591,9 +600,18 @@ void PPU::Push_to_SPRITE_FIFO()
 
             BYTE color_palette = spr.get_palette_number_flag();
 
+
+
+            if((screen_coordinate_x >= 0x6A &&  visible_OAM_buffer[i].get_x_pos() == 0x72 && visible_OAM_buffer[i].get_y_pos() == 0x3B))
+            {
+                BYTE tmp_cur_line = MEM[LY_register]; //for debugging purposes
+                std::cout << tmp_cur_line << std::endl;
+                std::cout << "oi";
+            }
+
             //we turn the pixel row into an array of 8 pixels - THIS CAN BE OPTIMIZED FURTHER IF NEEDED
             std::vector<Pixel> sprite_pixels;
-            for(int i = 0 ; i < 8; i++)
+            for(int j = 0 ; j < 8; j++)
             {
                 BYTE temp_pixel_color = ((sprite_pixel_row & 0xC000) >> 14);
                 sprite_pixel_row = (sprite_pixel_row << 2);
@@ -606,11 +624,11 @@ void PPU::Push_to_SPRITE_FIFO()
             if(spr.get_x_flip_flag()) //push them back-to-front
             {
                 std::stack<Pixel> temporary_flipper;
-                for(int i = 0 ; i < 8 ; i++)
+                for(int k = 0 ; k < 8 ; k++)
                 {
                     temporary_flipper.push(sprite_pixels[i]);
                 }
-                for(int i = Sprite_FIFO.size(); i < 8 && fifo_index <= spr.get_x_pos() ; i++,fifo_index++)
+                for(int l = Sprite_FIFO.size(); l < 8 && current_screen_pixel_x <= spr.get_x_pos() ; l++,current_screen_pixel_x++)
                 {
                     Sprite_FIFO.push(temporary_flipper.top());
                     temporary_flipper.pop();
@@ -618,9 +636,16 @@ void PPU::Push_to_SPRITE_FIFO()
             }
             else //regular
             {
-                for(int i = Sprite_FIFO.size(); i < 8 && fifo_index <= spr.get_x_pos() ; i++,fifo_index++)
+                for(int m = Sprite_FIFO.size(); m < 8 && current_screen_pixel_x <= spr.get_x_pos() ; m++,current_screen_pixel_x++)
                 {
-                    Sprite_FIFO.push(sprite_pixels[i]);
+                    if(sprite_pixels[m].get_color() == 0) //transparent
+                    {
+
+                        Sprite_FIFO.push(fill_transparent_sprite_pixel(current_screen_pixel_x,i,sprite_pixels[m],spr));
+                    }
+                    else
+                        Sprite_FIFO.push(sprite_pixels[m]);
+
                 }
             }
 
@@ -632,6 +657,52 @@ void PPU::Push_to_SPRITE_FIFO()
 //        }
 
     }
+}
+
+Pixel PPU::fill_transparent_sprite_pixel(BYTE cur_screen_pixel,BYTE sprite_index,Pixel default_pixel,Sprite original_sprite)
+{
+    for(int i = sprite_index+1 ; i < visible_OAM_buffer.size();i++)
+    {
+        Sprite spr = visible_OAM_buffer[i];
+        if (spr.get_x_pos() <= cur_screen_pixel + 8) {
+
+            //step 1 - fetch tile number
+            //step 2 - fetch tile data - base tile_data_mem loc is always 0x8000
+//            Fetch_SPRITE_tile_address(spr.get_tile_num());
+            tile_address_sprite = 0x8000 + (tile_size_bytes * spr.get_tile_num()) +
+                                  (2 * (7 - (((spr.get_y_pos() - 1) - (MEM[LY_register]) + MEM[SCY]) % 8)));
+
+            Fetch_Sprite_Tile_Data_low();
+            Fetch_Sprite_Tile_Data_high();
+            WORD sprite_pixel_row = tileData_to_pixel_row(tile_data_low_sprite, tile_data_high_sprite);
+
+
+            BYTE color_palette = spr.get_palette_number_flag();
+
+            //we turn the pixel row into an array of 8 pixels - THIS CAN BE OPTIMIZED FURTHER IF NEEDED
+            std::vector<Pixel> sprite_pixels;
+            for (int i = 0; i < 8; i++) {
+                BYTE temp_pixel_color = ((sprite_pixel_row & 0xC000) >> 14);
+                sprite_pixel_row = (sprite_pixel_row << 2);
+                BYTE palette = MEM[BG_palette_data_reg]; ///will be changed to sprite palette later on
+                Pixel pixel_temp = Pixel(temp_pixel_color, color_palette, 0,
+                                         1); //will need to edit the constructor according to sprite reqs
+                sprite_pixels.push_back(pixel_temp);
+            }
+//            if((fifo_index >= 0x70))
+//            {
+//                BYTE tmp_cur_line = MEM[LY_register]; //for debugging purposes
+//                std::cout << tmp_cur_line << std::endl;
+//                std::cout << "oi";
+//            }
+
+
+//            sprite_pixels[relative_pixel_in_sprite].set_color(3);
+            return sprite_pixels[8 - (spr.get_x_pos() - original_sprite.get_x_pos() + (original_sprite.get_x_pos() - cur_screen_pixel))];
+
+        }
+    }
+    return default_pixel;
 }
 
 //we assume that the fifos are in sync, worst case we'll add it later
