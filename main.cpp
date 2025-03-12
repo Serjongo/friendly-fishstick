@@ -2669,19 +2669,21 @@ void gameboy::decode_execute()
 void gameboy::check_user_input() //checks for pressed keys and writes to joypad register
 {
     bool key_pressed = false;
+
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
     {
         key_pressed = true;
         set_joypad_select_d_pad_bit(0);
         set_joypad_select_up_bit(0);
-        cout<<"up\n";
+//        cout<<"up\n";
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
     {
         key_pressed = true;
         set_joypad_select_d_pad_bit(0);
         set_joypad_start_down_bit(0);
-        cout<<"down\n";
+
+//        cout<<"down\n";
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
     {
@@ -2724,7 +2726,7 @@ void gameboy::check_user_input() //checks for pressed keys and writes to joypad 
         set_joypad_release_all();
     }else
     {
-        cout<< std::hex << std::setw(2) << std::setfill('0') << (int) mem[0xFF00] << '\n'<< dec;
+//        cout<< std::hex << std::setw(2) << std::setfill('0') << (int) mem[0xFF00] << '\n'<< dec;
         set_interrupt_bit(joypad,1);
 //        mem[IE_reg] = (mem[IE_reg] | 0x10);
     }
@@ -2819,8 +2821,30 @@ void gameboy::main_loop(gameboy& gb)
                     if (event.type == sf::Event::Closed) {
                         window.close();
                     }
-
+                    //user input via joypad
+                    if (event.type == sf::Event::KeyPressed) {
+                        bool key_pressed = false;
+//                        if(event.key.scancode == sf::Keyboard::Scancode::Down)
+//                        {
+//                            key_pressed = true;
+////                            set_joypad_select_d_pad_bit(0);
+////                            set_joypad_start_down_bit(0);
+//                            mem[JOYPAD_register] = 0x27;
+//                        }
+//                        //...
+//                        if(key_pressed)
+//                        {
+//                            mem[IE_reg] = (mem[IE_reg] | 0x10); //should be enabled by CPU not us
+////                            set_interrupt_bit(joypad,1);
+//                        }
+                    }
+                    else
+                    {
+//                        cout << "aa";
+                        set_joypad_release_all();
+                    }
                 }
+
 //                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
 //                    gameboy_testing::init_VRAM_file();
 //                    gameboy_testing::print_VRAM(gb);
