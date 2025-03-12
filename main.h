@@ -50,6 +50,7 @@ class gameboy_testing;
 #define TIMA_register 0xFF05 // TIMA: Timer counter
 #define TMA_register 0xFF06 // TMA: Timer modulo
 #define TAC_register 0xFF07 // TAC: Timer control
+#define JOYPAD_register 0xFF00
 
 //modes
 #define UNINITIALIZED 0
@@ -279,6 +280,7 @@ public:
     void decode_execute();
     void main_loop(gameboy& gb);
     void CPU_cycle(); //may change the function visibility to protected/public later since it'll likely cause problems if we break it down to sub-classes
+    void check_user_input();
 
     //public methods
     //getters
@@ -294,7 +296,9 @@ public:
     Register get_reg_SP();
     WORD get_PC();
 
-
+    //joypad getters
+    BYTE get_joypad_select_buttons_bit();
+    BYTE get_joypad_select_d_pad_bit();
 
     //setters
     void set_reg_AF(WORD input);
@@ -309,6 +313,14 @@ public:
     void set_reg_SP(WORD input);
     void set_PC(WORD input);
 
+    //joypad setters
+    void set_joypad_select_d_pad_bit(BYTE status);
+    void set_joypad_select_buttons_bit(BYTE status);
+    void set_joypad_start_down_bit(BYTE status);
+    void set_joypad_select_up_bit(BYTE status);
+    void set_joypad_b_left_bit(BYTE status);
+    void set_joypad_a_right_bit(BYTE status);
+    void set_joypad_release_all();
 };
 
 

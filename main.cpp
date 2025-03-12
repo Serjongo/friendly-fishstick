@@ -73,6 +73,96 @@ void gameboy::set_C_flag_status(BYTE status)
     }
 }
 
+//joypad getters
+BYTE gameboy::get_joypad_select_buttons_bit()
+{
+    return (mem[JOYPAD_register] & (0x01 << 5));
+}
+BYTE gameboy::get_joypad_select_d_pad_bit()
+{
+    return (mem[JOYPAD_register] & (0x01 << 4));
+}
+
+
+//joypad setters
+//joypad on means that the status is 0, unlike regularly where 1 means on
+void gameboy::set_joypad_select_d_pad_bit(BYTE status)
+{
+    if(status == 0)
+    {
+        mem[JOYPAD_register] = (mem[JOYPAD_register] & (BYTE)(~(1 << 4))); //should turn off FLAG_ZERO
+    }
+    else
+    {
+        mem[JOYPAD_register] = (mem[JOYPAD_register] | (BYTE)(1 << 4)); //should turn on FLAG_ZERO
+    }
+}
+
+void gameboy::set_joypad_select_buttons_bit(BYTE status)
+{
+    if(status == 0)
+    {
+        mem[JOYPAD_register] = (mem[JOYPAD_register] & (BYTE)(~(1 << 5))); //should turn off FLAG_ZERO
+    }
+    else
+    {
+        mem[JOYPAD_register] = (mem[JOYPAD_register] | (BYTE)(1 << 5)); //should turn on FLAG_ZERO
+    }
+}
+
+void gameboy::set_joypad_start_down_bit(BYTE status)
+{
+    if(status == 0)
+    {
+        mem[JOYPAD_register] = (mem[JOYPAD_register] & (BYTE)(~(1 << 3))); //should turn off FLAG_ZERO
+    }
+    else
+    {
+        mem[JOYPAD_register] = (mem[JOYPAD_register] | (BYTE)(1 << 3)); //should turn on FLAG_ZERO
+    }
+}
+
+void gameboy::set_joypad_select_up_bit(BYTE status)
+{
+    if(status == 0)
+    {
+        mem[JOYPAD_register] = (mem[JOYPAD_register] & (BYTE)(~(1 << 2))); //should turn off FLAG_ZERO
+    }
+    else
+    {
+        mem[JOYPAD_register] = (mem[JOYPAD_register] | (BYTE)(1 << 2)); //should turn on FLAG_ZERO
+    }
+}
+
+void gameboy::set_joypad_b_left_bit(BYTE status)
+{
+    if(status == 0)
+    {
+        mem[JOYPAD_register] = (mem[JOYPAD_register] & (BYTE)(~(1 << 1))); //should turn off FLAG_ZERO
+    }
+    else
+    {
+        mem[JOYPAD_register] = (mem[JOYPAD_register] | (BYTE)(1 << 1)); //should turn on FLAG_ZERO
+    }
+}
+
+void gameboy::set_joypad_a_right_bit(BYTE status)
+{
+    if(status == 0)
+    {
+        mem[JOYPAD_register] = (mem[JOYPAD_register] & (BYTE)(~(1))); //should turn off FLAG_ZERO
+    }
+    else
+    {
+        mem[JOYPAD_register] = (mem[JOYPAD_register] | (BYTE)1); //should turn on FLAG_ZERO
+    }
+}
+void gameboy::set_joypad_release_all()
+{
+    mem[JOYPAD_register] = 0x3F; //means all buttons are released
+}
+
+
 
 //interrupt
 BYTE gameboy::get_interrupt_bit_status(WORD IE_IF, int interrupt_type)
@@ -429,6 +519,7 @@ void gameboy::PC_to_interrupt(int interrupt_routine_type)
     IME = 0;
     set_interrupt_bit(interrupt_routine_type,0);
     //PUSH r16stk command
+//    r16[SP]->reg = PC;
     r16[SP]->reg = (r16[SP]->reg) - 1;
     mem[r16[SP]->reg] = (PC >> 8); //this is the MSByte of PC
     r16[SP]->reg = (r16[SP]->reg) - 1;
@@ -2574,6 +2665,71 @@ void gameboy::decode_execute()
 
     }
 }
+
+void gameboy::check_user_input() //checks for pressed keys and writes to joypad register
+{
+    bool key_pressed = false;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+    {
+        key_pressed = true;
+        set_joypad_select_d_pad_bit(0);
+        set_joypad_select_up_bit(0);
+        cout<<"up\n";
+    }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+    {
+        key_pressed = true;
+        set_joypad_select_d_pad_bit(0);
+        set_joypad_start_down_bit(0);
+        cout<<"down\n";
+    }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+    {
+        key_pressed = true;
+        set_joypad_select_d_pad_bit(0);
+        set_joypad_b_left_bit(0);
+    }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+    {
+        key_pressed = true;
+        set_joypad_select_d_pad_bit(0);
+        set_joypad_a_right_bit(0);
+    }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Z))
+    {
+        key_pressed = true;
+        set_joypad_select_buttons_bit(0);
+        set_joypad_a_right_bit(0);
+    }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::X))
+    {
+        key_pressed = true;
+        set_joypad_select_buttons_bit(0);
+        set_joypad_b_left_bit(0);
+    }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Enter))
+    {
+        key_pressed = true;
+        set_joypad_select_buttons_bit(0);
+        set_joypad_start_down_bit(0);
+    }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::RShift))
+    {
+        key_pressed = true;
+        set_joypad_select_buttons_bit(0);
+        set_joypad_select_up_bit(0);
+    }
+    if(!key_pressed)
+    {
+        set_joypad_release_all();
+    }else
+    {
+        cout<< std::hex << std::setw(2) << std::setfill('0') << (int) mem[0xFF00] << '\n'<< dec;
+        set_interrupt_bit(joypad,1);
+//        mem[IE_reg] = (mem[IE_reg] | 0x10);
+    }
+
+}
 void gameboy::main_loop(gameboy& gb)
 {
 
@@ -2665,11 +2821,11 @@ void gameboy::main_loop(gameboy& gb)
                     }
 
                 }
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
-                    gameboy_testing::init_VRAM_file();
-                    gameboy_testing::print_VRAM(gb);
-//                    std::cout << "a";
-                }
+//                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+//                    gameboy_testing::init_VRAM_file();
+//                    gameboy_testing::print_VRAM(gb);
+////                    std::cout << "a";
+//                }
                 //TODO:: break it down further from cycle-cycle to tick-tick (machine clock resolution) so facilitate more accurate communication between cpu and ppu
                 // if we are to use a shared clock resource, it'd require refactoring the cpu into a separate class and link the gameboy->ppu->c0
                 // pu
@@ -2677,7 +2833,7 @@ void gameboy::main_loop(gameboy& gb)
                 int scroll_y_val = mem[0xFF42];
 
                 CPU_cycle(); ///
-
+//                check_user_input();
 
                 if (scroll_y_val != mem[0xFF42]) {
                     cout << "SCY CHANGED! : " << (int)mem[0xFF42] << endl;
@@ -2794,6 +2950,9 @@ void gameboy::CPU_cycle()
         }
         mode = EXECUTE_MODE;
         decode_execute();
+
+        //get user_input
+
 
         //ought to fix the value so it doesnt become negative at any point
         unsigned int machine_cycle_cost_iter = gb_machine_cycles - gb_machine_cycles_prev;

@@ -204,10 +204,10 @@ void PPU::OAM_SCAN() //mode 2 of the ppu
         //checking that the OAM tile fits the criteria to appear on screen
         if(spr.get_x_pos() > 0 && cur_row + 16 >= spr.get_y_pos() && cur_row + 16 < spr.get_y_pos() + tile_size && visible_OAM_buffer.size() < 10)
         {
-            if(spr.get_y_pos() == 0x3D)
-            {
-                std::cout << "harta";
-            }
+//            if(spr.get_y_pos() == 0x3D)
+//            {
+//                std::cout << "harta";
+//            }
             visible_OAM_buffer.push_back(spr); //we point to the first byte of the OAM, currently it is not a distinct struct
         }
         OAM_counter = OAM_counter + 4;
@@ -605,8 +605,8 @@ void PPU::Push_to_SPRITE_FIFO()
             if((screen_coordinate_x >= 0x6A &&  visible_OAM_buffer[i].get_x_pos() == 0x72 && visible_OAM_buffer[i].get_y_pos() == 0x3B))
             {
                 BYTE tmp_cur_line = MEM[LY_register]; //for debugging purposes
-                std::cout << tmp_cur_line << std::endl;
-                std::cout << "oi";
+//                std::cout << tmp_cur_line << std::endl;
+//                std::cout << "oi";
             }
 
             //we turn the pixel row into an array of 8 pixels - THIS CAN BE OPTIMIZED FURTHER IF NEEDED
@@ -713,7 +713,6 @@ void PPU::Pop_to_screen()
     {
         if(!Sprite_FIFO.empty()) //means we'll also be popping from the sprite
         {
-            std::cout << "sprite detected";
             Pixel cur_bg_pixel = Background_FIFO.front();
             Pixel cur_visible_pixel = Sprite_FIFO.front();
             if(cur_visible_pixel.get_color() == 0) //0 means transparent
