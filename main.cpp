@@ -112,7 +112,9 @@ BYTE gameboy::get_joypad_select_d_pad_bit()
 
 BYTE gameboy::flip_joypad_bit(BYTE input_state,BYTE bit_to_flip) //if buttons false, will check movement state
 {
-    return (input_state & (BYTE)(~(1 << bit_to_flip))); //should turn off FLAG_ZERO
+//    return (input_state & (BYTE)(~(1 << bit_to_flip))); //should turn off FLAG_ZERO
+    return (input_state ^ (BYTE)((1 << bit_to_flip))); //should turn off FLAG_ZERO
+
 }
 
 void gameboy::set_joypad_select_up_bit(BYTE status)
@@ -564,7 +566,7 @@ void gameboy::write_memory(WORD loc_write_to,BYTE data_to_write)
             mem[JOYPAD_register] = (mem[JOYPAD_register] & 0xF0) | (buttons_state & 0X0F);
             if(buttons_state != 0x1F)
                 cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)mem[JOYPAD_register] << endl;
-            buttons_state = 0x1F;
+//            buttons_state = 0x1F;
         }
         else if(!get_joypad_select_d_pad_bit()) //0 means on in this case
         {
@@ -572,7 +574,7 @@ void gameboy::write_memory(WORD loc_write_to,BYTE data_to_write)
             mem[JOYPAD_register] = (mem[JOYPAD_register] & 0xF0) | (movement_state & 0X0F);
             if(movement_state != 0x2F)
                 cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)mem[JOYPAD_register] << endl;
-            movement_state = 0x2F;
+//            movement_state = 0x2F;
         }
         else
         {
@@ -2774,7 +2776,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_cartridge("../TESTS/Tennis.gb");
+    read_from_cartridge("../TESTS/Dr.mario.gb");
 
     if(!enable_bootrom)
     {
@@ -2822,7 +2824,7 @@ void gameboy::main_loop(gameboy& gb)
 
     if(HEADLESS_MODE == 0) {
         sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
-//        window. setKeyRepeatEnabled(false);
+        window. setKeyRepeatEnabled(false);
 
         sf::Image image; //stored in ram, this will be filled with the pixels to-be-drawn on screen
         sf::Texture texture; //stored in vram for GPU to access
@@ -2852,10 +2854,10 @@ void gameboy::main_loop(gameboy& gb)
                         input_commands.push(event.key.scancode);
                     }
 
-//                    else if (event.type == sf::Event::KeyReleased)
-//                    {
-//                        input_commands.push(event.key.scancode);
-//                    }
+                    else if (event.type == sf::Event::KeyReleased)
+                    {
+                        input_commands.push(event.key.scancode);
+                    }
 
 //                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
 //                        gameboy_testing::init_VRAM_file();
