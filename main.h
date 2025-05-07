@@ -96,7 +96,7 @@ public:
     PPU pupy;
 
     BYTE mem[0x10000]; //2^16 bytes
-    bool enable_bootrom = true; //by default false, otherwise instead of init function it will run the bootrom file
+    bool enable_bootrom = false; //by default false, otherwise instead of init function it will run the bootrom file
     bool bootrom_finished = false; //will switch to true if bootrom is enabled && we've finished it once
     BYTE IME = 0; //IME FLAG, interrupts enabled/disabled
     BYTE is_halted = 0; //used for halt commands, will have values of 1 - to be halted, 2 - halted. credit : https://rylev.github.io/DMG-01/public/book/cpu/conclusion.html
@@ -118,6 +118,10 @@ public:
     Register HL_reg;
     Register StackPointer_reg; //stack pointer
     WORD PC; //program counter
+
+    //joypad state
+    BYTE movement_state = 0x2F; //upper nibble always remains the same, only lower nibble changes to record moves
+    BYTE buttons_state = 0x1F; //upper nibble always remains the same, only lower nibble changes to record button presses
 
     //timers
     WORD DIV_timer = 0; // only the most significant byte will be used for the actual div_timer, since it increments every 256 cycles
@@ -167,6 +171,14 @@ public:
         timer,
         serial_link,
         joypad
+    };
+
+    enum joypad_input
+    {
+        A_right,
+        B_left,
+        Select_up,
+        Start_down,
     };
 
     //carry locations in registers
@@ -316,7 +328,7 @@ public:
     //joypad setters
     void set_joypad_select_d_pad_bit(BYTE status);
     void set_joypad_select_buttons_bit(BYTE status);
-    void set_joypad_start_down_bit(BYTE status);
+    BYTE flip_joypad_bit(BYTE input_state,BYTE bit_to_flip);
     void set_joypad_select_up_bit(BYTE status);
     void set_joypad_b_left_bit(BYTE status);
     void set_joypad_a_right_bit(BYTE status);

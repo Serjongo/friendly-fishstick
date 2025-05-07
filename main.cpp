@@ -86,40 +86,33 @@ BYTE gameboy::get_joypad_select_d_pad_bit()
 
 //joypad setters
 //joypad on means that the status is 0, unlike regularly where 1 means on
-void gameboy::set_joypad_select_d_pad_bit(BYTE status)
-{
-    if(status == 0)
-    {
-        mem[JOYPAD_register] = (mem[JOYPAD_register] & (BYTE)(~(1 << 4))); //should turn off FLAG_ZERO
-    }
-    else
-    {
-        mem[JOYPAD_register] = (mem[JOYPAD_register] | (BYTE)(1 << 4)); //should turn on FLAG_ZERO
-    }
-}
+//void gameboy::set_joypad_select_d_pad_bit(BYTE status)
+//{
+//    if(status == 0)
+//    {
+//        mem[JOYPAD_register] = (mem[JOYPAD_register] & (BYTE)(~(1 << 4))); //should turn off FLAG_ZERO
+//    }
+//    else
+//    {
+//        mem[JOYPAD_register] = (mem[JOYPAD_register] | (BYTE)(1 << 4)); //should turn on FLAG_ZERO
+//    }
+//}
+//
+//void gameboy::set_joypad_select_buttons_bit(BYTE status)
+//{
+//    if(status == 0)
+//    {
+//        mem[JOYPAD_register] = (mem[JOYPAD_register] & (BYTE)(~(1 << 5))); //should turn off FLAG_ZERO
+//    }
+//    else
+//    {
+//        mem[JOYPAD_register] = (mem[JOYPAD_register] | (BYTE)(1 << 5)); //should turn on FLAG_ZERO
+//    }
+//}
 
-void gameboy::set_joypad_select_buttons_bit(BYTE status)
+BYTE gameboy::flip_joypad_bit(BYTE input_state,BYTE bit_to_flip) //if buttons false, will check movement state
 {
-    if(status == 0)
-    {
-        mem[JOYPAD_register] = (mem[JOYPAD_register] & (BYTE)(~(1 << 5))); //should turn off FLAG_ZERO
-    }
-    else
-    {
-        mem[JOYPAD_register] = (mem[JOYPAD_register] | (BYTE)(1 << 5)); //should turn on FLAG_ZERO
-    }
-}
-
-void gameboy::set_joypad_start_down_bit(BYTE status)
-{
-    if(status == 0)
-    {
-        mem[JOYPAD_register] = (mem[JOYPAD_register] & (BYTE)(~(1 << 3))); //should turn off FLAG_ZERO
-    }
-    else
-    {
-        mem[JOYPAD_register] = (mem[JOYPAD_register] | (BYTE)(1 << 3)); //should turn on FLAG_ZERO
-    }
+    return (input_state & (BYTE)(~(1 << bit_to_flip))); //should turn off FLAG_ZERO
 }
 
 void gameboy::set_joypad_select_up_bit(BYTE status)
@@ -159,7 +152,8 @@ void gameboy::set_joypad_a_right_bit(BYTE status)
 }
 void gameboy::set_joypad_release_all()
 {
-    mem[JOYPAD_register] = 0x3F; //means all buttons are released
+//    mem[JOYPAD_register] = 0x3F; //means all buttons are released
+    mem[JOYPAD_register] = 0x3F;
 }
 
 
@@ -555,12 +549,37 @@ void gameboy::write_memory(WORD loc_write_to,BYTE data_to_write)
             mem[i] = mem[DMA_src_loc];
         }
     }
+
     //if we try to write to VRAM during non v/hblank ops, do nothing
     //VRAM PROTECTION
 //    if( ((loc_write_to >= VRAM_mem_start) && (loc_write_to <= VRAM_mem_end))  && ( (pupy.mode != V_BLANK_MODE) || (pupy.mode != H_BLANK_MODE)) )
 //        return;
 
     mem[loc_write_to] = data_to_write;
+    if(loc_write_to == JOYPAD_register)
+    {
+        if(!get_joypad_select_buttons_bit()) //0 means on in this case
+        {
+//            mem[JOYPAD_register] = 0x27;
+            mem[JOYPAD_register] = (mem[JOYPAD_register] & 0xF0) | (buttons_state & 0X0F);
+            if(buttons_state != 0x1F)
+                cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)mem[JOYPAD_register] << endl;
+            buttons_state = 0x1F;
+        }
+        else if(!get_joypad_select_d_pad_bit()) //0 means on in this case
+        {
+//            mem[JOYPAD_register] = 0x17;
+            mem[JOYPAD_register] = (mem[JOYPAD_register] & 0xF0) | (movement_state & 0X0F);
+            if(movement_state != 0x2F)
+                cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)mem[JOYPAD_register] << endl;
+            movement_state = 0x2F;
+        }
+        else
+        {
+//            cout<< "joypad reading doesn't quite make sense\n";
+//            cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)mem[JOYPAD_register] << endl;
+        }
+    }
 }
 
 void gameboy::check_interrupts()
@@ -571,7 +590,7 @@ void gameboy::check_interrupts()
     if(( mem[IF_reg] & mem[IE_reg] ) != 0)
     {
         if(is_halted == 2)
-            cout << "HALT STOPPED\n";
+//            cout << "HALT STOPPED\n";
         is_halted = 0;
         if(IME == 1)
         {
@@ -742,7 +761,7 @@ void gameboy::decode_execute()
 
         case(0x76): ///TODO: HALT, currently it is a temporary solution
             is_halted = 1;
-            cout << "HALT COMMAND REACHED\n";
+//            cout << "HALT COMMAND REACHED\n";
             num_of_machine_cycles(1);
             break;
 
@@ -1356,14 +1375,13 @@ void gameboy::decode_execute()
 
         case(0xE0): //LD (a8), A
 
-        ///TODO: we are currently implementing a DMA-OAM command through this OPCODE. This is BAD PRACTICE.
-        /// The test NEEDS to go through write_memory func, but it is currently not implemented throughout all of the opcodes, so TODO!
-
             tmp_uChar = mem[PC]; //FIX!
             PC++;
             tmp = (WORD)0xFF00|tmp_uChar;
 //            mem[tmp] = *r8[A];
             write_memory(tmp,*r8[A]); //MSB is FF, LSB is the PC byte
+
+
 
             //this is for blaarg's test suite, can be moved to testing_mode if causes problems
             if(tmp == SC_reg && *r8[A] == 0x81)
@@ -1380,16 +1398,17 @@ void gameboy::decode_execute()
             break;
 
         case(0xF0): //LD A, (a8)
-            tmp_uChar = mem[PC];
+            tmp_uChar = read_memory(PC);
             PC++;
             tmp = (WORD)0xFF00|(WORD)tmp_uChar;
-            *r8[A] = mem[tmp]; //MSB is FF, LSB is the PC byte
+            *r8[A] = read_memory(tmp); //MSB is FF, LSB is the PC byte
             num_of_machine_cycles(3);
             break;
 
         case(0xE2): //LD (C), A
             tmp = (WORD)0xFF00|*r8[C];
-            mem[tmp] = *r8[A]; //MSB is FF, LSB is the C subreg
+            write_memory(tmp,*r8[A]);
+//            mem[tmp] = *r8[A]; //MSB is FF, LSB is the C subreg
 
             if(testing_mode)
             {
@@ -2666,72 +2685,72 @@ void gameboy::decode_execute()
     }
 }
 
-void gameboy::check_user_input() //checks for pressed keys and writes to joypad register
-{
-    bool key_pressed = false;
-
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-    {
-        key_pressed = true;
-        set_joypad_select_d_pad_bit(0);
-        set_joypad_select_up_bit(0);
-//        cout<<"up\n";
-    }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-    {
-        key_pressed = true;
-        set_joypad_select_d_pad_bit(0);
-        set_joypad_start_down_bit(0);
-
-//        cout<<"down\n";
-    }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-    {
-        key_pressed = true;
-        set_joypad_select_d_pad_bit(0);
-        set_joypad_b_left_bit(0);
-    }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-    {
-        key_pressed = true;
-        set_joypad_select_d_pad_bit(0);
-        set_joypad_a_right_bit(0);
-    }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Z))
-    {
-        key_pressed = true;
-        set_joypad_select_buttons_bit(0);
-        set_joypad_a_right_bit(0);
-    }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::X))
-    {
-        key_pressed = true;
-        set_joypad_select_buttons_bit(0);
-        set_joypad_b_left_bit(0);
-    }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Enter))
-    {
-        key_pressed = true;
-        set_joypad_select_buttons_bit(0);
-        set_joypad_start_down_bit(0);
-    }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::RShift))
-    {
-        key_pressed = true;
-        set_joypad_select_buttons_bit(0);
-        set_joypad_select_up_bit(0);
-    }
-    if(!key_pressed)
-    {
-        set_joypad_release_all();
-    }else
-    {
-//        cout<< std::hex << std::setw(2) << std::setfill('0') << (int) mem[0xFF00] << '\n'<< dec;
-        set_interrupt_bit(joypad,1);
-//        mem[IE_reg] = (mem[IE_reg] | 0x10);
-    }
-
-}
+//void gameboy::check_user_input() //checks for pressed keys and writes to joypad register
+//{
+//    bool key_pressed = false;
+//
+//    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+//    {
+//        key_pressed = true;
+//        set_joypad_select_d_pad_bit(0);
+//        set_joypad_select_up_bit(0);
+////        cout<<"up\n";
+//    }
+//    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+//    {
+//        key_pressed = true;
+//        set_joypad_select_d_pad_bit(0);
+//        set_joypad_start_down_bit(0);
+//
+////        cout<<"down\n";
+//    }
+//    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+//    {
+//        key_pressed = true;
+//        set_joypad_select_d_pad_bit(0);
+//        set_joypad_b_left_bit(0);
+//    }
+//    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+//    {
+//        key_pressed = true;
+//        set_joypad_select_d_pad_bit(0);
+//        set_joypad_a_right_bit(0);
+//    }
+//    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Z))
+//    {
+//        key_pressed = true;
+//        set_joypad_select_buttons_bit(0);
+//        set_joypad_a_right_bit(0);
+//    }
+//    if(sf::Keyboard::isKeyPressed(sf::Keyboard::X))
+//    {
+//        key_pressed = true;
+//        set_joypad_select_buttons_bit(0);
+//        set_joypad_b_left_bit(0);
+//    }
+//    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Enter))
+//    {
+//        key_pressed = true;
+//        set_joypad_select_buttons_bit(0);
+//        set_joypad_start_down_bit(0);
+//    }
+//    if(sf::Keyboard::isKeyPressed(sf::Keyboard::RShift))
+//    {
+//        key_pressed = true;
+//        set_joypad_select_buttons_bit(0);
+//        set_joypad_select_up_bit(0);
+//    }
+//    if(!key_pressed)
+//    {
+//        set_joypad_release_all();
+//    }else
+//    {
+////        cout<< std::hex << std::setw(2) << std::setfill('0') << (int) mem[0xFF00] << '\n'<< dec;
+//        set_interrupt_bit(joypad,1);
+////        mem[IE_reg] = (mem[IE_reg] | 0x10);
+//    }
+//
+//}
 void gameboy::main_loop(gameboy& gb)
 {
 
@@ -2755,7 +2774,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_cartridge("../TESTS/dr.mario.gb");
+    read_from_cartridge("../TESTS/Tennis.gb");
 
     if(!enable_bootrom)
     {
@@ -2803,6 +2822,7 @@ void gameboy::main_loop(gameboy& gb)
 
     if(HEADLESS_MODE == 0) {
         sf::RenderWindow window(sf::VideoMode(160, 144), "My window");
+//        window. setKeyRepeatEnabled(false);
 
         sf::Image image; //stored in ram, this will be filled with the pixels to-be-drawn on screen
         sf::Texture texture; //stored in vram for GPU to access
@@ -2811,50 +2831,95 @@ void gameboy::main_loop(gameboy& gb)
 
         //temporary var so we draw the screen once per frame
         bool drew_screen_this_frame = false;
-
+        bool key_pressed = false;
+        queue<sf::Keyboard::Scancode> input_commands;
         while (true) {
 
             while (window.isOpen())
             {
+                BYTE joypad_backup = mem[JOYPAD_register];
                 sf::Event event;
-                while (window.pollEvent(event)) {
+                //iterating over all events
+                while (window.pollEvent(event))
+                {
                     if (event.type == sf::Event::Closed) {
                         window.close();
                     }
-                    //user input via joypad
-                    if (event.type == sf::Event::KeyPressed) {
-                        bool key_pressed = false;
-//                        if(event.key.scancode == sf::Keyboard::Scancode::Down)
-//                        {
-//                            key_pressed = true;
-////                            set_joypad_select_d_pad_bit(0);
-////                            set_joypad_start_down_bit(0);
-//                            mem[JOYPAD_register] = 0x27;
-//                        }
-//                        //...
-//                        if(key_pressed)
-//                        {
-//                            mem[IE_reg] = (mem[IE_reg] | 0x10); //should be enabled by CPU not us
-////                            set_interrupt_bit(joypad,1);
-//                        }
-                    }
-                    else
+
+                //user input via joypad
+                    else if (event.type == sf::Event::KeyPressed)
                     {
-//                        cout << "aa";
-                        set_joypad_release_all();
+                        input_commands.push(event.key.scancode);
                     }
+
+//                    else if (event.type == sf::Event::KeyReleased)
+//                    {
+//                        input_commands.push(event.key.scancode);
+//                    }
+
+//                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+//                        gameboy_testing::init_VRAM_file();
+//                        gameboy_testing::print_VRAM(gb);
+//    //                    std::cout << "a";
+//                    }
                 }
 
-//                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
-//                    gameboy_testing::init_VRAM_file();
-//                    gameboy_testing::print_VRAM(gb);
-////                    std::cout << "a";
-//                }
+                //finished iterating, checking our input commands
+                //after polling all events, lets execute the commands in order
+                if(!input_commands.empty()) {
+                    key_pressed = true;
+                    while (!input_commands.empty()) {
+                        cout << "pressed";
+                        sf::Keyboard::Scancode command = input_commands.front();
+                        input_commands.pop();
+                        if (command == sf::Keyboard::Scancode::Down) {
+                            movement_state = flip_joypad_bit(movement_state, Start_down);
+                        }
+                        if (command == sf::Keyboard::Scancode::Up) {
+                            movement_state = flip_joypad_bit(movement_state, Select_up);
+                        }
+                        if (command == sf::Keyboard::Scancode::Enter) {
+                            buttons_state = flip_joypad_bit(buttons_state, Start_down);
+                        }
+                        if (command == sf::Keyboard::Scancode::RShift) {
+                            buttons_state = flip_joypad_bit(buttons_state, Select_up);
+                        }
+                        if (command == sf::Keyboard::Scancode::Z) {
+                            buttons_state = flip_joypad_bit(buttons_state, A_right);
+                        }
+                        if (command == sf::Keyboard::Scancode::X) {
+                            buttons_state = flip_joypad_bit(buttons_state, B_left);
+                        }
+                        if (command == sf::Keyboard::Scancode::Left) {
+                            movement_state = flip_joypad_bit(movement_state, B_left);
+                        }
+                        if (command == sf::Keyboard::Scancode::Right) {
+                            movement_state = flip_joypad_bit(movement_state, A_right);
+                        }
+                        //...
+                        //                        }
+
+                    }
+                }
+                else
+                {
+                    key_pressed = false;
+//                    movement_state = (mem[JOYPAD_register] & 0xF0) | 0X0F;
+//                    buttons_state = (mem[JOYPAD_register] & 0XF0) | 0X0F;
+//                    movement_state = 0x2F;
+//                    buttons_state = 0x1F;
+                }
+
+
+
+
                 //TODO:: break it down further from cycle-cycle to tick-tick (machine clock resolution) so facilitate more accurate communication between cpu and ppu
                 // if we are to use a shared clock resource, it'd require refactoring the cpu into a separate class and link the gameboy->ppu->c0
                 // pu
 
                 int scroll_y_val = mem[0xFF42];
+
+
 
                 CPU_cycle(); ///
 //                check_user_input();
@@ -2864,6 +2929,10 @@ void gameboy::main_loop(gameboy& gb)
                 }
 
                 pupy.PPU_cycle(); ///
+//                if(joypad_backup != mem[JOYPAD_register])
+//                {
+//                    cout << "JOYPAD REG CHANGED from: " << joypad_backup << " TO " << mem[JOYP]
+//                }
                 if(mem[LY_register] == 0)
                     drew_screen_this_frame = false;
 
