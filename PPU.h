@@ -26,6 +26,8 @@
 #define OAM_mem_end 0xFE9F
 #define VRAM_mem_start 0x8000 //mem loc
 #define VRAM_mem_end 0x9FFF //mem loc bound
+#define tile_map_1_start 0x9800
+#define tile_map_1_end 0x9FFF
 
 
 //modes
@@ -335,11 +337,17 @@ class PPU{
 
 
     //getters
+    BYTE get_LCDC_bg_window_enable_status() const;
+    BYTE get_LCDC_sprite_enable_status() const;
     BYTE get_LCDC_sprite_size_status() const; // 1 means tall (8X16 pixels),0 = 8x8
-    BYTE get_LCDC_window_display_enable_status() const;
     BYTE get_LCDC_bg_tile_map_select_status() const;
-    BYTE get_LCDC_window_tile_map_select() const;
     BYTE get_LCDC_tile_data_select() const;
+    BYTE get_LCDC_display_enable_status() const;
+    BYTE get_LCDC_window_tile_map_select() const;
+    BYTE get_LCDC_window_display_enable_status() const;
+
+
+
 
     //LCDS getters
     BYTE get_LCDS_lycly_interrupt_enable_status() const;

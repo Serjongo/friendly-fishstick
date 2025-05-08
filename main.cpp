@@ -247,7 +247,8 @@ void gameboy_testing::print_VRAM(gameboy& gb)
 //
 //    }
     outVRAMFile.close();
-    for(int i = OAM_mem_start;i < OAM_mem_end;i++) //VRAM_mem_end
+//    for(int i = OAM_mem_start;i < OAM_mem_end;i++) //VRAM_mem_end
+    for(int i = 0x9C00;i < 0x9FFF;i++) //VRAM_mem_end
 //    for(int i = VRAM_mem_start;i < 0x8200;i++) //VRAM_mem_end
     {
         cout << hex << std::setw(2) << std::setfill('0') << (int)gb.mem[i] << dec << ' ';
@@ -2776,7 +2777,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_cartridge("../TESTS/Dr.mario.gb");
+    read_from_cartridge("../TESTS/tennis.gb");
 
     if(!enable_bootrom)
     {
@@ -2859,11 +2860,11 @@ void gameboy::main_loop(gameboy& gb)
                         input_commands.push(event.key.scancode);
                     }
 
-//                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
-//                        gameboy_testing::init_VRAM_file();
-//                        gameboy_testing::print_VRAM(gb);
-//    //                    std::cout << "a";
-//                    }
+                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+                        gameboy_testing::init_VRAM_file();
+                        gameboy_testing::print_VRAM(gb);
+    //                    std::cout << "a";
+                    }
                 }
 
                 //finished iterating, checking our input commands

@@ -235,6 +235,7 @@ void PPU::DRAW() //mode 3 of the ppu
     {
         switch(this->mode_DRAW) {
             case (0):
+                //if we are here, we fetch bg/window normally
                 Fetch_BG_tile_num_and_address();
                 num_of_machine_cycles(0.5);
                 mode_DRAW++;
@@ -486,8 +487,10 @@ void PPU::Fetch_BG_tile_num_and_address()
     first_iteration_in_line = (pixel_fetcher_x_position_counter == 0);
 
     //may add in the future a check for bit 5. if bit 5 is off, window is to be absolutely ignored regardless of other bits, and background will be drawn instead.
-    if(get_LCDC_bg_tile_map_select_status() || get_LCDC_window_tile_map_select())
-        tilemap_mem_loc = 0x9C00;
+//    if(get_LCDC_bg_tile_map_select_status() || get_LCDC_window_tile_map_select())
+//        tilemap_mem_loc = 0x9C00;
+//    else
+//        tilemap_mem_loc = 0x9800;
 
     //-----------------------------BACKGROUND/WINDOW FETCHER
 //    while(pixel_fetcher_x_position_counter <= 160) //TEMP - should be less than
@@ -496,24 +499,37 @@ void PPU::Fetch_BG_tile_num_and_address()
     //window rendering
     if ((pixel_fetcher_x_position_counter >= MEM[WX_reg] && MEM[LY_register] >= MEM[WY_reg]) && get_LCDC_window_display_enable_status())
     {
-        //upon reaching this for the first time in the line, we reset pixel_fetcher_x counter and add WX - 7
-        if(first_window_encounter)
-        {
-            pixel_fetcher_x_position_counter = MEM[WX_reg] - 7; //-7
-            first_window_encounter = 0;
-        }
-        tile_x = pixel_fetcher_x_position_counter;
+        tilemap_mem_loc = 0x9C00;
+//        //upon reaching this for the first time in the line, we reset pixel_fetcher_x counter and add WX - 7
+//        if(first_window_encounter)
+//        {
+//            //empty out fifo
+//            while(!Background_FIFO.empty())
+//            {
+//                Background_FIFO.pop();
+//            }
+//            pixel_fetcher_x_position_counter = MEM[WX_reg] - 7; //-7
+//            first_window_encounter = 0;
+//        }
+//        tile_x = pixel_fetcher_x_position_counter;
+//
+//        //tile_y = MEM[LY_register]; //ADD WINDOW LINE COUNTER
+//        tile_y = WINDOW_LINE_COUNTER / 8;
+//        WINDOW_LINE_COUNTER++; //we reset this counter upon entering V_BLANK
 
-        //tile_y = MEM[LY_register]; //ADD WINDOW LINE COUNTER
+//        tile_x = ((pixel_fetcher_x_position_counter/8) + (MEM[SCX]/8) ) & 0x1F;
+//        tile_y = ((MEM[LY_register] + MEM[SCY]) & 0xff) / 8;
+
+        tile_x = ((pixel_fetcher_x_position_counter/8)) & 0x1F;
         tile_y = WINDOW_LINE_COUNTER / 8;
         WINDOW_LINE_COUNTER++; //we reset this counter upon entering V_BLANK
-
-        tilenum = MEM[tilemap_mem_loc + (tile_x + (tilemap_row_length_bytes * tile_y) % tilemap_size)];
+        tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];
 
     }
         //background rendering
     else
     {
+        tilemap_mem_loc = 0x9800;
         //reset first_window_encounter, since if we're here, we're past/before window
         if(!first_window_encounter)
             first_window_encounter = 1;
@@ -591,7 +607,15 @@ void PPU::Push_to_SPRITE_FIFO()
             //step 1 - fetch tile number
             //step 2 - fetch tile data - base tile_data_mem loc is always 0x8000
 //            Fetch_SPRITE_tile_address(spr.get_tile_num());
-            tile_address_sprite = 0x8000 + (tile_size_bytes * spr.get_tile_num()) + (2 * (7-(((spr.get_y_pos()-1) - (MEM[LY_register]) + MEM[SCY]) % 8)));
+            if(spr.get_y_flip_flag())
+            {
+                tile_address_sprite = 0x8000 + (tile_size_bytes * spr.get_tile_num()) + (2 * ((((spr.get_y_pos()-1) - (MEM[LY_register])) % 8)));
+            }
+            else
+            {
+                tile_address_sprite = 0x8000 + (tile_size_bytes * spr.get_tile_num()) + (2 * (7-(((spr.get_y_pos()-1) - (MEM[LY_register])) % 8)));
+            }
+
 
             Fetch_Sprite_Tile_Data_low();
             Fetch_Sprite_Tile_Data_high();
@@ -626,12 +650,21 @@ void PPU::Push_to_SPRITE_FIFO()
                 std::stack<Pixel> temporary_flipper;
                 for(int k = 0 ; k < 8 ; k++)
                 {
-                    temporary_flipper.push(sprite_pixels[i]);
+                    temporary_flipper.push(sprite_pixels[k]);
                 }
                 for(int l = Sprite_FIFO.size(); l < 8 && current_screen_pixel_x <= spr.get_x_pos() ; l++,current_screen_pixel_x++)
                 {
-                    Sprite_FIFO.push(temporary_flipper.top());
-                    temporary_flipper.pop();
+                    if(temporary_flipper.top().get_color() == 0) //transparent
+                    {
+                        Sprite_FIFO.push(fill_transparent_sprite_pixel(current_screen_pixel_x,i,temporary_flipper.top(),spr));
+                        temporary_flipper.pop();
+                    }
+                    else
+                    {
+                        Sprite_FIFO.push(temporary_flipper.top());
+                        temporary_flipper.pop();
+                    }
+
                 }
             }
             else //regular
@@ -709,6 +742,20 @@ Pixel PPU::fill_transparent_sprite_pixel(BYTE cur_screen_pixel,BYTE sprite_index
 //we pop a single pixel for now
 void PPU::Pop_to_screen()
 {
+    //check for lcdc bits
+//    if(!get_LCDC_bg_window_enable_status())
+//    {
+//        std::cout << "no bg and no window!\n";
+//    }
+//    if(!get_LCDC_sprite_enable_status())
+//    {
+//        std::cout << "no sprites!\n";
+//    }
+//    if(!get_LCDC_display_enable_status())
+//    {
+//        std::cout << "no screen lol!\n";
+//    }
+
     if(!Background_FIFO.empty() && !waiting_for_visible_sprite_fetch) //means we'll be popping from the background
     {
         if(!Sprite_FIFO.empty()) //means we'll also be popping from the sprite
@@ -810,10 +857,24 @@ void PPU::Push_to_BG_FIFO()
 };
 
 ////
+BYTE PPU::get_LCDC_bg_window_enable_status() const
+{
+    return (MEM[LCD_Control_reg] & (BYTE)(1)) == (BYTE)(1);
+}
+
+BYTE PPU::get_LCDC_sprite_enable_status() const
+{
+    return (MEM[LCD_Control_reg] & (BYTE)(1 << 1)) == (BYTE)(1 << 1);
+}
 
 BYTE PPU::get_LCDC_sprite_size_status() const
 {
     return (MEM[LCD_Control_reg] & (BYTE)(1 << 2)) == (BYTE)(1 << 2);
+};
+
+BYTE PPU::get_LCDC_bg_tile_map_select_status() const
+{
+    return (MEM[LCD_Control_reg] & (BYTE)(1 << 3)) == (BYTE)(1 << 3);
 };
 
 BYTE PPU::get_LCDC_tile_data_select() const
@@ -826,14 +887,14 @@ BYTE PPU::get_LCDC_window_display_enable_status() const
     return (MEM[LCD_Control_reg] & (BYTE)(1 << 5)) == (BYTE)(1 << 5);
 };
 
-BYTE PPU::get_LCDC_bg_tile_map_select_status() const
-{
-    return (MEM[LCD_Control_reg] & (BYTE)(1 << 3)) == (BYTE)(1 << 3);
-};
-
 BYTE PPU::get_LCDC_window_tile_map_select() const
 {
     return (MEM[LCD_Control_reg] & (BYTE)(1 << 6)) == (BYTE)(1 << 6);
+}
+
+BYTE PPU::get_LCDC_display_enable_status() const
+{
+    return (MEM[LCD_Control_reg] & (BYTE)(1 << 7)) == (BYTE)(1 << 7);
 }
 
 //LCDS getters
