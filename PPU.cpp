@@ -317,6 +317,9 @@ void PPU::H_BLANK()
     mode_H_BLANK++;
     if(mode_H_BLANK >= 114) //count down remaining cycle from 456T cycles = 114 machine cycles
     {
+        if(first_window_encounter == 0)
+            WINDOW_LINE_COUNTER++;
+
         pixel_fetcher_x_position_counter = 0;
         MEM[LY_register]++;
 
@@ -499,6 +502,13 @@ void PPU::Fetch_BG_tile_num_and_address()
     //window rendering
     if ((pixel_fetcher_x_position_counter >= MEM[WX_reg] && MEM[LY_register] >= MEM[WY_reg]) && get_LCDC_window_display_enable_status())
     {
+        if(MEM[LY_register] > 0)
+        {
+            int tmp = 1;
+            tmp++;
+        }
+        first_window_encounter = 0; //temporary solution, may add other actions to it like emptying fifo and such
+
         tilemap_mem_loc = 0x9C00;
 //        //upon reaching this for the first time in the line, we reset pixel_fetcher_x counter and add WX - 7
 //        if(first_window_encounter)
@@ -522,8 +532,30 @@ void PPU::Fetch_BG_tile_num_and_address()
 
         tile_x = ((pixel_fetcher_x_position_counter/8)) & 0x1F;
         tile_y = WINDOW_LINE_COUNTER / 8;
-        WINDOW_LINE_COUNTER++; //we reset this counter upon entering V_BLANK
         tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];
+
+
+
+        if (get_LCDC_tile_data_select())
+        {
+            //$8000 method
+            //meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
+            tile_data_base_loc = 0x8000;
+
+            //base address of tile data + jump to tile + jump to line in tile
+            tile_address_background = tile_data_base_loc + (tile_size_bytes * tilenum) + (2 * (WINDOW_LINE_COUNTER % 8));
+        }
+        else
+        {
+            //$8800 method
+            //tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1;
+            //to put it differently, “$8800 addressing” takes tiles 0-127 from block 2
+            // and tiles 128-255 from block 1.
+            tile_data_base_loc = 0x9000;
+
+            tile_address_background = tile_data_base_loc + (tile_size_bytes * char(tilenum) + (2 * (WINDOW_LINE_COUNTER % 8)));
+        }
+
 
     }
         //background rendering
@@ -542,26 +574,30 @@ void PPU::Fetch_BG_tile_num_and_address()
 //        {
 //            std::cout << (int)tilenum << std::endl;
 //        }
-    }
-    if (get_LCDC_tile_data_select())
-    {
-        //$8000 method
-        //meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
-        tile_data_base_loc = 0x8000;
 
-        //base address of tile data + jump to tile + jump to line in tile
-        tile_address_background = tile_data_base_loc + (tile_size_bytes * tilenum) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8));
-    }
-    else
-    {
-        //$8800 method
-        //tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1;
-        //to put it differently, “$8800 addressing” takes tiles 0-127 from block 2
-        // and tiles 128-255 from block 1.
-        tile_data_base_loc = 0x9000;
 
-        tile_address_background = tile_data_base_loc + (tile_size_bytes * char(tilenum) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8)));
+
+        if (get_LCDC_tile_data_select())
+        {
+            //$8000 method
+            //meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
+            tile_data_base_loc = 0x8000;
+
+            //base address of tile data + jump to tile + jump to line in tile
+            tile_address_background = tile_data_base_loc + (tile_size_bytes * tilenum) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8));
+        }
+        else
+        {
+            //$8800 method
+            //tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1;
+            //to put it differently, “$8800 addressing” takes tiles 0-127 from block 2
+            // and tiles 128-255 from block 1.
+            tile_data_base_loc = 0x9000;
+
+            tile_address_background = tile_data_base_loc + (tile_size_bytes * char(tilenum) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8)));
+        }
     }
+
 };
 
 void PPU::Fetch_SPRITE_tile_address(BYTE sprite_tile_num)
@@ -776,11 +812,9 @@ void PPU::Pop_to_screen()
             Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel;
             Background_FIFO.pop();
         }
-
         screen_coordinate_x++; //dont need it for now, might delete later
 //        pixel_fetcher_x_position_counter += 1;
     }
-
 }
 
 

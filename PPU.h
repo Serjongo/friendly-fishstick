@@ -12,8 +12,8 @@
 #define LCD_Status_reg 0xFF41
 #define SCX 0xFF43 //mem loc of x-screen coordinate for rendering
 #define SCY 0xFF42 //mem loc of y-scrren coordinate for rendering
-#define WX_reg 0xFF4A //mem loc of leftmost x_coord border of the window (continues till end of screen)
-#define WY_reg 0xFF4B //mem loc of top y_coord border of the window
+#define WX_reg 0xFF4B //mem loc of leftmost x_coord border of the window (continues till end of screen)
+#define WY_reg 0xFF4A //mem loc of top y_coord border of the window
 #define oam_size 0xA0 // 160 bytes
 #define tilemap_row_length_bytes 32 //window/background, 32 rows of 32 bytes
 #define tilemap_size 0x3ff
