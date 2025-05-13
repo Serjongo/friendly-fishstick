@@ -532,7 +532,7 @@ void PPU::Fetch_BG_tile_num_and_address()
 
         tile_x = ((pixel_fetcher_x_position_counter/8)) & 0x1F;
         tile_y = WINDOW_LINE_COUNTER / 8;
-        tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];
+        tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];;
 
 
 
