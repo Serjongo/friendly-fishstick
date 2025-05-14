@@ -337,6 +337,10 @@ void PPU::H_BLANK()
         {
             Background_FIFO.pop();
         }
+        while(!Sprite_FIFO.empty())
+        {
+            Sprite_FIFO.pop();
+        }
         mode_DRAW = 0; //restart DRAW cycle
 
 
