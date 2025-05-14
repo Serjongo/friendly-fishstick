@@ -318,7 +318,7 @@ void PPU::H_BLANK()
     if(mode_H_BLANK >= 114) //count down remaining cycle from 456T cycles = 114 machine cycles
     {
         if(first_window_encounter == 0)
-            WINDOW_LINE_COUNTER++;
+            WINDOW_LINE_COUNTER = (WINDOW_LINE_COUNTER + 1);
 
         pixel_fetcher_x_position_counter = 0;
         MEM[LY_register]++;
@@ -414,6 +414,7 @@ void PPU::V_BLANK()
 
     if(mode_V_BLANK >= 1140) //happens when we pass through 10 lines
     {
+        WINDOW_LINE_COUNTER = 0;
         mode_V_BLANK = 0;
         this->mode = OAM_SCAN_MODE;
         set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
@@ -500,7 +501,7 @@ void PPU::Fetch_BG_tile_num_and_address()
 //    {
 
     //window rendering
-    if ((pixel_fetcher_x_position_counter >= MEM[WX_reg] && MEM[LY_register] >= MEM[WY_reg]) && get_LCDC_window_display_enable_status())
+    if ((pixel_fetcher_x_position_counter >= MEM[WX_reg]-7 && MEM[LY_register] >= MEM[WY_reg]) && get_LCDC_window_display_enable_status())
     {
         if(MEM[LY_register] > 0)
         {
@@ -530,9 +531,9 @@ void PPU::Fetch_BG_tile_num_and_address()
 //        tile_x = ((pixel_fetcher_x_position_counter/8) + (MEM[SCX]/8) ) & 0x1F;
 //        tile_y = ((MEM[LY_register] + MEM[SCY]) & 0xff) / 8;
 
-        tile_x = ((pixel_fetcher_x_position_counter/8)) & 0x1F;
-        tile_y = WINDOW_LINE_COUNTER / 8;
-        tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];;
+        tile_x = ((pixel_fetcher_x_position_counter/8 - (MEM[WX_reg])/8)) & 0x1F;
+        tile_y = ((WINDOW_LINE_COUNTER / 8) & 0xff);
+        tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];
 
 
 
@@ -552,6 +553,8 @@ void PPU::Fetch_BG_tile_num_and_address()
             //to put it differently, “$8800 addressing” takes tiles 0-127 from block 2
             // and tiles 128-255 from block 1.
             tile_data_base_loc = 0x9000;
+
+//            tile_address_background = tile_data_base_loc + (tile_size_bytes * char(tilenum) + (2 * (WINDOW_LINE_COUNTER % 8)));
 
             tile_address_background = tile_data_base_loc + (tile_size_bytes * char(tilenum) + (2 * (WINDOW_LINE_COUNTER % 8)));
         }
@@ -574,7 +577,10 @@ void PPU::Fetch_BG_tile_num_and_address()
 //        {
 //            std::cout << (int)tilenum << std::endl;
 //        }
-
+//        if(get_LCDC_window_display_enable_status())
+//        {
+//            std::cout << "line: " << (int)MEM[LY_register] << '\n';
+//        }
 
 
         if (get_LCDC_tile_data_select())
@@ -676,7 +682,7 @@ void PPU::Push_to_SPRITE_FIFO()
                 BYTE temp_pixel_color = ((sprite_pixel_row & 0xC000) >> 14);
                 sprite_pixel_row = (sprite_pixel_row << 2);
                 BYTE palette = MEM[BG_palette_data_reg]; ///will be changed to sprite palette later on
-                Pixel pixel_temp = Pixel(temp_pixel_color,color_palette,0,1); //will need to edit the constructor according to sprite reqs
+                Pixel pixel_temp = Pixel(temp_pixel_color,color_palette,spr.get_obj_to_bg_priority_flag(),1); //will need to edit the constructor according to sprite reqs
                 sprite_pixels.push_back(pixel_temp);
             }
 
@@ -798,7 +804,11 @@ void PPU::Pop_to_screen()
         {
             Pixel cur_bg_pixel = Background_FIFO.front();
             Pixel cur_visible_pixel = Sprite_FIFO.front();
-            if(cur_visible_pixel.get_color() == 0) //0 means transparent
+//            if(cur_visible_pixel.get_background_priority())
+//            {
+//                std::cout << "PRIORITY!";
+//            }
+            if(cur_visible_pixel.get_color() == 0 || (cur_visible_pixel.get_background_priority() && cur_bg_pixel.get_color() != 0)) //0 means transparent
             {
                 cur_visible_pixel = cur_bg_pixel;
             }

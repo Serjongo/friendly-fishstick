@@ -234,7 +234,7 @@ void gameboy_testing::print_registers_r8(gameboy& gb)
 
 }
 
-void gameboy_testing::print_VRAM(gameboy& gb)
+void gameboy_testing::        print_VRAM(gameboy& gb)
 {
     outVRAMFile.open("../VRAM_MAP", ios::binary);
     if (!outVRAMFile) {
@@ -248,7 +248,7 @@ void gameboy_testing::print_VRAM(gameboy& gb)
 //    }
     outVRAMFile.close();
 //    for(int i = OAM_mem_start;i < OAM_mem_end;i++) //VRAM_mem_end
-    for(int i = 0x9C00;i < 0x9FFF;i++) //VRAM_mem_end
+    for(int i = OAM_mem_start;i < OAM_mem_end;i++) //VRAM_mem_end
 //    for(int i = VRAM_mem_start;i < 0x8200;i++) //VRAM_mem_end
     {
         cout << hex << std::setw(2) << std::setfill('0') << (int)gb.mem[i] << dec << ' ';
@@ -547,6 +547,8 @@ void gameboy::write_memory(WORD loc_write_to,BYTE data_to_write)
     WORD DMA_src_loc = (data_to_write << 8);
     if(loc_write_to == 0xFF46) //Initiate DMA-OAM memory transfer
     {
+//        if(mem[0xC037] == 0x80)
+//            cout << "AAA";
         for(int i = OAM_mem_start ; i <= OAM_mem_end; i++, DMA_src_loc++)
         {
             mem[i] = mem[DMA_src_loc];
@@ -2777,7 +2779,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_cartridge("../TESTS/tennis.gb");
+    read_from_cartridge("../TESTS/Dr.mario.gb");
 
     if(!enable_bootrom)
     {
