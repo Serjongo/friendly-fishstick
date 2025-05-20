@@ -224,6 +224,8 @@ class PPU{
         BYTE mode_H_BLANK = 0; //if we're inside H_blank, we'll be counting overall clocks with this
         WORD mode_V_BLANK = 0; //if we're inside V_blank, we'll be counting overall clocks with this
 
+        //debug
+        std::stack<int> modes_trace;
 
         int OAM_counter = OAM_mem_start;
         int vblank_counter = 0;

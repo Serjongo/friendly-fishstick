@@ -226,6 +226,10 @@ void PPU::OAM_SCAN() //mode 2 of the ppu
     OAM_counter = OAM_mem_start; //reset OAM counter once over
     this->mode = DRAW_MODE;
     set_LCDS_PPU_MODE_status(DRAW_MODE);
+    if (this->mode < 0 || this->mode > 3)
+    {
+        std::cout << "OAM scan is crashing the gameboy\n";
+    }
 }
 
 
@@ -287,7 +291,8 @@ void PPU::DRAW() //mode 3 of the ppu
                 }
                 if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                     break;
-
+            default:
+                std::cout << "what the fuck is going on, mode_DRAW is borked\n";
         }
     }
 //    ///post mode
@@ -423,6 +428,11 @@ void PPU::V_BLANK()
         this->mode = OAM_SCAN_MODE;
         set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
         MEM[LY_register] = 0;
+        while(!modes_trace.empty())
+        {
+//            std::cout << "emptying trace";
+            modes_trace.pop();
+        }
     }
     return;
 
@@ -512,7 +522,14 @@ void PPU::Fetch_BG_tile_num_and_address()
             int tmp = 1;
             tmp++;
         }
-        first_window_encounter = 0; //temporary solution, may add other actions to it like emptying fifo and such
+        if(first_window_encounter)
+        {
+            first_window_encounter = 0; //temporary solution, may add other actions to it like emptying fifo and such
+            while(!Background_FIFO.empty())
+            {
+                Background_FIFO.pop();
+            }
+        }
 
         tilemap_mem_loc = 0x9C00;
 //        //upon reaching this for the first time in the line, we reset pixel_fetcher_x counter and add WX - 7
@@ -801,9 +818,22 @@ void PPU::Pop_to_screen()
 //    {
 //        std::cout << "no screen lol!\n";
 //    }
-
+    //dealing with SCX scrolling
+    for(int i = (MEM[SCX] % 8) ; first_iteration_in_line && i > 0; i--)
+    {
+//            if(!Sprite_FIFO.empty())
+//            {
+//                Sprite_FIFO.pop();
+//            }
+        if(!Background_FIFO.empty())
+        {
+            Background_FIFO.pop();
+//            std::cout << "scrolled";
+        }
+    }
     if(!Background_FIFO.empty() && !waiting_for_visible_sprite_fetch) //means we'll be popping from the background
     {
+
         if(!Sprite_FIFO.empty()) //means we'll also be popping from the sprite
         {
             Pixel cur_bg_pixel = Background_FIFO.front();
@@ -1084,12 +1114,15 @@ void PPU::PPU_cycle()
     switch(this->mode)
     {
         case OAM_SCAN_MODE:
+            modes_trace.push(2);
             OAM_SCAN();
             return;
         case DRAW_MODE:
+            modes_trace.push(3);
             DRAW();
             return;
         case H_BLANK_MODE:
+            modes_trace.push(0);
             H_BLANK();
             //draw row
 //            if (MEM[LY_register] >= 144) {
@@ -1104,6 +1137,7 @@ void PPU::PPU_cycle()
 //            }
             return;
         case V_BLANK_MODE:
+            modes_trace.push(1);
             V_BLANK();
             return;
         default:
