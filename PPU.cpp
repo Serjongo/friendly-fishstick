@@ -831,6 +831,8 @@ void PPU::Pop_to_screen()
 //            std::cout << "scrolled";
         }
     }
+    first_iteration_in_line = false;
+
     if(!Background_FIFO.empty() && !waiting_for_visible_sprite_fetch) //means we'll be popping from the background
     {
 
@@ -1108,7 +1110,11 @@ void PPU::PPU_cycle()
 //    {
 //        V_BLANK();
 //    }
-
+    if(SCX_VAL_DEBUG != MEM[SCX])
+    {
+        std::cout << "SCX VAL:" << (int)MEM[SCX] << '\n';
+        SCX_VAL_DEBUG = MEM[SCX];
+    }
     CUR_TICK_ppu_machine_cycles = 0;
     sample_STAT_interrupt_line();
     switch(this->mode)

@@ -567,16 +567,16 @@ void gameboy::write_memory(WORD loc_write_to,BYTE data_to_write)
         {
 //            mem[JOYPAD_register] = 0x27;
             mem[JOYPAD_register] = (mem[JOYPAD_register] & 0xF0) | (buttons_state & 0X0F);
-            if(buttons_state != 0x1F)
-                cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)mem[JOYPAD_register] << endl;
+//            if(buttons_state != 0x1F)
+//                cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)mem[JOYPAD_register] << endl;
 //            buttons_state = 0x1F;
         }
         else if(!get_joypad_select_d_pad_bit()) //0 means on in this case
         {
 //            mem[JOYPAD_register] = 0x17;
             mem[JOYPAD_register] = (mem[JOYPAD_register] & 0xF0) | (movement_state & 0X0F);
-            if(movement_state != 0x2F)
-                cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)mem[JOYPAD_register] << endl;
+//            if(movement_state != 0x2F)
+//                cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << (int)mem[JOYPAD_register] << endl;
 //            movement_state = 0x2F;
         }
         else
@@ -2874,7 +2874,7 @@ void gameboy::main_loop(gameboy& gb)
                 if(!input_commands.empty()) {
                     key_pressed = true;
                     while (!input_commands.empty()) {
-                        cout << "pressed";
+//                        cout << "pressed";
                         sf::Keyboard::Scancode command = input_commands.front();
                         input_commands.pop();
                         if (command == sf::Keyboard::Scancode::Down) {

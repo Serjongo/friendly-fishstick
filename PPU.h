@@ -253,6 +253,7 @@ class PPU{
 
 
         //placeholder
+        WORD SCX_VAL_DEBUG = 0; ///for debugging purposes, TO DELETE
         WORD tile_data_base_loc;
         WORD tile_address_background; //after calculating tile number and base_loc, final address
         BYTE tile_data_low_background; //first byte of pixels
