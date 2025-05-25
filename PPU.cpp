@@ -428,6 +428,14 @@ void PPU::V_BLANK()
         this->mode = OAM_SCAN_MODE;
         set_LCDS_PPU_MODE_status(OAM_SCAN_MODE);
         MEM[LY_register] = 0;
+
+        ///DEBUG
+        if(DEBUG_FLAG)
+        {
+            DEBUG_FLAG = false;
+            std::cout << "VBLANK REACHED!\n";
+        }
+
         while(!modes_trace.empty())
         {
 //            std::cout << "emptying trace";
@@ -818,20 +826,22 @@ void PPU::Pop_to_screen()
 //    {
 //        std::cout << "no screen lol!\n";
 //    }
-    //dealing with SCX scrolling
-    for(int i = (MEM[SCX] % 8) ; first_iteration_in_line && i > 0; i--)
+
+    ///dealing with SCX scrolling
+    bool pixels_popped = false;
+    for(int i = (MEM[SCX] % 8) ; first_iteration_in_line && i > 0 && !Background_FIFO.empty(); i--)
     {
 //            if(!Sprite_FIFO.empty())
 //            {
 //                Sprite_FIFO.pop();
 //            }
-        if(!Background_FIFO.empty())
-        {
-            Background_FIFO.pop();
-//            std::cout << "scrolled";
-        }
+        Background_FIFO.pop();
+        pixels_popped = true;
     }
-    first_iteration_in_line = false;
+    if(pixels_popped)
+        first_iteration_in_line = false;
+    ///
+
 
     if(!Background_FIFO.empty() && !waiting_for_visible_sprite_fetch) //means we'll be popping from the background
     {
@@ -1114,6 +1124,7 @@ void PPU::PPU_cycle()
     {
         std::cout << "SCX VAL:" << (int)MEM[SCX] << '\n';
         SCX_VAL_DEBUG = MEM[SCX];
+        DEBUG_FLAG = true;
     }
     CUR_TICK_ppu_machine_cycles = 0;
     sample_STAT_interrupt_line();
