@@ -239,6 +239,7 @@ void PPU::DRAW() //mode 3 of the ppu
     {
         switch(this->mode_DRAW) {
             case (0):
+                modes_trace.push(30);
                 //if we are here, we fetch bg/window normally
                 Fetch_BG_tile_num_and_address();
                 num_of_machine_cycles(0.5);
@@ -250,6 +251,7 @@ void PPU::DRAW() //mode 3 of the ppu
                 if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                     break;
             case (1):
+                modes_trace.push(31);
                 Fetch_Background_Tile_Data_low();
                 num_of_machine_cycles(0.5);
                 mode_DRAW++;
@@ -260,6 +262,7 @@ void PPU::DRAW() //mode 3 of the ppu
                 if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                     break;
             case (2):
+                modes_trace.push(32);
 //            if(first_iteration_in_line)
 //                mode_DRAW = 0;
 //            else
@@ -275,6 +278,7 @@ void PPU::DRAW() //mode 3 of the ppu
                 if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                     break;
             case (3):
+                modes_trace.push(33);
                 Push_to_BG_FIFO();
                 num_of_machine_cycles(0.5);
 
@@ -283,7 +287,7 @@ void PPU::DRAW() //mode 3 of the ppu
                 Pop_to_screen();
                 Push_to_SPRITE_FIFO();
 
-                if (screen_coordinate_x > 160) //if we finished with the line
+                if (screen_coordinate_x >= 160) //if we finished with the line
                 {
                     mode = H_BLANK_MODE;
                     set_LCDS_PPU_MODE_status(H_BLANK_MODE);
@@ -291,8 +295,23 @@ void PPU::DRAW() //mode 3 of the ppu
                 }
                 if(CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                     break;
+                else
+                {
+                    mode_DRAW = 0;
+                    break;
+                }
+                break;
+
             default:
                 std::cout << "what the fuck is going on, mode_DRAW is borked\n";
+                int pops = 0;
+                while(pops < 5 && !modes_trace.empty())
+                {
+
+                    std::cout << +modes_trace.top() << '\n';
+                    pops++;
+                    modes_trace.pop();
+                }
         }
     }
 //    ///post mode
@@ -434,6 +453,7 @@ void PPU::V_BLANK()
         {
             DEBUG_FLAG = false;
             std::cout << "VBLANK REACHED!\n";
+            std::cout << SCX_VAL_DEBUG << " + " << screen_coordinate_x << '\n';
         }
 
         while(!modes_trace.empty())
@@ -598,7 +618,7 @@ void PPU::Fetch_BG_tile_num_and_address()
         if(!first_window_encounter)
             first_window_encounter = 1;
 
-        tile_x = ((pixel_fetcher_x_position_counter/8) + (MEM[SCX]/8) ) & 0x1F;
+        tile_x = ((pixel_fetcher_x_position_counter/8) + (((MEM[SCX])+0)/8) ) & 0x1F;
         tile_y = ((MEM[LY_register] + MEM[SCY]) & 0xff) / 8;
 
         tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];
@@ -813,20 +833,6 @@ Pixel PPU::fill_transparent_sprite_pixel(BYTE cur_screen_pixel,BYTE sprite_index
 //we pop a single pixel for now
 void PPU::Pop_to_screen()
 {
-    //check for lcdc bits
-//    if(!get_LCDC_bg_window_enable_status())
-//    {
-//        std::cout << "no bg and no window!\n";
-//    }
-//    if(!get_LCDC_sprite_enable_status())
-//    {
-//        std::cout << "no sprites!\n";
-//    }
-//    if(!get_LCDC_display_enable_status())
-//    {
-//        std::cout << "no screen lol!\n";
-//    }
-
     ///dealing with SCX scrolling
     bool pixels_popped = false;
     for(int i = (MEM[SCX] % 8) ; first_iteration_in_line && i > 0 && !Background_FIFO.empty(); i--)
@@ -843,7 +849,7 @@ void PPU::Pop_to_screen()
     ///
 
 
-    if(!Background_FIFO.empty() && !waiting_for_visible_sprite_fetch) //means we'll be popping from the background
+    if(!Background_FIFO.empty() && !waiting_for_visible_sprite_fetch && screen_coordinate_x <= 159) //means we'll be popping from the background // && screen_coordinate_x <= 159
     {
 
         if(!Sprite_FIFO.empty()) //means we'll also be popping from the sprite
@@ -868,7 +874,7 @@ void PPU::Pop_to_screen()
             Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel;
             Background_FIFO.pop();
         }
-        screen_coordinate_x++; //dont need it for now, might delete later
+        screen_coordinate_x++;
 //        pixel_fetcher_x_position_counter += 1;
     }
 }
@@ -1108,24 +1114,35 @@ void PPU::set_vblank_interrupt() //this will be called every single time the V_B
 
 void PPU::PPU_cycle()
 {
-//    OAM_SCAN();
-//    DRAW();
-////    for(int i = 0 ; i < 160; i++)
-////    {
-////        pixels.push_back(addPixel({(float)i,(float)MEM[LY_register]},100,100,100));
-////    }
-//    H_BLANK();
-//    //draw row
-//    if(MEM[LY_register] >= 144)
-//    {
-//        V_BLANK();
-//    }
+
     if(SCX_VAL_DEBUG != MEM[SCX])
     {
-        std::cout << "SCX VAL:" << (int)MEM[SCX] << '\n';
+        std::cout << "SCX VAL:" << (int)MEM[SCX] << " + " << screen_coordinate_x << '\n';
         SCX_VAL_DEBUG = MEM[SCX];
         DEBUG_FLAG = true;
     }
+//    if(MEM[SCX] != 0)
+//    {
+//        std::cout << screen_coordinate_x << '\n';
+//
+//    }
+//    if(0 == MEM[SCY] && MEM[SCX] != 0)
+//    {
+//
+//        int pops = 0;
+//        while(pops < 5 && !modes_trace.empty())
+//        {
+//
+//            std::cout << +modes_trace.top() << '\n';
+//            pops++;
+//            modes_trace.pop();
+//        }
+//        std::cout << "SCY VAL:" << (int)MEM[SCY] << '\n';
+//        std::cout << "loop counter: " << loop_counter << '\n';
+////        SCX_VAL_DEBUG = MEM[SCX];
+////        DEBUG_FLAG = true;
+//    }
+
     CUR_TICK_ppu_machine_cycles = 0;
     sample_STAT_interrupt_line();
     switch(this->mode)
@@ -1135,7 +1152,7 @@ void PPU::PPU_cycle()
             OAM_SCAN();
             return;
         case DRAW_MODE:
-            modes_trace.push(3);
+//            modes_trace.push(3);
             DRAW();
             return;
         case H_BLANK_MODE:

@@ -141,7 +141,7 @@ public:
     //TESTING RELATED
     BYTE testing_mode = 0; //when turned on, will print testing related info, as well as logging data in text files
     bool real_cpu_speed_constraint = false; //this caps the amount of commands the gameboy can perform per second
-    static inline int loop_counter = 1;
+    static inline double loop_counter = 1;
 
 
     enum r8
