@@ -287,7 +287,7 @@ void PPU::DRAW() //mode 3 of the ppu
                 Pop_to_screen();
                 Push_to_SPRITE_FIFO();
 
-                if (screen_coordinate_x >= 160) //if we finished with the line
+                if (screen_coordinate_x >= SCREEN_X_END) //if we finished with the line
                 {
                     mode = H_BLANK_MODE;
                     set_LCDS_PPU_MODE_status(H_BLANK_MODE);
@@ -557,6 +557,7 @@ void PPU::Fetch_BG_tile_num_and_address()
             {
                 Background_FIFO.pop();
             }
+            pixel_fetcher_x_position_counter = MEM[WX_reg] - 7;
         }
 
         tilemap_mem_loc = 0x9C00;
@@ -618,7 +619,7 @@ void PPU::Fetch_BG_tile_num_and_address()
         if(!first_window_encounter)
             first_window_encounter = 1;
 
-        tile_x = ((pixel_fetcher_x_position_counter/8) + (((MEM[SCX])+0)/8) ) & 0x1F;
+        tile_x = ((pixel_fetcher_x_position_counter/8) + (((MEM[SCX]))/8) ) & 0x1F;
         tile_y = ((MEM[LY_register] + MEM[SCY]) & 0xff) / 8;
 
         tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];
@@ -849,7 +850,7 @@ void PPU::Pop_to_screen()
     ///
 
 
-    if(!Background_FIFO.empty() && !waiting_for_visible_sprite_fetch && screen_coordinate_x <= 159) //means we'll be popping from the background // && screen_coordinate_x <= 159
+    if(!Background_FIFO.empty() && !waiting_for_visible_sprite_fetch && screen_coordinate_x <= SCREEN_X_END) //means we'll be popping from the background // && screen_coordinate_x <= SCREEN_X_END
     {
 
         if(!Sprite_FIFO.empty()) //means we'll also be popping from the sprite
@@ -864,14 +865,16 @@ void PPU::Pop_to_screen()
             {
                 cur_visible_pixel = cur_bg_pixel;
             }
-            Screen[MEM[LY_register]][screen_coordinate_x] = cur_visible_pixel;
+//            if(screen_coordinate_x >= 7)
+                Screen[MEM[LY_register]][screen_coordinate_x] = cur_visible_pixel;
             Background_FIFO.pop();
             Sprite_FIFO.pop();
         }
         else //only from background
         {
             Pixel cur_pixel = Background_FIFO.front();
-            Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel;
+//            if(screen_coordinate_x >= 7)
+                Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel;
             Background_FIFO.pop();
         }
         screen_coordinate_x++;

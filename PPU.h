@@ -28,6 +28,7 @@
 #define VRAM_mem_end 0x9FFF //mem loc bound
 #define tile_map_1_start 0x9800
 #define tile_map_1_end 0x9FFF
+#define SCREEN_X_END 159
 
 
 //modes
