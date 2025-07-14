@@ -2779,7 +2779,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_cartridge("../TESTS/tennis.gb");
+    read_from_cartridge("../TESTS/dr.mario.gb");
 
     if(!enable_bootrom)
     {
@@ -2929,9 +2929,9 @@ void gameboy::main_loop(gameboy& gb)
                 CPU_cycle(); ///
 //                check_user_input();
 
-                if (scroll_y_val != mem[0xFF42]) {
-                    cout << "SCY CHANGED! : " << (int)mem[0xFF42] << endl;
-                }
+//                if (scroll_y_val != mem[0xFF42]) {
+//                    cout << "SCY CHANGED! : " << (int)mem[0xFF42] << endl;
+//                }
 
                 pupy.PPU_cycle(); ///
 //                if(joypad_backup != mem[JOYPAD_register])

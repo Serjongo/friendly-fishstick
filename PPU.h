@@ -147,19 +147,19 @@ class Sprite
                 return flags;
             };
 
-            BYTE get_palette_number_flag()
+            BYTE get_palette_number_flag() const
             {
                 return ((flags & 0x10) >> 4);
             }
-            BYTE get_x_flip_flag()
+            BYTE get_x_flip_flag() const
             {
                 return ((flags & 0x20) >> 5);
             }
-            BYTE get_y_flip_flag()
+            BYTE get_y_flip_flag() const
             {
                 return ((flags & 0x40) >> 6);
             }
-            BYTE get_obj_to_bg_priority_flag()
+            BYTE get_obj_to_bg_priority_flag() const
             {
                 return ((flags & 0x80) >> 7);
             }
@@ -224,6 +224,7 @@ class PPU{
         BYTE mode_DRAW = 0; //if we're inside draw mode, we'll be checking the specific stage
         BYTE mode_H_BLANK = 0; //if we're inside H_blank, we'll be counting overall clocks with this
         WORD mode_V_BLANK = 0; //if we're inside V_blank, we'll be counting overall clocks with this
+        BYTE mode_BG = 1; //If a sprite is waiting for a fetch, we switch the fetcher to Sprite Mode
 
         //debug
         std::stack<int> modes_trace;
@@ -234,9 +235,10 @@ class PPU{
         BYTE* VRAM; // from the vram start point
         std::vector<Sprite> OAM; //all sprites from the MEM as objects, will hold up to 40 sprites, 160 bytes of data in total
         BYTE* MEM; //1 to 1 memory mapping from the start
-        std::queue<Pixel> Background_FIFO;
-        std::queue<Pixel> Sprite_FIFO;
-        bool first_iteration_in_line; //used for DRAW mode quirk
+        std::deque<Pixel> Background_FIFO;
+        std::deque<Pixel> Sprite_FIFO;
+        std::deque<const Sprite*> Sprite_Fetch_Requests;
+        bool first_iteration_in_line = true; //used for DRAW mode quirk
 
         std::vector<Sprite> visible_OAM_buffer; //up to 10 pointers to OAMs/sprites which are potentially visible in the line
         Color background_palette[4];
@@ -331,11 +333,17 @@ class PPU{
     void Fetch_Background_Tile_Data_low();
     void Fetch_Background_Tile_Data_high();
 
+
+    void Fetch_tile_num_and_address(bool BG); //combines fetch sprite and fetch bg
+    void Fetch_Tile_Data_low(bool BG);
+    void Fetch_Tile_Data_high(bool BG);
+
     void Fetch_SPRITE_tile_address(BYTE sprite_tile_num);
     void Fetch_Sprite_Tile_Data_low();
     void Fetch_Sprite_Tile_Data_high();
     void Push_to_BG_FIFO();
     void Push_to_SPRITE_FIFO();
+    void Scan_visible_OAM_buffer();
     Pixel fill_transparent_sprite_pixel(BYTE fifo_index,BYTE sprite_index,Pixel default_pixel,Sprite original_sprite);
 
     void Pop_to_screen(); // pop from eligible fifos to screen

@@ -241,24 +241,26 @@ void PPU::DRAW() //mode 3 of the ppu
             case (0):
                 modes_trace.push(30);
                 //if we are here, we fetch bg/window normally
-                Fetch_BG_tile_num_and_address();
+//                Fetch_BG_tile_num_and_address();
+                Fetch_tile_num_and_address(this->mode_BG);
                 num_of_machine_cycles(0.5);
                 mode_DRAW++;
                 Pop_to_screen();
-                Push_to_SPRITE_FIFO();
+//                Push_to_SPRITE_FIFO();
                 Pop_to_screen();
-                Push_to_SPRITE_FIFO();
+//                Push_to_SPRITE_FIFO();
                 if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                     break;
             case (1):
                 modes_trace.push(31);
-                Fetch_Background_Tile_Data_low();
+//                Fetch_Background_Tile_Data_low();
+                Fetch_Tile_Data_low(this->mode_BG);
                 num_of_machine_cycles(0.5);
                 mode_DRAW++;
                 Pop_to_screen();
-                Push_to_SPRITE_FIFO();
+//                Push_to_SPRITE_FIFO();
                 Pop_to_screen();
-                Push_to_SPRITE_FIFO();
+//                Push_to_SPRITE_FIFO();
                 if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                     break;
             case (2):
@@ -267,25 +269,36 @@ void PPU::DRAW() //mode 3 of the ppu
 //                mode_DRAW = 0;
 //            else
 //            {
-                Fetch_Background_Tile_Data_high();
+//                Fetch_Background_Tile_Data_high();
+                Fetch_Tile_Data_high(this->mode_BG);
                 mode_DRAW++;
                 Pop_to_screen();
-                Push_to_SPRITE_FIFO();
+//                Push_to_SPRITE_FIFO();
                 Pop_to_screen();
-                Push_to_SPRITE_FIFO();
+//                Push_to_SPRITE_FIFO();
 //            }
                 num_of_machine_cycles(0.5);
                 if (CUR_TICK_ppu_machine_cycles >= 1) ///1-M CYCLE TICK LIMITATION
                     break;
             case (3):
                 modes_trace.push(33);
-                Push_to_BG_FIFO();
-                num_of_machine_cycles(0.5);
+                if(this->mode_BG || Background_FIFO.empty())
+                {
+                    Push_to_BG_FIFO();
+                    num_of_machine_cycles(0.5);
+                }
+                else
+                {
+                    Push_to_SPRITE_FIFO();
+                    num_of_machine_cycles(0.5);
+                }
+
+
 
                 Pop_to_screen();
-                Push_to_SPRITE_FIFO();
+//                Push_to_SPRITE_FIFO();
                 Pop_to_screen();
-                Push_to_SPRITE_FIFO();
+//                Push_to_SPRITE_FIFO();
 
                 if (screen_coordinate_x >= SCREEN_X_END) //if we finished with the line
                 {
@@ -338,14 +351,14 @@ void PPU::DRAW() //mode 3 of the ppu
 void PPU::H_BLANK()
 {
     num_of_machine_cycles(1);
-    mode_H_BLANK++;
+    this->mode_H_BLANK++;
     if(mode_H_BLANK >= 114) //count down remaining cycle from 456T cycles = 114 machine cycles
     {
         if(first_window_encounter == 0)
             WINDOW_LINE_COUNTER = (WINDOW_LINE_COUNTER + 1);
 
-        pixel_fetcher_x_position_counter = 0;
-        MEM[LY_register]++;
+        this->pixel_fetcher_x_position_counter = 0;
+        this->MEM[LY_register]++;
 
         //setting coincidence flag according to LY==LYC -- may be used for interrupts later on
         if(MEM[LYC_register] == MEM[LY_register])
@@ -359,19 +372,20 @@ void PPU::H_BLANK()
         ///temporary solution, should probably think of something else
         while(!Background_FIFO.empty())
         {
-            Background_FIFO.pop();
+            Background_FIFO.pop_front();
         }
         while(!Sprite_FIFO.empty())
         {
-            Sprite_FIFO.pop();
+            Sprite_FIFO.pop_front();
         }
-        mode_DRAW = 0; //restart DRAW cycle
+        this->mode_DRAW = 0; //restart DRAW cycle
 
 
-        screen_coordinate_x = 0;
+        this->screen_coordinate_x = 0;
+        this->first_iteration_in_line = true;
 
         ///post mode
-        mode_H_BLANK = 0;
+        this->mode_H_BLANK = 0;
 
         if (MEM[LY_register] >= 144) { //POST H_BLANK
             this->mode = V_BLANK_MODE;
@@ -411,7 +425,7 @@ void PPU::H_BLANK()
 //
 //        while(!Background_FIFO.empty())
 //        {
-//            Background_FIFO.pop();
+//            Background_FIFO.pop_front();
 //        }
 //
 //        screen_coordinate_x = 0;
@@ -527,6 +541,105 @@ WORD PPU::tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high)
 }
 
 // DRAW()'s inner functions
+void PPU::Fetch_tile_num_and_address(bool BG)
+{
+    /// XXX TO REMOVE
+    first_iteration_in_line = (pixel_fetcher_x_position_counter == 0);
+
+    if(BG) {
+        //window rendering
+        if ((pixel_fetcher_x_position_counter >= MEM[WX_reg] - 7 && MEM[LY_register] >= MEM[WY_reg]) &&
+            get_LCDC_window_display_enable_status()) {
+            if (MEM[LY_register] > 0) {
+                int tmp = 1;
+                tmp++;
+            }
+            if (first_window_encounter) {
+                first_window_encounter = 0; //temporary solution, may add other actions to it like emptying fifo and such
+                while (!Background_FIFO.empty()) {
+                    Background_FIFO.pop_front();
+                }
+                pixel_fetcher_x_position_counter = MEM[WX_reg] - 7;
+            }
+
+            tilemap_mem_loc = 0x9C00;
+
+            tile_x = ((pixel_fetcher_x_position_counter / 8 - (MEM[WX_reg]) / 8)) & 0x1F;
+            tile_y = ((WINDOW_LINE_COUNTER / 8) & 0xff);
+            tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];
+
+
+            if (get_LCDC_tile_data_select()) {
+                //$8000 method
+                //meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
+                tile_data_base_loc = 0x8000;
+
+                //base address of tile data + jump to tile + jump to line in tile
+                tile_address_background =
+                        tile_data_base_loc + (tile_size_bytes * tilenum) + (2 * (WINDOW_LINE_COUNTER % 8));
+            } else {
+                //$8800 method
+                //tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1;
+                //to put it differently, “$8800 addressing” takes tiles 0-127 from block 2
+                // and tiles 128-255 from block 1.
+                tile_data_base_loc = 0x9000;
+
+                //            tile_address_background = tile_data_base_loc + (tile_size_bytes * char(tilenum) + (2 * (WINDOW_LINE_COUNTER % 8)));
+
+                tile_address_background =
+                        tile_data_base_loc + (tile_size_bytes * char(tilenum) + (2 * (WINDOW_LINE_COUNTER % 8)));
+            }
+
+
+        }
+            //background rendering
+        else {
+            tilemap_mem_loc = 0x9800;
+            //reset first_window_encounter, since if we're here, we're past/before window
+            if (!first_window_encounter)
+                first_window_encounter = 1;
+
+            tile_x = ((pixel_fetcher_x_position_counter / 8) + (((MEM[SCX])) / 8)) & 0x1F;
+            tile_y = ((MEM[LY_register] + MEM[SCY]) & 0xff) / 8;
+
+            tilenum = MEM[tilemap_mem_loc + ((tile_x + (tile_y * tilemap_row_length_bytes)) % tilemap_size)];
+
+
+            if (get_LCDC_tile_data_select()) {
+                //$8000 method
+                //meaning that tiles 0-127 are in block 0, and tiles 128-255 are in block 1.
+                tile_data_base_loc = 0x8000;
+
+                //base address of tile data + jump to tile + jump to line in tile
+                tile_address_background =
+                        tile_data_base_loc + (tile_size_bytes * tilenum) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8));
+            } else {
+                //$8800 method
+                //tiles 0-127 are in block 2, and tiles -128 to -1 are in block 1;
+                //to put it differently, “$8800 addressing” takes tiles 0-127 from block 2
+                // and tiles 128-255 from block 1.
+                tile_data_base_loc = 0x9000;
+
+                tile_address_background = tile_data_base_loc +
+                                          (tile_size_bytes * char(tilenum) + (2 * ((MEM[LY_register] + MEM[SCY]) % 8)));
+            }
+        }
+    }
+    else //sprite mode
+    {
+        BYTE current_screen_pixel_x = screen_coordinate_x; //this gets updated with each pixel push_back, as opposed to screen_coordinate which gets updated which each pop_front
+        const Sprite *spr = Sprite_Fetch_Requests.front();
+        if(spr->get_y_flip_flag())
+        {
+            tile_address_sprite = 0x8000 + (tile_size_bytes * spr->get_tile_num()) + (2 * ((((spr->get_y_pos()-1) - (MEM[LY_register])) % 8)));
+        }
+        else
+        {
+            tile_address_sprite = 0x8000 + (tile_size_bytes * spr->get_tile_num()) + (2 * (7-(((spr->get_y_pos()-1) - (MEM[LY_register])) % 8)));
+        }
+    }
+}
+
 
 void PPU::Fetch_BG_tile_num_and_address()
 {
@@ -555,7 +668,7 @@ void PPU::Fetch_BG_tile_num_and_address()
             first_window_encounter = 0; //temporary solution, may add other actions to it like emptying fifo and such
             while(!Background_FIFO.empty())
             {
-                Background_FIFO.pop();
+                Background_FIFO.pop_front();
             }
             pixel_fetcher_x_position_counter = MEM[WX_reg] - 7;
         }
@@ -567,7 +680,7 @@ void PPU::Fetch_BG_tile_num_and_address()
 //            //empty out fifo
 //            while(!Background_FIFO.empty())
 //            {
-//                Background_FIFO.pop();
+//                Background_FIFO.pop_front();
 //            }
 //            pixel_fetcher_x_position_counter = MEM[WX_reg] - 7; //-7
 //            first_window_encounter = 0;
@@ -680,109 +793,181 @@ void PPU::Fetch_Sprite_Tile_Data_high()
     tile_data_high_sprite = MEM[tile_address_sprite + 1];
 };
 
+void PPU::Fetch_Tile_Data_high(bool BG)
+{
+    if(BG)
+        tile_data_high_background = MEM[tile_address_background + 1];
+    else
+        tile_data_high_sprite = MEM[tile_address_sprite + 1];
+}
+void PPU::Fetch_Tile_Data_low(bool BG)
+{
+    if(BG)
+        tile_data_low_background = MEM[tile_address_background];
+    else
+        tile_data_low_sprite = MEM[tile_address_sprite];
+}
 
 
+void PPU::Scan_visible_OAM_buffer()
+{
+    for(auto & i : visible_OAM_buffer)
+    {
+        const Sprite *spr = &i;
+        if (spr->get_x_pos() == screen_coordinate_x + 8)
+        {
+            Sprite_Fetch_Requests.push_front(spr);
+        }
+    }
+    if(!Sprite_Fetch_Requests.empty())
+    {
+        waiting_for_visible_sprite_fetch = true;
+//        this->mode_BG = 0;//switching to SPRITE MODE
+    }
+
+}
 void PPU::Push_to_SPRITE_FIFO()
 {
-//    if(screen_coordinate_x + 8 >= 0x7C && MEM[LY_register] == 0x45)
-//    {
-//        std::cout << "oi";
-//    }
-    BYTE current_screen_pixel_x = screen_coordinate_x; //this gets updated with each pixel push, as opposed to screen_coordinate which gets updated which each pop
-    //scan the sprite buffer to find relevant objects
-    for(int i = 0 ; i < visible_OAM_buffer.size();i++)
+    BYTE current_screen_pixel_x = screen_coordinate_x; //this gets updated with each pixel push_back, as opposed to screen_coordinate which gets updated which each pop_front
+    WORD sprite_pixel_row = tileData_to_pixel_row(tile_data_low_sprite,tile_data_high_sprite);
+    const Sprite* spr = Sprite_Fetch_Requests.front();
+
+    BYTE color_palette = spr->get_palette_number_flag();
+
+    std::vector<Pixel> sprite_pixels;
+
+    //make pixel row
+    for(int j = 0 ; j < 8; j++)
     {
-        Sprite spr = visible_OAM_buffer[i];
-        if (spr.get_x_pos() <= screen_coordinate_x + 8)
+        BYTE temp_pixel_color = ((sprite_pixel_row & 0xC000) >> 14);
+        sprite_pixel_row = (sprite_pixel_row << 2);
+        BYTE palette = MEM[BG_palette_data_reg]; ///will be changed to sprite palette later on
+        Pixel pixel_temp = Pixel(temp_pixel_color,color_palette,spr->get_obj_to_bg_priority_flag(),1); //will need to edit the constructor according to sprite reqs
+        sprite_pixels.push_back(pixel_temp);
+    }
+
+    //converting FIFO to VECTOR to overwrite transparent pixels
+    std::vector<Pixel> Sprite_FIFO_vector(Sprite_FIFO.begin(), Sprite_FIFO.end());
+
+    //merge pixel row with the sprite FIFO
+    int flip = spr->get_x_flip_flag();
+    for(size_t fifo_size = Sprite_FIFO_vector.size(), i = 0; i < sprite_pixels.size();i++)
+    {
+        size_t sprite_pixels_index = flip ? 7-i : i;
+        //overwrite existing transparent pixels
+        if(i < fifo_size && Sprite_FIFO_vector[i].get_color() == 0) //meaning transparent
         {
-
-            //step 1 - fetch tile number
-            //step 2 - fetch tile data - base tile_data_mem loc is always 0x8000
-//            Fetch_SPRITE_tile_address(spr.get_tile_num());
-            if(spr.get_y_flip_flag())
-            {
-                tile_address_sprite = 0x8000 + (tile_size_bytes * spr.get_tile_num()) + (2 * ((((spr.get_y_pos()-1) - (MEM[LY_register])) % 8)));
-            }
-            else
-            {
-                tile_address_sprite = 0x8000 + (tile_size_bytes * spr.get_tile_num()) + (2 * (7-(((spr.get_y_pos()-1) - (MEM[LY_register])) % 8)));
-            }
-
-
-            Fetch_Sprite_Tile_Data_low();
-            Fetch_Sprite_Tile_Data_high();
-            WORD sprite_pixel_row = tileData_to_pixel_row(tile_data_low_sprite,tile_data_high_sprite);
-
-
-            BYTE color_palette = spr.get_palette_number_flag();
-
-
-
-            if((screen_coordinate_x >= 0x6A &&  visible_OAM_buffer[i].get_x_pos() == 0x72 && visible_OAM_buffer[i].get_y_pos() == 0x3B))
-            {
-                BYTE tmp_cur_line = MEM[LY_register]; //for debugging purposes
-//                std::cout << tmp_cur_line << std::endl;
-//                std::cout << "oi";
-            }
-
-            //we turn the pixel row into an array of 8 pixels - THIS CAN BE OPTIMIZED FURTHER IF NEEDED
-            std::vector<Pixel> sprite_pixels;
-            for(int j = 0 ; j < 8; j++)
-            {
-                BYTE temp_pixel_color = ((sprite_pixel_row & 0xC000) >> 14);
-                sprite_pixel_row = (sprite_pixel_row << 2);
-                BYTE palette = MEM[BG_palette_data_reg]; ///will be changed to sprite palette later on
-                Pixel pixel_temp = Pixel(temp_pixel_color,color_palette,spr.get_obj_to_bg_priority_flag(),1); //will need to edit the constructor according to sprite reqs
-                sprite_pixels.push_back(pixel_temp);
-            }
-
-            //now we push pixels
-            if(spr.get_x_flip_flag()) //push them back-to-front
-            {
-                std::stack<Pixel> temporary_flipper;
-                for(int k = 0 ; k < 8 ; k++)
-                {
-                    temporary_flipper.push(sprite_pixels[k]);
-                }
-                for(int l = Sprite_FIFO.size(); l < 8 && current_screen_pixel_x <= spr.get_x_pos() ; l++,current_screen_pixel_x++)
-                {
-                    if(temporary_flipper.top().get_color() == 0) //transparent
-                    {
-                        Sprite_FIFO.push(fill_transparent_sprite_pixel(current_screen_pixel_x,i,temporary_flipper.top(),spr));
-                        temporary_flipper.pop();
-                    }
-                    else
-                    {
-                        Sprite_FIFO.push(temporary_flipper.top());
-                        temporary_flipper.pop();
-                    }
-
-                }
-            }
-            else //regular
-            {
-                for(int m = Sprite_FIFO.size(); m < 8 && current_screen_pixel_x <= spr.get_x_pos() ; m++,current_screen_pixel_x++)
-                {
-                    if(sprite_pixels[m].get_color() == 0) //transparent
-                    {
-
-                        Sprite_FIFO.push(fill_transparent_sprite_pixel(current_screen_pixel_x,i,sprite_pixels[m],spr));
-                    }
-                    else
-                        Sprite_FIFO.push(sprite_pixels[m]);
-
-                }
-            }
-
-            visible_OAM_buffer.erase(visible_OAM_buffer.begin());
+            Sprite_FIFO_vector[i] = sprite_pixels[sprite_pixels_index];
         }
-//        else
-//        {
-//            break;
-//        }
+        //push pixels if possible
+        else if(i >= fifo_size && fifo_size < 8)
+        {
+            Sprite_FIFO_vector.push_back(sprite_pixels[sprite_pixels_index]);
+        }
+        //if FIFO is both full and has no transparent pixels, nothing will change
 
     }
+    //overwrite the FIFO with the new data
+    Sprite_FIFO = std::deque<Pixel>(Sprite_FIFO_vector.begin(),Sprite_FIFO_vector.end());
+
+//    visible_OAM_buffer.erase(visible_OAM_buffer.begin());
+
+    //POPPING THE SPRITE FROM THE REQUESTS QUEUE, RETURNING TO NORMAL if possible
+    Sprite_Fetch_Requests.pop_front();
+    if(Sprite_Fetch_Requests.empty())
+    {
+        waiting_for_visible_sprite_fetch = false;
+        this->mode_BG = 1;
+    }
+    else //there's more sprites waiting to be fetched, we restart the draw mode again
+    {
+        this->mode_BG = 0; //unnecessary, kept for readability
+        this->mode_DRAW = 0; //restart process, fetch another sprite
+    }
+
+
 }
+
+//void PPU::Push_to_SPRITE_FIFO() ///OLD
+//{
+////    if(screen_coordinate_x + 8 >= 0x7C && MEM[LY_register] == 0x45)
+////    {
+////        std::cout << "oi";
+////    }
+//    BYTE current_screen_pixel_x = screen_coordinate_x; //this gets updated with each pixel push_back, as opposed to screen_coordinate which gets updated which each pop_front
+//    //scan the sprite buffer to find relevant objects
+//    for(int i = 0 ; i < visible_OAM_buffer.size();i++)
+//    {
+//        Sprite spr = visible_OAM_buffer[i];
+//        if (spr.get_x_pos() <= screen_coordinate_x + 8)
+//        {
+//
+//            //1.FETCH TILE No.
+//            //step 1 - fetch tile number
+//            //step 2 - fetch tile data - base tile_data_mem loc is always 0x8000
+////            Fetch_SPRITE_tile_address(spr.get_tile_num());
+//            if(spr.get_y_flip_flag())
+//            {
+//                tile_address_sprite = 0x8000 + (tile_size_bytes * spr.get_tile_num()) + (2 * ((((spr.get_y_pos()-1) - (MEM[LY_register])) % 8)));
+//            }
+//            else
+//            {
+//                tile_address_sprite = 0x8000 + (tile_size_bytes * spr.get_tile_num()) + (2 * (7-(((spr.get_y_pos()-1) - (MEM[LY_register])) % 8)));
+//            }
+//
+//            //2.FETCH TILE DATA LOW
+//            Fetch_Sprite_Tile_Data_low();
+//            //3.FETCH TILE DATA HIGH
+//            Fetch_Sprite_Tile_Data_high();
+//            WORD sprite_pixel_row = tileData_to_pixel_row(tile_data_low_sprite,tile_data_high_sprite);
+//
+//
+//            BYTE color_palette = spr.get_palette_number_flag();
+//
+//
+//
+////            if((screen_coordinate_x >= 0x6A &&  visible_OAM_buffer[i].get_x_pos() == 0x72 && visible_OAM_buffer[i].get_y_pos() == 0x3B))
+////            {
+////                BYTE tmp_cur_line = MEM[LY_register]; //for debugging purposes
+//////                std::cout << tmp_cur_line << std::endl;
+//////                std::cout << "oi";
+////            }
+//
+//            //we turn the pixel row into an array of 8 pixels - THIS CAN BE OPTIMIZED FURTHER IF NEEDED
+//            //4.PUSH TO FIFO
+//            std::vector<Pixel> sprite_pixels;
+//            for(int j = 0 ; j < 8; j++)
+//            {
+//                BYTE temp_pixel_color = ((sprite_pixel_row & 0xC000) >> 14);
+//                sprite_pixel_row = (sprite_pixel_row << 2);
+//                BYTE palette = MEM[BG_palette_data_reg]; ///will be changed to sprite palette later on
+//                Pixel pixel_temp = Pixel(temp_pixel_color,color_palette,spr.get_obj_to_bg_priority_flag(),1); //will need to edit the constructor according to sprite reqs
+//                sprite_pixels.push_back(pixel_temp);
+//            }
+//
+//            //now we push_back pixels
+//            for(int m = Sprite_FIFO.size(); m < 8 && current_screen_pixel_x <= spr.get_x_pos() ; m++,current_screen_pixel_x++)
+//            {
+//                if(spr.get_x_flip_flag())
+//                {
+//                    Sprite_FIFO.push_front(sprite_pixels[m]);
+//                }
+//                else
+//                {
+//                    Sprite_FIFO.push_back(sprite_pixels[m]);
+//                }
+//            }
+//
+//
+//            visible_OAM_buffer.erase(visible_OAM_buffer.begin());
+//        }
+////        else
+////        {
+////            break;
+////        }
+//
+//    }
+//}
 
 Pixel PPU::fill_transparent_sprite_pixel(BYTE cur_screen_pixel,BYTE sprite_index,Pixel default_pixel,Sprite original_sprite)
 {
@@ -831,18 +1016,15 @@ Pixel PPU::fill_transparent_sprite_pixel(BYTE cur_screen_pixel,BYTE sprite_index
 }
 
 //we assume that the fifos are in sync, worst case we'll add it later
-//we pop a single pixel for now
+//we pop_front a single pixel for now
 void PPU::Pop_to_screen()
 {
-    ///dealing with SCX scrolling
+    ///dealing with SCX scrolling - XXX TO REMOVE
     bool pixels_popped = false;
+
     for(int i = (MEM[SCX] % 8) ; first_iteration_in_line && i > 0 && !Background_FIFO.empty(); i--)
     {
-//            if(!Sprite_FIFO.empty())
-//            {
-//                Sprite_FIFO.pop();
-//            }
-        Background_FIFO.pop();
+        Background_FIFO.pop_front();
         pixels_popped = true;
     }
     if(pixels_popped)
@@ -852,57 +1034,108 @@ void PPU::Pop_to_screen()
 
     if(!Background_FIFO.empty() && !waiting_for_visible_sprite_fetch && screen_coordinate_x <= SCREEN_X_END) //means we'll be popping from the background // && screen_coordinate_x <= SCREEN_X_END
     {
+        Pixel cur_bg_pixel = Background_FIFO.front();
+        Pixel *cur_visible_pixel = &cur_bg_pixel;
+        Pixel cur_sprite_pixel;
 
         if(!Sprite_FIFO.empty()) //means we'll also be popping from the sprite
         {
-            Pixel cur_bg_pixel = Background_FIFO.front();
-            Pixel cur_visible_pixel = Sprite_FIFO.front();
-//            if(cur_visible_pixel.get_background_priority())
-//            {
-//                std::cout << "PRIORITY!";
-//            }
-            if(cur_visible_pixel.get_color() == 0 || (cur_visible_pixel.get_background_priority() && cur_bg_pixel.get_color() != 0)) //0 means transparent
-            {
-                cur_visible_pixel = cur_bg_pixel;
-            }
-//            if(screen_coordinate_x >= 7)
-                Screen[MEM[LY_register]][screen_coordinate_x] = cur_visible_pixel;
-            Background_FIFO.pop();
-            Sprite_FIFO.pop();
+            cur_sprite_pixel = Sprite_FIFO.front();
+            if(cur_sprite_pixel.get_color() == 0 || (cur_sprite_pixel.get_background_priority() && cur_bg_pixel.get_color() != 0)) //0 means transparent
+                cur_visible_pixel = &cur_bg_pixel;
+            else
+                cur_visible_pixel = &cur_sprite_pixel;
+            Sprite_FIFO.pop_front();
         }
-        else //only from background
-        {
-            Pixel cur_pixel = Background_FIFO.front();
-//            if(screen_coordinate_x >= 7)
-                Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel;
-            Background_FIFO.pop();
-        }
+        Background_FIFO.pop_front();
+
+        ///XXX TO REMOVE
+        Screen[MEM[LY_register]][screen_coordinate_x] = *cur_visible_pixel;
         screen_coordinate_x++;
-//        pixel_fetcher_x_position_counter += 1;
+        //Scanning for all matching sprites now
+        Scan_visible_OAM_buffer();
+
+//        if(pixel_fetcher_x_position_counter == 0 && !first_iteration_in_line) //dummy fetch
+//        {
+//
+//        }
+        ///TEMPORARY CONSTRUCTION ZONE
+//        if((pixel_fetcher_x_position_counter <= 8 && !first_iteration_in_line) && ((MEM[SCX] % 8) >= 8 - Background_FIFO.size())) //not dummy fetch - will
+//        {
+//
+//        }
+//        else //not dummy fetch,
+//        {
+//            Screen[MEM[LY_register]][screen_coordinate_x] = *cur_visible_pixel;
+//            screen_coordinate_x++;
+//            //Scanning for all matching sprites now
+//            Scan_visible_OAM_buffer();
+//        }
+        ///
+
+//        if(first_iteration_in_line)
+//        {
+//            if(screen_coordinate_x > 7 || ((MEM[SCX] % 8) < 8 - Background_FIFO.size()))
+//            {
+//                first_iteration_in_line = false;
+//            }
+//            else
+//            {
+//                std::cout << Background_FIFO.size() << '\n';
+//            }
+//        }
+//        if(!first_iteration_in_line)
+//        {
+//            Screen[MEM[LY_register]][screen_coordinate_x] = *cur_visible_pixel;
+//            screen_coordinate_x++;
+//            //Scanning for all matching sprites now
+//            Scan_visible_OAM_buffer();
+//        }
+
     }
 }
 
 
 void PPU::Push_to_BG_FIFO()
 {
-    WORD pixel_row = tileData_to_pixel_row(tile_data_low_background, tile_data_high_background); //generate the pixel row from the tile data
+
+
     if(Background_FIFO.empty())
     {
+        WORD pixel_row = tileData_to_pixel_row(tile_data_low_background, tile_data_high_background); //generate the pixel row from the tile data
         for(int i = 0 ; i < pixel_row_size;i++)
         {
 //        BYTE temp_pixel_color = ((pixel_row & 0xC0) >> 6);
 //        Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0);
-//        Background_FIFO.push(pixel_temp);
+//        Background_FIFO.push_back(pixel_temp);
             //BYTE temp_pixel_color = ((pixel_row & 0xC0) >> 6);
             BYTE temp_pixel_color = ((pixel_row & 0xC000) >> 14);
             pixel_row = (pixel_row << 2);
             BYTE palette = MEM[BG_palette_data_reg];
             //std::cout << MEM[BG_palette_data_reg] << std::endl;
             Pixel pixel_temp = Pixel(temp_pixel_color,MEM[BG_palette_data_reg],0,0);
-            Background_FIFO.push(pixel_temp);
+            Background_FIFO.push_back(pixel_temp);
         }
         pixel_fetcher_x_position_counter += 8;
+
+        ///TEMPORARY CONSTRUCTION ZONE
+//        if(pixel_fetcher_x_position_counter == 8 && first_iteration_in_line)
+//        {
+//            first_iteration_in_line = false;
+//            pixel_fetcher_x_position_counter = 0;
+//
+//        }
+        ///
+
         mode_DRAW = 0; //restart DRAW cycle
+    }
+    else // NOT EMPTY
+    {
+        if (waiting_for_visible_sprite_fetch)
+        {
+            this->mode_BG = 0;
+            mode_DRAW = 0; //restart draw cycle - this time with the sprite fetcher - when done, continue with bg
+        }
     }
 
 
@@ -910,13 +1143,13 @@ void PPU::Push_to_BG_FIFO()
 
 //    if(Background_FIFO.size() > pixel_row_size) // && Sprite_FIFO.size() > pixel_row_size)
 
-        //push to screen
+        //push_back to screen
 
 //        while(!Background_FIFO.empty())
 //        {
 //            Pixel cur_pixel = Background_FIFO.front();
 //            Screen[MEM[LY_register]][screen_coordinate_x] = cur_pixel.get_color();
-//            Background_FIFO.pop();
+//            Background_FIFO.pop_front();
 //
 //            screen_coordinate_x++; //dont need it for now, might delete later
 //        }
@@ -945,7 +1178,7 @@ void PPU::Push_to_BG_FIFO()
 //    MEM[LY_register]++;
 //    while(!Background_FIFO.empty())
 //    {
-//        Background_FIFO.pop();
+//        Background_FIFO.pop_front();
 //    }
 //
 //    screen_coordinate_x = 0;
@@ -1138,7 +1371,7 @@ void PPU::PPU_cycle()
 //
 //            std::cout << +modes_trace.top() << '\n';
 //            pops++;
-//            modes_trace.pop();
+//            modes_trace.pop_front();
 //        }
 //        std::cout << "SCY VAL:" << (int)MEM[SCY] << '\n';
 //        std::cout << "loop counter: " << loop_counter << '\n';
@@ -1155,7 +1388,7 @@ void PPU::PPU_cycle()
             OAM_SCAN();
             return;
         case DRAW_MODE:
-//            modes_trace.push(3);
+//            modes_trace.push_back(3);
             DRAW();
             return;
         case H_BLANK_MODE:
