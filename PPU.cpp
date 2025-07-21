@@ -358,6 +358,7 @@ void PPU::H_BLANK()
             WINDOW_LINE_COUNTER = (WINDOW_LINE_COUNTER + 1);
 
         this->pixel_fetcher_x_position_counter = 0;
+        this->x_position_sprite = 0;
         this->MEM[LY_register]++;
 
         //setting coincidence flag according to LY==LYC -- may be used for interrupts later on
@@ -382,7 +383,7 @@ void PPU::H_BLANK()
 
 
         this->screen_coordinate_x = 0;
-        this->first_iteration_in_line = true;
+        this->first_iteration_in_line = 2;
 
         ///post mode
         this->mode_H_BLANK = 0;
@@ -544,7 +545,7 @@ WORD PPU::tileData_to_pixel_row(BYTE tile_data_low,BYTE tile_data_high)
 void PPU::Fetch_tile_num_and_address(bool BG)
 {
     /// XXX TO REMOVE
-    first_iteration_in_line = (pixel_fetcher_x_position_counter == 0);
+//    first_iteration_in_line = (pixel_fetcher_x_position_counter == 0);
 
     if(BG) {
         //window rendering
@@ -806,6 +807,11 @@ void PPU::Fetch_Tile_Data_low(bool BG)
         tile_data_low_background = MEM[tile_address_background];
     else
         tile_data_low_sprite = MEM[tile_address_sprite];
+
+//    if(pixel_fetcher_x_position_counter == 16 || pixel_fetcher_x_position_counter == 8 || pixel_fetcher_x_position_counter == 0)
+//    {
+//        std::cout << pixel_fetcher_x_position_counter << ":" << tile_address_background << '\n';
+//    }
 }
 
 
@@ -814,9 +820,11 @@ void PPU::Scan_visible_OAM_buffer()
     for(auto & i : visible_OAM_buffer)
     {
         const Sprite *spr = &i;
-        if (spr->get_x_pos() == screen_coordinate_x + 8)
+
+
+        if (spr->get_x_pos() == this->screen_coordinate_x + this->x_position_sprite)
         {
-            Sprite_Fetch_Requests.push_front(spr);
+            this->Sprite_Fetch_Requests.push_front(spr);
         }
     }
     if(!Sprite_Fetch_Requests.empty())
@@ -851,22 +859,52 @@ void PPU::Push_to_SPRITE_FIFO()
 
     //merge pixel row with the sprite FIFO
     int flip = spr->get_x_flip_flag();
-    for(size_t fifo_size = Sprite_FIFO_vector.size(), i = 0; i < sprite_pixels.size();i++)
-    {
-        size_t sprite_pixels_index = flip ? 7-i : i;
-        //overwrite existing transparent pixels
-        if(i < fifo_size && Sprite_FIFO_vector[i].get_color() == 0) //meaning transparent
-        {
-            Sprite_FIFO_vector[i] = sprite_pixels[sprite_pixels_index];
-        }
-        //push pixels if possible
-        else if(i >= fifo_size && fifo_size < 8)
-        {
-            Sprite_FIFO_vector.push_back(sprite_pixels[sprite_pixels_index]);
-        }
-        //if FIFO is both full and has no transparent pixels, nothing will change
+//    for(size_t fifo_size = Sprite_FIFO_vector.size(), i = 0; i < sprite_pixels.size();i++)
+//    BYTE i = (spr->get_x_pos() - (this->screen_coordinate_x+this->x_position_sprite)) % 8;
 
+
+    ///TEMPORARY UGLY SOLUTION
+    if (first_iteration_in_line)
+    {
+        for(size_t fifo_size = Sprite_FIFO_vector.size(), i = 8-spr->get_x_pos(); i< 8;i++)
+        {
+            size_t sprite_pixels_index = flip ? 7-i : i;
+//        size_t sprite_pixels_index = i;
+            //overwrite existing transparent pixels
+            if(i < fifo_size && Sprite_FIFO_vector[i].get_color() == 0) //meaning transparent
+            {
+                Sprite_FIFO_vector[i] = sprite_pixels[sprite_pixels_index];
+            }
+                //push pixels if possible
+            else if(i >= fifo_size && fifo_size < 8)
+            {
+                Sprite_FIFO_vector.push_back(sprite_pixels[sprite_pixels_index]);
+            }
+            //if FIFO is both full and has no transparent pixels, nothing will change
+
+        }
     }
+    else
+    {
+        for(size_t fifo_size = Sprite_FIFO_vector.size(), i = 0; i< 8;i++)
+        {
+            size_t sprite_pixels_index = flip ? 7-i : i;
+//        size_t sprite_pixels_index = i;
+            //overwrite existing transparent pixels
+            if(i < fifo_size && Sprite_FIFO_vector[i].get_color() == 0) //meaning transparent
+            {
+                Sprite_FIFO_vector[i] = sprite_pixels[sprite_pixels_index];
+            }
+                //push pixels if possible
+            else if(i >= fifo_size && fifo_size < 8)
+            {
+                Sprite_FIFO_vector.push_back(sprite_pixels[sprite_pixels_index]);
+            }
+            //if FIFO is both full and has no transparent pixels, nothing will change
+
+        }
+    }
+
     //overwrite the FIFO with the new data
     Sprite_FIFO = std::deque<Pixel>(Sprite_FIFO_vector.begin(),Sprite_FIFO_vector.end());
 
@@ -878,6 +916,7 @@ void PPU::Push_to_SPRITE_FIFO()
     {
         waiting_for_visible_sprite_fetch = false;
         this->mode_BG = 1;
+
     }
     else //there's more sprites waiting to be fetched, we restart the draw mode again
     {
@@ -1020,15 +1059,15 @@ Pixel PPU::fill_transparent_sprite_pixel(BYTE cur_screen_pixel,BYTE sprite_index
 void PPU::Pop_to_screen()
 {
     ///dealing with SCX scrolling - XXX TO REMOVE
-    bool pixels_popped = false;
-
-    for(int i = (MEM[SCX] % 8) ; first_iteration_in_line && i > 0 && !Background_FIFO.empty(); i--)
-    {
-        Background_FIFO.pop_front();
-        pixels_popped = true;
-    }
-    if(pixels_popped)
-        first_iteration_in_line = false;
+//    bool pixels_popped = false;
+//
+//    for(int i = (MEM[SCX] % 8) ; first_iteration_in_line && i > 0 && !Background_FIFO.empty(); i--)
+//    {
+//        Background_FIFO.pop_front();
+//        pixels_popped = true;
+//    }
+//    if(pixels_popped)
+//        first_iteration_in_line = false;
     ///
 
 
@@ -1038,10 +1077,11 @@ void PPU::Pop_to_screen()
         Pixel *cur_visible_pixel = &cur_bg_pixel;
         Pixel cur_sprite_pixel;
 
-        if(!Sprite_FIFO.empty()) //means we'll also be popping from the sprite
+        //IF sprite fifo is not empty AND this is not the first iteration AND we are NOT scrolling
+        if(!Sprite_FIFO.empty() && first_iteration_in_line == 0 && !(pixel_fetcher_x_position_counter <= 8 && ((MEM[SCX] % 8) > 8 - Background_FIFO.size()))) //means we'll also be popping from the sprite
         {
             cur_sprite_pixel = Sprite_FIFO.front();
-            if(cur_sprite_pixel.get_color() == 0 || (cur_sprite_pixel.get_background_priority() && cur_bg_pixel.get_color() != 0)) //0 means transparent
+            if((cur_sprite_pixel.get_color() == 0 || (cur_sprite_pixel.get_background_priority() && cur_bg_pixel.get_color() != 0))) //0 means transparent
                 cur_visible_pixel = &cur_bg_pixel;
             else
                 cur_visible_pixel = &cur_sprite_pixel;
@@ -1050,27 +1090,46 @@ void PPU::Pop_to_screen()
         Background_FIFO.pop_front();
 
         ///XXX TO REMOVE
-        Screen[MEM[LY_register]][screen_coordinate_x] = *cur_visible_pixel;
-        screen_coordinate_x++;
-        //Scanning for all matching sprites now
-        Scan_visible_OAM_buffer();
+//        Screen[MEM[LY_register]][screen_coordinate_x] = *cur_visible_pixel;
+//        screen_coordinate_x++;
+//        //Scanning for all matching sprites now
+//        Scan_visible_OAM_buffer();
 
 //        if(pixel_fetcher_x_position_counter == 0 && !first_iteration_in_line) //dummy fetch
 //        {
 //
 //        }
         ///TEMPORARY CONSTRUCTION ZONE
-//        if((pixel_fetcher_x_position_counter <= 8 && !first_iteration_in_line) && ((MEM[SCX] % 8) >= 8 - Background_FIFO.size())) //not dummy fetch - will
-//        {
-//
-//        }
-//        else //not dummy fetch,
-//        {
-//            Screen[MEM[LY_register]][screen_coordinate_x] = *cur_visible_pixel;
-//            screen_coordinate_x++;
-//            //Scanning for all matching sprites now
-//            Scan_visible_OAM_buffer();
-//        }
+        if(first_iteration_in_line) //part of dummy fetch
+        {
+//            std::cout << "oioi";
+            x_position_sprite++; // ALWAYS BETWEEN 0-8
+            Scan_visible_OAM_buffer();
+            if(x_position_sprite >= 8)
+            {
+                this->first_iteration_in_line = 0;
+//                if(!Background_FIFO.empty())
+//                {
+//                    std::cout << "oi";
+//                }
+
+            }
+        }
+        else if(pixel_fetcher_x_position_counter <= 8 && ((MEM[SCX] % 8) >= 8 - Background_FIFO.size())) //scrolling
+        {
+
+        }
+        else //not dummy fetch,
+        {
+//            if(pixel_fetcher_x_position_counter <= 8)
+//            {
+//                std::cout << "oi";
+//            }
+            Screen[MEM[LY_register]][screen_coordinate_x] = *cur_visible_pixel;
+            screen_coordinate_x++;
+            //Scanning for all matching sprites now
+            Scan_visible_OAM_buffer();
+        }
         ///
 
 //        if(first_iteration_in_line)
@@ -1119,12 +1178,12 @@ void PPU::Push_to_BG_FIFO()
         pixel_fetcher_x_position_counter += 8;
 
         ///TEMPORARY CONSTRUCTION ZONE
-//        if(pixel_fetcher_x_position_counter == 8 && first_iteration_in_line)
-//        {
-//            first_iteration_in_line = false;
-//            pixel_fetcher_x_position_counter = 0;
-//
-//        }
+        if(pixel_fetcher_x_position_counter == 8 && first_iteration_in_line == 2)
+        {
+            first_iteration_in_line = 1; //now we are dependent on emptying out the BG fifo, while fetching the appropriate 0-7 sprite x_loc
+            pixel_fetcher_x_position_counter = 0;
+
+        }
         ///
 
         mode_DRAW = 0; //restart DRAW cycle
@@ -1136,6 +1195,12 @@ void PPU::Push_to_BG_FIFO()
             this->mode_BG = 0;
             mode_DRAW = 0; //restart draw cycle - this time with the sprite fetcher - when done, continue with bg
         }
+        else
+        {
+//            std::cout << pixel_fetcher_x_position_counter << '\n';
+
+        }
+
     }
 
 

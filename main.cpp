@@ -2779,7 +2779,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_cartridge("../TESTS/dr.mario.gb");
+    read_from_cartridge("../TESTS/tennis.gb");
 
     if(!enable_bootrom)
     {

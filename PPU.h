@@ -238,7 +238,7 @@ class PPU{
         std::deque<Pixel> Background_FIFO;
         std::deque<Pixel> Sprite_FIFO;
         std::deque<const Sprite*> Sprite_Fetch_Requests;
-        bool first_iteration_in_line = true; //used for DRAW mode quirk
+        BYTE first_iteration_in_line = 2; //used for DRAW mode quirk - this has 3 MODES - 0: not first iter, 1: middle of first iter, 2: fetching first iter
 
         std::vector<Sprite> visible_OAM_buffer; //up to 10 pointers to OAMs/sprites which are potentially visible in the line
         Color background_palette[4];
@@ -247,6 +247,7 @@ class PPU{
 
         //pixel fetcher vars
         WORD pixel_fetcher_x_position_counter = 0;
+        BYTE x_position_sprite = 0; //this ranges from 0-8 for the initial dummy fetch, and maxes out at 8 until the end of the line
         int screen_coordinate_x = 0; //used to count pixels on screen as we pop them from the fifo
         WORD WINDOW_LINE_COUNTER = 0; // credit to: https://hacktix.github.io/GBEDG/ppu/
         BYTE first_window_encounter = 1; //
