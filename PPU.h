@@ -228,6 +228,7 @@ class PPU{
 
         //debug
         std::stack<int> modes_trace;
+        BYTE lcdc_reg_backup;//testing interrupt changes in ff40
 
         int OAM_counter = OAM_mem_start;
         int vblank_counter = 0;

@@ -467,8 +467,8 @@ void PPU::V_BLANK()
         if(DEBUG_FLAG)
         {
             DEBUG_FLAG = false;
-            std::cout << "VBLANK REACHED!\n";
-            std::cout << SCX_VAL_DEBUG << " + " << screen_coordinate_x << '\n';
+//            std::cout << "VBLANK REACHED!\n";
+//            std::cout << SCX_VAL_DEBUG << " + " << screen_coordinate_x << '\n';
         }
 
         while(!modes_trace.empty())
@@ -546,11 +546,17 @@ void PPU::Fetch_tile_num_and_address(bool BG)
 {
     /// XXX TO REMOVE
 //    first_iteration_in_line = (pixel_fetcher_x_position_counter == 0);
-
+    if(MEM[0xFF40] != lcdc_reg_backup)
+    {
+        lcdc_reg_backup = MEM[0xFF40];
+        std::cout << std::hex << std::setw(2) << std::setfill('0')  << (int)MEM[0xFF40] << std::dec << '\n';
+    }
     if(BG) {
         //window rendering
         if ((pixel_fetcher_x_position_counter >= MEM[WX_reg] - 7 && MEM[LY_register] >= MEM[WY_reg]) &&
             get_LCDC_window_display_enable_status()) {
+//            std::cout << "rendering window: line" << (int)MEM[LY_register] << " lcdc: " << (int)get_LCDC_bg_window_enable_status() << " LCDS: " << (int)sample_STAT_interrupt_line()
+//            << "LCDC3: " << (int)get_LCDC_bg_tile_map_select_status() << '\n';
             if (MEM[LY_register] > 0) {
                 int tmp = 1;
                 tmp++;
@@ -1418,7 +1424,7 @@ void PPU::PPU_cycle()
 
     if(SCX_VAL_DEBUG != MEM[SCX])
     {
-        std::cout << "SCX VAL:" << (int)MEM[SCX] << " + " << screen_coordinate_x << '\n';
+//        std::cout << "SCX VAL:" << (int)MEM[SCX] << " + " << screen_coordinate_x << '\n';
         SCX_VAL_DEBUG = MEM[SCX];
         DEBUG_FLAG = true;
     }

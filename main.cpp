@@ -544,6 +544,17 @@ BYTE gameboy::read_memory(WORD loc_src)
 }
 void gameboy::write_memory(WORD loc_write_to,BYTE data_to_write)
 {
+    if(loc_write_to <= 0x7FFF && loc_write_to >= 0x00) // ROM memory, shouldn't be able to write there
+    {
+//        cout << "ROM WRITE DETECTED";
+        return;
+    }
+
+    if (loc_write_to == LCD_Control_reg && data_to_write != mem[LCD_Control_reg])
+    {
+        cout<<"changing LCDC\n";
+    }
+
     WORD DMA_src_loc = (data_to_write << 8);
     if(loc_write_to == 0xFF46) //Initiate DMA-OAM memory transfer
     {
@@ -559,6 +570,8 @@ void gameboy::write_memory(WORD loc_write_to,BYTE data_to_write)
     //VRAM PROTECTION
 //    if( ((loc_write_to >= VRAM_mem_start) && (loc_write_to <= VRAM_mem_end))  && ( (pupy.mode != V_BLANK_MODE) || (pupy.mode != H_BLANK_MODE)) )
 //        return;
+
+
 
     mem[loc_write_to] = data_to_write;
     if(loc_write_to == JOYPAD_register)
@@ -596,7 +609,7 @@ void gameboy::check_interrupts()
     {
         if(is_halted == 2)
 //            cout << "HALT STOPPED\n";
-        is_halted = 0;
+            is_halted = 0;
         if(IME == 1)
         {
             if(get_interrupt_bit_status(IF_reg,vblank) && get_interrupt_bit_status(IE_reg,vblank)) //Vblank
@@ -1077,7 +1090,7 @@ void gameboy::decode_execute()
             //tested
 
 
-        case(0x32):
+        case(0x32): //LD (HL-), A
             if(sub_mode == 0)
             {
                 sub_mode++;
@@ -1085,7 +1098,8 @@ void gameboy::decode_execute()
             }
             else if(sub_mode == 1)
             {
-                mem[r16[HL_16]->reg] = *r8[A];
+//                mem[r16[HL_16]->reg] = *r8[A];
+                write_memory(r16[HL_16]->reg,*r8[A]);
                 r16[HL_16]->reg--; //increment the CONTENTS of HL --- MAY BE PROBLEMATIC DOWN THE LINE
 
                 check_div_reg_change(r16[HL_16]->reg);
@@ -1293,35 +1307,36 @@ void gameboy::decode_execute()
             break;
 
             //to-test
-        case(0x06): case(0x16): case(0x26): case(0x36): //LD SUBREG, d8
+
+
+        case(0x06): case(0x16): case(0x26):  //LD SUBREG, d8
             tmp = (OPCODE & 0x38)>>3;
-            (*r8[tmp]) = mem[PC];
+            //(*r8[tmp]) = mem[PC];
+            (*r8[tmp]) = read_memory(PC);
             PC++;
-
-            if(testing_mode && (OPCODE == 0x36))
-            {
-                gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg, mem[PC-1]);
-            }
-
-            if(OPCODE == 0x36)
-            {
-                num_of_machine_cycles(3);
-                check_div_reg_change(r16[HL_16]->reg);
-            }
-            else
-            {
-                num_of_machine_cycles(2);
-            }
+            num_of_machine_cycles(2);
             break;
 
             ///LD INSTRUCTIONS WITH REGISTERS - MAY UNIFY THEM ALL INTO ONE COMMAND SOON
 
 
+        case(0x36): //LD (HL), d8
+            tmp = (OPCODE & 0x38)>>3;
+            num_of_machine_cycles(3);
+            write_memory((r16[HL_16]->reg),mem[PC]);
+            PC++;
+            check_div_reg_change(r16[HL_16]->reg);
+            if(testing_mode && (OPCODE == 0x36))
+            {
+                gameboy_testing::print_memory_writes(OPCODE, r16[HL_16]->reg, mem[PC-1]);
+            }
+            break;
+
             //to-test
         case(0x40): case(0x41): case(0x42): case(0x43): case(0x44): case(0x45): case(0x46): case(0x47): //LD B,*SUBREG*
         case(0x50): case(0x51): case(0x52): case(0x53): case(0x54): case(0x55): case(0x56): case(0x57): //LD D,*SUBREG*
         case(0x60): case(0x61): case(0x62): case(0x63): case(0x64): case(0x65): case(0x66): case(0x67): //LD H,*SUBREG*
-        case(0x70): case(0x71): case(0x72): case(0x73): case(0x74): case(0x75): case(0x77): //LD (HL),*SUBREG*
+//        case(0x70): case(0x71): case(0x72): case(0x73): case(0x74): case(0x75): case(0x77): //LD (HL),*SUBREG*
         case(0x48): case(0x49): case(0x4A): case(0x4B): case(0x4C): case(0x4D): case(0x4E): case(0x4F): //LD C,*SUBREG*
         case(0x58): case(0x59): case(0x5A): case(0x5B): case(0x5C): case(0x5D): case(0x5E): case(0x5F): //LD E,*SUBREG*
         case(0x68): case(0x69): case(0x6A): case(0x6B): case(0x6C): case(0x6D): case(0x6E): case(0x6F): //LD L,*SUBREG*
@@ -1329,14 +1344,9 @@ void gameboy::decode_execute()
 
 
             (*r8[(OPCODE & 0x38)>>3]) = (*r8[(OPCODE & 0x07)]); //dst: relevant opcode bits in r8 are 3rd, 4th & 5th, src: rel bits 0,1,2
-            if(testing_mode && (OPCODE == 0x70 || OPCODE == 0x71 || OPCODE == 0x72 || OPCODE == 0x73 || OPCODE == 0x74 || OPCODE == 0x75 || OPCODE == 0x77))
-            {
-                gameboy_testing::print_memory_writes(OPCODE ,r16[HL_16]->reg, (*r8[(OPCODE & 0x07)]));
-            }
 
             //machine cycles update
-            if(OPCODE == 0x46 || OPCODE == 0x56 || OPCODE == 0x66 || OPCODE == 0x70 || OPCODE == 0x71 || OPCODE == 0x72 || OPCODE == 0x73 ||
-               OPCODE == 0x74 || OPCODE == 0x75 || OPCODE == 0x77 || OPCODE == 0x4E || OPCODE == 0x5E || OPCODE == 0x6E || OPCODE == 0x7E )
+            if(OPCODE == 0x46 || OPCODE == 0x56 || OPCODE == 0x66 || OPCODE == 0x4E || OPCODE == 0x5E || OPCODE == 0x6E || OPCODE == 0x7E )
             {
                 num_of_machine_cycles(2);
                 check_div_reg_change(r16[HL_16]->reg);
@@ -1346,6 +1356,18 @@ void gameboy::decode_execute()
                 num_of_machine_cycles(1);
             }
             break;
+
+
+        case(0x70): case(0x71): case(0x72): case(0x73): case(0x74): case(0x75): case(0x77): //LD (HL),*SUBREG*
+
+            write_memory(r16[HL_16]->reg,(*r8[(OPCODE & 0x07)]));
+//            r16[HL_16]->reg = (*r8[(OPCODE & 0x07)]); //dst: relevant opcode bits in r8 are 3rd, 4th & 5th, src: rel bits 0,1,2
+            if(testing_mode)
+                gameboy_testing::print_memory_writes(OPCODE ,r16[HL_16]->reg, (*r8[(OPCODE & 0x07)]));
+
+            num_of_machine_cycles(2);
+            check_div_reg_change(r16[HL_16]->reg);
+        break;
 
         case(0x09):case(0x19):case(0x29):case(0x39): //ADD HL, rr: Add 16bit reg to HL
             operand_1 = (r16[HL_16]->reg); // for flags
@@ -1439,7 +1461,8 @@ void gameboy::decode_execute()
             PC++;
             tmp = ((mem[PC]<<8) | tmp);
             PC++;
-            mem[tmp] = *r8[A];
+//            mem[tmp] = *r8[A];
+            write_memory(tmp,*r8[A]);
 
             if(testing_mode)
             {
@@ -2025,9 +2048,11 @@ void gameboy::decode_execute()
             tmp = tmp | (mem[PC]) << 8;
             PC = PC + 1; // May not be necessary
             r16[SP]->reg = (r16[SP]->reg) - 1;
-            mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+//            mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+            write_memory(r16[SP]->reg,(BYTE) (0X00FF & ((PC) >> 8)));
             r16[SP]->reg = (r16[SP]->reg) - 1;
-            mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+//            mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+            write_memory(r16[SP]->reg,(BYTE) (0X00FF & (PC)));
             PC = tmp;
 
             if(testing_mode)
@@ -2052,9 +2077,11 @@ void gameboy::decode_execute()
             PC = PC + 1; // May not be necessary
             if(!get_Z_flag_status()){
                 r16[SP]->reg = (r16[SP]->reg) - 1;
-                mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+//                mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+                write_memory(r16[SP]->reg,(BYTE) (0X00FF & ((PC) >> 8)));
                 r16[SP]->reg = (r16[SP]->reg) - 1;
-                mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+//                mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+                write_memory(r16[SP]->reg,(BYTE) (0X00FF & (PC)));
                 PC = tmp;
 
                 if(testing_mode)
@@ -2084,9 +2111,11 @@ void gameboy::decode_execute()
             PC = PC + 1; // May not be necessary
             if(get_Z_flag_status()){
                 r16[SP]->reg = (r16[SP]->reg) - 1;
-                mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+//                mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+                write_memory(r16[SP]->reg,(BYTE) (0X00FF & ((PC) >> 8)));
                 r16[SP]->reg = (r16[SP]->reg) - 1;
-                mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+//                mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+                write_memory(r16[SP]->reg,(BYTE) (0X00FF & (PC)));
                 PC = tmp;
 
                 if(testing_mode)
@@ -2114,9 +2143,11 @@ void gameboy::decode_execute()
             PC = PC + 1; // May not be necessary
             if(!get_C_flag_status()){
                 r16[SP]->reg = (r16[SP]->reg) - 1;
-                mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+//                mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+                write_memory(r16[SP]->reg,(BYTE) (0X00FF & ((PC) >> 8)));
                 r16[SP]->reg = (r16[SP]->reg) - 1;
-                mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+//                mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+                write_memory(r16[SP]->reg,(BYTE) (0X00FF & (PC)));
                 PC = tmp;
 
                 if(testing_mode)
@@ -2144,9 +2175,11 @@ void gameboy::decode_execute()
             PC = PC + 1; // May not be necessary
             if(get_C_flag_status()){
                 r16[SP]->reg = (r16[SP]->reg) - 1;
-                mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+//                mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+                write_memory(r16[SP]->reg,(BYTE) (0X00FF & ((PC) >> 8)));
                 r16[SP]->reg = (r16[SP]->reg) - 1;
-                mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+//                mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+                write_memory(r16[SP]->reg,(BYTE) (0X00FF & (PC)));
                 PC = tmp;
 
                 if(testing_mode)
@@ -2169,11 +2202,14 @@ void gameboy::decode_execute()
         case(0xC7): case(0xD7): case(0xE7): case(0xF7):
         case(0xCF): case(0xDF): case(0xEF): case(0xFF)://RST tgt3
 
+
             tmp = (OPCODE & 0x38);
             r16[SP]->reg = (r16[SP]->reg) - 1;
-            mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
+            write_memory(r16[SP]->reg,(BYTE) (0X00FF & ((PC) >> 8)));
+//            mem[r16[SP]->reg] = (BYTE) (0X00FF & ((PC) >> 8));
             r16[SP]->reg = (r16[SP]->reg) - 1;
-            mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
+            write_memory(r16[SP]->reg,(BYTE) (0X00FF & (PC)));
+//            mem[r16[SP]->reg] = (BYTE) (0X00FF & (PC));
             PC = tmp;
 
             if(testing_mode)
@@ -2779,7 +2815,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_cartridge("../TESTS/tennis.gb");
+    read_from_cartridge("../TESTS/Serpent.gb");
 
     if(!enable_bootrom)
     {
@@ -2851,7 +2887,7 @@ void gameboy::main_loop(gameboy& gb)
                         window.close();
                     }
 
-                //user input via joypad
+                        //user input via joypad
                     else if (event.type == sf::Event::KeyPressed)
                     {
                         input_commands.push(event.key.scancode);
@@ -2865,7 +2901,7 @@ void gameboy::main_loop(gameboy& gb)
                     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
                         gameboy_testing::init_VRAM_file();
                         gameboy_testing::print_VRAM(gb);
-    //                    std::cout << "a";
+                        //                    std::cout << "a";
                     }
                 }
 
