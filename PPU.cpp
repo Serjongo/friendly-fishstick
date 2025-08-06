@@ -569,7 +569,7 @@ void PPU::Fetch_tile_num_and_address(bool BG)
                 pixel_fetcher_x_position_counter = MEM[WX_reg] - 7;
             }
 
-            tilemap_mem_loc = 0x9C00;
+            tilemap_mem_loc = get_LCDC_window_tile_map_select() ? 0x9C00 : 0x9800;
 
             tile_x = ((pixel_fetcher_x_position_counter / 8 - (MEM[WX_reg]) / 8)) & 0x1F;
             tile_y = ((WINDOW_LINE_COUNTER / 8) & 0xff);
@@ -601,7 +601,7 @@ void PPU::Fetch_tile_num_and_address(bool BG)
         }
             //background rendering
         else {
-            tilemap_mem_loc = 0x9800;
+            tilemap_mem_loc = get_LCDC_bg_tile_map_select_status() ? 0x9C00 :0x9800;
             //reset first_window_encounter, since if we're here, we're past/before window
             if (!first_window_encounter)
                 first_window_encounter = 1;

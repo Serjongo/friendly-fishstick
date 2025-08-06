@@ -490,7 +490,8 @@ void gameboy::load_bootrom(const string& path) //basic version, will change as t
 
 void gameboy::fetch()
 {
-    OPCODE = mem[PC];
+//    OPCODE = mem[PC];
+    OPCODE = read_memory(PC);
     if(PC >= 0x100 && enable_bootrom && !bootrom_finished)
     {
         for(int i = 0 ; i < 0x100 ; i++)
@@ -562,7 +563,8 @@ void gameboy::write_memory(WORD loc_write_to,BYTE data_to_write)
 //            cout << "AAA";
         for(int i = OAM_mem_start ; i <= OAM_mem_end; i++, DMA_src_loc++)
         {
-            mem[i] = mem[DMA_src_loc];
+//            mem[i] = mem[DMA_src_loc];
+            mem[i] = read_memory(DMA_src_loc);
         }
     }
 
@@ -1323,7 +1325,7 @@ void gameboy::decode_execute()
         case(0x36): //LD (HL), d8
             tmp = (OPCODE & 0x38)>>3;
             num_of_machine_cycles(3);
-            write_memory((r16[HL_16]->reg),mem[PC]);
+            write_memory((r16[HL_16]->reg), read_memory(PC));
             PC++;
             check_div_reg_change(r16[HL_16]->reg);
             if(testing_mode && (OPCODE == 0x36))
@@ -1362,6 +1364,7 @@ void gameboy::decode_execute()
 
             write_memory(r16[HL_16]->reg,(*r8[(OPCODE & 0x07)]));
 //            r16[HL_16]->reg = (*r8[(OPCODE & 0x07)]); //dst: relevant opcode bits in r8 are 3rd, 4th & 5th, src: rel bits 0,1,2
+//            mem[r16[HL_16]->reg] = *r8[(OPCODE & 0x07)];
             if(testing_mode)
                 gameboy_testing::print_memory_writes(OPCODE ,r16[HL_16]->reg, (*r8[(OPCODE & 0x07)]));
 
@@ -1395,14 +1398,16 @@ void gameboy::decode_execute()
             //to-test
         case(0x0A): case(0x1A):  //LD A, (REG)
             tmp = (OPCODE & 0x30)>>4;
-            (*r8[A]) = mem[r16[tmp]->reg];
+//            (*r8[A]) = mem[r16[tmp]->reg];
+            (*r8[A]) = read_memory(r16[tmp]->reg);
             num_of_machine_cycles(2);
             break;
 
 
         case(0xE0): //LD (a8), A
 
-            tmp_uChar = mem[PC]; //FIX!
+//            tmp_uChar = mem[PC]; //FIX!
+            tmp_uChar = read_memory(PC);
             PC++;
             tmp = (WORD)0xFF00|tmp_uChar;
 //            mem[tmp] = *r8[A];
@@ -1451,15 +1456,19 @@ void gameboy::decode_execute()
             break;
 
         case(0xF2): //LD A, (C)
-            *r8[A] = mem[(WORD)0xFF00|*r8[C]]; //MSB is FF, LSB is the PC byte
+//            *r8[A] = mem[(WORD)0xFF00|*r8[C]]; //MSB is FF, LSB is the PC byte
+            *r8[A] = read_memory((WORD)0xFF00|*r8[C]); //MSB is FF, LSB is the PC byte
+
             num_of_machine_cycles(2);
             break;
 
         case(0xEA): //LD (a16), A
             tmp = 0;
-            tmp = mem[PC];
+//            tmp = mem[PC];
+            tmp = read_memory(PC);
             PC++;
-            tmp = ((mem[PC]<<8) | tmp);
+            tmp = ((read_memory(PC)<<8) | tmp);
+//            tmp = ((mem[PC]<<8) | tmp);
             PC++;
 //            mem[tmp] = *r8[A];
             write_memory(tmp,*r8[A]);
@@ -1475,18 +1484,24 @@ void gameboy::decode_execute()
 
         case(0xFA): //LD A, (a16)
             tmp = 0;
-            tmp = mem[PC];
+//            tmp = mem[PC];
+            tmp = read_memory(PC);
             PC++;
-            tmp = (tmp | (mem[PC]<<8));
+//            tmp = (tmp | (mem[PC]<<8));
+            tmp = (tmp | read_memory(PC)<<8);
             PC++;
-            *r8[A] = mem[tmp];
+//            *r8[A] = mem[tmp];
+            *r8[A] = read_memory(tmp);
+
 
             num_of_machine_cycles(4);
             break;
 
         case(0xF8): //LD HL, SP+e
             operand_1 = r16[SP]->reg;
-            tmp_sChar = (signed char)mem[PC];
+//            tmp_sChar = (signed char)mem[PC];
+            tmp_sChar = (signed char)read_memory(PC);
+
 
             r16[HL_16]->reg = operand_1 + tmp_sChar;
             PC++;
@@ -1575,21 +1590,26 @@ void gameboy::decode_execute()
 
             //to-test
         case(0x2A): //LD A, (HL+)
-            (*r8[A]) = mem[r16[HL_16]->reg]; //HL //may be problematic, since mem is an array of WORDS, so it should only take the first BYTE of the word
+//            (*r8[A]) = mem[r16[HL_16]->reg]; //HL //may be problematic, since mem is an array of WORDS, so it should only take the first BYTE of the word
+            (*r8[A]) = read_memory(r16[HL_16]->reg); //HL //may be problematic, since mem is an array of WORDS, so it should only take the first BYTE of the word
+
             (r16[HL_16]->reg)++;
 
             num_of_machine_cycles(2);
             break;
             //to-test
         case(0x3A): //LD A, (HL-)
-            (*r8[A]) = mem[r16[HL_16]->reg]; //HL
+//            (*r8[A]) = mem[r16[HL_16]->reg]; //HL
+            (*r8[A]) = read_memory(r16[HL_16]->reg); //HL
+
             (r16[HL_16]->reg)--;
 
             num_of_machine_cycles(2);
             break;
 
         case(0x0E): case(0x1E): case(0x2E): case(0x3E): //LD C,d8
-            (*r8[(OPCODE & 0x38)>>3]) = mem[PC];
+//            (*r8[(OPCODE & 0x38)>>3]) = mem[PC];
+            (*r8[(OPCODE & 0x38)>>3]) = read_memory(PC);
             PC++;
 
             num_of_machine_cycles(2);
@@ -1626,7 +1646,9 @@ void gameboy::decode_execute()
             break;
 
         case(0xE8): //ADD SP, e (relative)
-            tmp_sChar = (signed char)(mem[PC]);
+//            tmp_sChar = (signed char)(mem[PC]);
+            tmp_sChar = (signed char)read_memory(PC);
+
             operand_1 = r16[SP]->reg;
             PC++;
             r16[SP]->reg = operand_1 + tmp_sChar;
@@ -1885,18 +1907,24 @@ void gameboy::decode_execute()
         case(0xC1): case(0xD1): case(0xE1): //POP r16stk
 
             tmp = (OPCODE & 0x30)>>4;
-            r16[tmp]->lo = mem[r16[SP]->reg];
+//            r16[tmp]->lo = mem[r16[SP]->reg];
+            r16[tmp]->lo = read_memory(r16[SP]->reg);
             r16[SP]->reg = (r16[SP]->reg) + 1;
-            r16[tmp]->hi = (mem[r16[SP]->reg]);
+//            r16[tmp]->hi = (mem[r16[SP]->reg]);
+            r16[tmp]->hi = read_memory(r16[SP]->reg);
             r16[SP]->reg = (r16[SP]->reg) + 1;
 
             num_of_machine_cycles(3);
             break;
 
         case(0xF1): //POP AF,stk
-            AF_reg.lo = mem[r16[SP]->reg] & 0xF0; //4 lower bits of F are always 0
+//            AF_reg.lo = mem[r16[SP]->reg] & 0xF0; //4 lower bits of F are always 0
+            AF_reg.lo = (read_memory(r16[SP]->reg) & 0xF0); //4 lower bits of F are always 0
+
             r16[SP]->reg = (r16[SP]->reg) + 1;
-            AF_reg.hi = (mem[r16[SP]->reg]);
+//            AF_reg.hi = (mem[r16[SP]->reg]);
+            AF_reg.hi = read_memory(r16[SP]->reg);
+
             r16[SP]->reg = (r16[SP]->reg) + 1;
 
             num_of_machine_cycles(3);
@@ -2255,7 +2283,10 @@ void gameboy::decode_execute()
 
         case(0xCE): //ADC A,d8
             operand_1 = (*r8[A]);
-            operand_2 = mem[PC];
+//            operand_2 = mem[PC];
+            operand_2 = read_memory(PC);
+
+
             (*r8[A]) = operand_1 + operand_2 + get_C_flag_status();
             PC++;
 
@@ -2281,7 +2312,8 @@ void gameboy::decode_execute()
 
         case(0xDE): //SBC A,d8
             operand_1 = (*r8[A]);
-            operand_2 = mem[PC];
+//            operand_2 = mem[PC];
+            operand_2 = read_memory(PC);
             (*r8[A]) = operand_1 - operand_2 - get_C_flag_status();
             PC++;
 
@@ -2308,7 +2340,9 @@ void gameboy::decode_execute()
 
         case(0xD6): //SUB A, d8
             operand_1 = (*r8[A]); //backup for flag calculation
-            operand_2 = mem[PC];
+//            operand_2 = mem[PC];
+            operand_2 = read_memory(PC);
+
             (*r8[A]) = operand_1 - operand_2;
             PC++;
 
@@ -2384,7 +2418,8 @@ void gameboy::decode_execute()
 
         case(0xFE): //CP A, d8
             operand_1 = *r8[A];
-            operand_2 = mem[PC];
+//            operand_2 = mem[PC];
+            operand_2 = read_memory(PC);
             tmp_uChar = operand_1 - operand_2;
             PC++;
 
@@ -2815,7 +2850,7 @@ void gameboy::main_loop(gameboy& gb)
     // 10-bit ops.gb - VV
     // 11-op a,(hl).gb
     //bootrom - boot_rom_world.gb
-    read_from_cartridge("../TESTS/Serpent.gb");
+    read_from_cartridge("../TESTS/dr.mario.gb");
 
     if(!enable_bootrom)
     {
